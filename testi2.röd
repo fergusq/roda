@@ -1,0 +1,10 @@
+echo sanat... {
+	sanat | while pull -r sana; do
+		push sana
+	done
+	push "\n"
+}
+
+main {
+	wcat -U "WCat (Linux; text)" "http://localhost:8080" | write "google.txt"
+}
