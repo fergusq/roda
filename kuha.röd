@@ -107,13 +107,13 @@ main {
 		päivitykset -create !(wcat tg_update..offset)
 		
 		/* etsitään viestit */
-		offsets -set !(päivitykset | grep -o "(?<=\"update_id\":)[0-9]+")
-		ketjut -create !(päivitykset | grep -o "(?<=\"chat\":\\{\"id\"\\:)[0-9]+")
-		viestit -create !(päivitykset | grep -o "(?<=\"text\":\").*(?=\")")
+		offsets -set !(päivitykset | grep -o "(?<=\"update_id\":)-?[0-9]+")
+		ketjut -create !(päivitykset | grep -o "(?<=\"chat\":\\{\"id\"\\:)-?[0-9]+")
+		viestit -create !(päivitykset | grep -o "(?<=\"text\":\")[^\"]*(?=\")")
 
 		/* jos viesti löytyi */
 		if test #viestit -ge 1; do
-
+			
 			/* jos viesti on kuhavitsi, tehdään siitä hauska kuva */
 			if test #!(push viestit[0] | grep ".*[Kk][Uu][Hh][Aa].*") -gt 0; do
 				käsittele_kuhaviesti ketjut[0] viestit[0]
