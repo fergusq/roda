@@ -26,8 +26,8 @@ public class Calculator {
 		.addCommentRule("/*", "*/")
 		.appendOnEOF("<EOF>");
 	
-	private static OperatorLibrary<Double> library;
-	private static OperatorPrecedenceParser<Double> opparser;
+	private static OperatorLibrary<Integer> library;
+	private static OperatorPrecedenceParser<Integer> opparser;
 	private static TokenList tokenlist;
         
 	static {
@@ -35,24 +35,24 @@ public class Calculator {
 		library = new OperatorLibrary<>(tl -> parsePrimary(tl));
 		
 		/* Declares the operators*/
-		library.add("&&", (a, b) -> a != 0 && b != 0 ? 1d : 0d);
-		library.add("||", (a, b) -> a != 0 || b != 0 ? 1d : 0d);
-		library.add("^^", (a, b) -> a != 0 ^  b != 0 ? 1d : 0d);
+		library.add("&&", (a, b) -> a != 0 && b != 0 ? 1 : 0);
+		library.add("||", (a, b) -> a != 0 || b != 0 ? 1 : 0);
+		library.add("^^", (a, b) -> a != 0 ^  b != 0 ? 1 : 0);
 		library.increaseLevel();
-		library.add("=", (a, b) -> a == b ? 1d : 0d);
-		library.add("!=", (a, b) -> a != b ? 1d : 0d);
+		library.add("=", (a, b) -> a == b ? 1 : 0);
+		library.add("!=", (a, b) -> a != b ? 1 : 0);
 		library.increaseLevel();
-		library.add("<", (a, b) -> a < b ? 1d : 0d);
-		library.add(">", (a, b) -> a > b ? 1d : 0d);
-		library.add("<=", (a, b) -> a <= b ? 1d : 0d);
-		library.add(">=", (a, b) -> a >= b ? 1d : 0d);
+		library.add("<", (a, b) -> a < b ? 1 : 0);
+		library.add(">", (a, b) -> a > b ? 1 : 0);
+		library.add("<=", (a, b) -> a <= b ? 1 : 0);
+		library.add(">=", (a, b) -> a >= b ? 1 : 0);
 		library.increaseLevel();
-		library.add("&", (a, b) -> (double) (a.intValue() & b.intValue()));
-		library.add("|", (a, b) -> (double) (a.intValue() | b.intValue()));
-		library.add("^", (a, b) -> (double) (a.intValue() ^ b.intValue()));
-		library.add("<<", (a, b) -> (double) (a.intValue() << b.intValue()));
-		library.add(">>", (a, b) -> (double) (a.intValue() >> b.intValue()));
-		library.add(">>>", (a, b) -> (double) (a.intValue() >>> b.intValue()));
+		library.add("&", (a, b) -> a & b);
+		library.add("|", (a, b) -> a | b);
+		library.add("^", (a, b) -> a ^ b);
+		library.add("<<", (a, b) -> a << b);
+		library.add(">>", (a, b) -> a >> b);
+		library.add(">>>", (a, b) -> a >>> b);
 		library.increaseLevel();
 		library.add("+", (a, b) -> a + b);
 		library.add("-", (a, b) -> a - b);
@@ -60,21 +60,21 @@ public class Calculator {
 		library.add("*", (a, b) -> a * b);
 		library.add("/", (a, b) -> a / b);
 		library.increaseLevel();
-		library.add("**", (a, b) -> Math.pow(a, b));
+		library.add("**", (a, b) -> (int) Math.pow(a, b));
 		
 		/* Declares the OPP*/
 		opparser = OperatorPrecedenceParser.fromLibrary(library);
 	}
 	
-	private static double parse(TokenList tl) {
+	private static int parse(TokenList tl) {
 		return parseExpression(tl);
 	}
 	
-	private static double parseExpression(TokenList tl) {
+	private static int parseExpression(TokenList tl) {
 		return opparser.parse(tl);
 	}
 	
-	private static double parsePrimary(TokenList tl) {
+	private static int parsePrimary(TokenList tl) {
 		if (tl.isNext("-")) {
 			tl.accept("-");
 			return -parsePrimary(tl);
@@ -82,27 +82,27 @@ public class Calculator {
 		if (tl.isNext("abs", "exp", "ln", "sin", "cos", "tan", "sqrt", "cbrt")) {
 			String function = tl.nextString();
 			tl.accept("(");
-			double d = evalFunction(function, parseExpression(tl));
+			int i = (int) evalFunction(function, parseExpression(tl));
 			tl.accept(")");
-			return d;
+			return i;
 		}
 		if (tl.isNext("(")) {
 			tl.accept("(");
-			double d = parseExpression(tl);
+			int i = parseExpression(tl);
 			tl.accept(")");
-			return d;
+			return i;
 		}
 		if (tl.isNext("E")) {
 			tl.accept("E");
-			return Math.E;
+			return (int) Math.E;
 		}
 		if (tl.isNext("PI")) {
 			tl.accept("PI");
-			return Math.PI;
+			return (int) Math.PI;
 		}
 		Token t = tl.seek();
 		try {
-			return Double.parseDouble(tl.nextString());
+			return Integer.parseInt(tl.nextString());
 		} catch (NumberFormatException e) {
 			throw new ParsingException(TokenList.expected(
 								      "-", "(",
@@ -130,7 +130,7 @@ public class Calculator {
 		return -1;
 	}
 
-	public static double eval(String expression) {
+	public static int eval(String expression) {
 		return parse(t.tokenize(expression, "<string>"));
 	}
 }

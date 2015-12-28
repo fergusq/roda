@@ -12,11 +12,14 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.joining;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.Random;
 
 import org.kaivos.röda.Calculator;
 import org.kaivos.röda.IOUtils;
 
 import java.util.Iterator;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 import java.net.URL;
 import java.net.URLConnection;
@@ -27,6 +30,10 @@ import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.File;
+
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 import static org.kaivos.röda.Parser.*;
 
@@ -50,8 +57,8 @@ public class Interpreter {
 		// STRING
 		String text;
 
-		// DOUBLE
-		double number;
+		// INT
+		int number;
 
 		// BOOLEAN
 		boolean bool;
@@ -110,11 +117,11 @@ public class Interpreter {
 			return true;
 		}
 
-		double num() {
+		int num() {
 			if (type == Type.NUMBER) return number;
 			if (type == Type.STRING) {
 				try {
-					return Double.parseDouble(text);
+					return Integer.parseInt(text);
 				} catch (NumberFormatException e) {
 					error("can't convert '" + text + "' to a number");
 				}
@@ -133,9 +140,22 @@ public class Interpreter {
 			return null;
 		}
 
+		RödaValue impliciteResolve() {
+			if (isReference()) return resolve(true);
+			return this;
+		}
+
 		void assign(RödaValue value) {
 			if (type == Type.REFERENCE) {
 				scope.set(target, value);
+				return;
+			}
+			error("can't assign a " + type);
+		}
+
+		void assignLocal(RödaValue value) {
+			if (type == Type.REFERENCE) {
+				scope.setLocal(target, value);
 				return;
 			}
 			error("can't assign a " + type);
@@ -186,6 +206,14 @@ public class Interpreter {
 			return type == Type.FUNCTION || type == Type.NATIVE_FUNCTION;
 		}
 
+		boolean isList() {
+			return type == Type.LIST;
+		}
+		
+		boolean isReference() {
+			return type == Type.REFERENCE;
+		}
+
 		@Override
 		public String toString() {
 			return "RödaValue{str=" + str() + "}";
@@ -211,7 +239,7 @@ public class Interpreter {
 		return val;
 	}
 
-	public static RödaValue valueFromDouble(double number) {
+	public static RödaValue valueFromInt(int number) {
 		RödaValue val = new RödaValue();
 		val.type = RödaValue.Type.NUMBER;
 		val.number = number;
@@ -605,17 +633,40 @@ public class Interpreter {
 					checkNumber("seq", args.get(1));
 					int from = (int) args.get(0).num();
 					int to = (int) args.get(1).num();
-					for (int i = from; i <= to; i++) out.push(valueFromDouble(i));
+					for (int i = from; i <= to; i++) out.push(valueFromInt(i));
 				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false));
 
 		G.setLocal("grep", valueFromNativeFunction("grep", (rawArgs, args, scope, in, out) -> {
-					for (RödaValue input : in) {
-						String text = input.str();
-						for (RödaValue value : args) {
-							checkString("grep", value);
-							String pattern = value.str();
-							if (text.matches(pattern))
-								out.push(input);
+					if (args.size() < 1) argumentUnderflow("grep", 1, 0);
+					checkString("grep", args.get(0));
+					boolean onlyMatching = args.get(0).str().equals("-o");
+					
+					// basic mode
+					if (!onlyMatching) {
+						for (RödaValue input : in) {
+							String text = input.str();
+							for (RödaValue value : args) {
+								checkString("grep", value);
+								String pattern = value.str();
+								if (text.matches(pattern))
+									out.push(input);
+							}
+						}
+					}
+
+					// only matching mode
+					if (onlyMatching) {
+						args.remove(0);
+						for (RödaValue input : in) {
+							String text = input.str();
+							for (RödaValue value : args) {
+								checkString("grep", value);
+								Pattern pattern = Pattern.compile(value.str());
+								Matcher m = pattern.matcher(text);
+								while (m.find()) {
+									out.push(valueFromString(m.group()));
+								}
+							}
 						}
 					}
 				}, Arrays.asList(new Parameter("patterns", false)), true));
@@ -635,6 +686,24 @@ public class Interpreter {
 					}
 				}, Arrays.asList(new Parameter("patterns_and_replacements", false)), true));
 
+		G.setLocal("split", valueFromNativeFunction("split", (rawArgs, args, scope, in, out) -> {
+					String separator = " ";
+					for (int i = 0; i < args.size(); i++) {
+						RödaValue value = args.get(i);
+						checkString("split", value);
+						String str = value.str();
+						if (str.equals("-s")) {
+							RödaValue newSep = args.get(++i);
+							checkString("split", newSep);
+							separator = newSep.str();
+							continue;
+						}
+						for (String s : str.split(separator)) {
+							out.push(valueFromString(s));
+						}
+					}
+				}, Arrays.asList(new Parameter("flags_and_strings", false)), true));
+		
 		G.setLocal("list", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
 				        out.push(valueFromList(args));
 				}, Arrays.asList(new Parameter("values", false)), true));
@@ -647,10 +716,44 @@ public class Interpreter {
 				        out.push(valueFromBoolean(false));
 				}, Arrays.asList(), false));
 
+		Random rnd = new Random();
+		
+		G.setLocal("random", valueFromNativeFunction("random", (rawArgs, args, scope, in, out) -> {
+					final int INTEGER=0,
+						FLOAT=1,
+						BOOLEAN=2;
+					java.util.function.Function<Integer, RödaValue> next = i -> {
+						switch (i) {
+						case INTEGER: return valueFromInt(rnd.nextInt());
+						case FLOAT: return valueFromInt(rnd.nextInt());
+						case BOOLEAN: return valueFromBoolean(rnd.nextBoolean());
+						}
+						return null;
+					};
+					int mode = BOOLEAN;
+					if (args.size() == 1 && args.get(0).type == RödaValue.Type.STRING) {
+						switch (args.get(0).str()) {
+						case "-integer": mode = INTEGER; break;
+						case "-boolean": mode = BOOLEAN; break;
+						case "-float": mode = FLOAT; break;
+						default: error("random: invalid flag " + args.get(0).str());
+						}
+						args.remove(0);
+					}
+					if (args.size() == 0) {
+						out.push(next.apply(mode));
+						return;
+					}
+					for (RödaValue variable : args) {
+						checkReference("random", variable);
+						variable.assign(next.apply(mode));
+					}
+				}, Arrays.asList(new Parameter("flags_and_variables", true)), true));
+		
 		G.setLocal("expr", valueFromNativeFunction("expr", (rawArgs, args, scope, in, out) -> {
 				        String expression = args.stream().map(RödaValue::str).collect(joining(" "));
-					out.push(valueFromDouble(Calculator.eval(expression)));
-				}, Arrays.asList(), true));
+					out.push(valueFromInt(Calculator.eval(expression)));
+				}, Arrays.asList(new Parameter("expressions", false)), true));
 
 		G.setLocal("test", valueFromNativeFunction("test", (rawArgs, args, scope, in, out) -> {
 					checkString("test", args.get(1));
@@ -773,6 +876,7 @@ public class Interpreter {
 					}
 					else try {
 							String useragent = "";
+							String outputFile = "";
 							for (int i = 0; i < args.size(); i++) {
 								RödaValue _arg = args.get(i);
 								checkString("wcat", _arg);
@@ -784,14 +888,25 @@ public class Interpreter {
 									useragent = _ua.str();
 									continue;
 								}
+								if (arg.equals("-O")) {
+									RödaValue _of = args.get(++i);
+									checkString("wcat", _of);
+									outputFile = _of.str();
+									continue;
+								}
 								URL url = new URL(arg);
 								URLConnection c = url.openConnection();
 								if (!useragent.isEmpty())
 									c.setRequestProperty("User-Agent" , useragent);
 								c.connect();
 								InputStream input = c.getInputStream();
-								for (String line : IOUtils.streamIterator(input)) {
-									out.push(valueFromString(line));
+								if (!outputFile.isEmpty()) {
+									Files.copy(input, new File(outputFile).toPath(), StandardCopyOption.REPLACE_EXISTING);
+								}
+								else {
+									for (String line : IOUtils.streamIterator(input)) {
+										out.push(valueFromString(line));
+									}
 								}
 								input.close();
 							}
@@ -830,10 +945,15 @@ public class Interpreter {
 							}
 						};
 						new Thread(input).start();
-						new Thread(output).start();
+						Thread o = new Thread(output);
+						o.start();
+						o.join();
 					} catch (IOException e) {
 						e.printStackTrace();
 						error("exec: io error while executing '" + params.stream().collect(joining(" ")) + "'");
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+						error("exec: threading error while executing '" + params.stream().collect(joining(" ")) + "'");
 					}
 				}, Arrays.asList(new Parameter("command", false), new Parameter("args", false)), true));
 	}
@@ -931,6 +1051,15 @@ public class Interpreter {
 		else return parameters.get(i).reference;
 	}
 
+	private void checkReference(String function, RödaValue arg) {
+		switch (arg.type) {
+		case REFERENCE:
+			return;
+		default:
+			error("illegal argument for '" + function + "': reference expected (got " + arg.type + ")");
+		}
+	}
+	
 	private void checkList(String function, RödaValue arg) {
 		switch (arg.type) {
 		case LIST:
@@ -955,7 +1084,7 @@ public class Interpreter {
 		case NUMBER:
 			return;
 		case STRING:
-			try { Double.parseDouble(arg.text); return; }
+			try { Integer.parseInt(arg.text); return; }
 			catch (NumberFormatException e) {}
 		default:
 			error("illegal argument for '" + function + "': number expected (got " + arg.type + ")");
@@ -1004,15 +1133,38 @@ public class Interpreter {
 				else out.push(rval);
 				return;
 			}
+			if (args.size() == 1) {
+				RödaValue rval = value.resolve(false);
+				if (args.get(0).str().equals("-inc")) {
+					checkNumber("-inc", rval);
+					value.assign(valueFromInt(rval.num()+1));
+					return;
+				}
+				if (args.get(0).str().equals("-dec")) {
+					checkNumber("-dec", rval);
+					value.assign(valueFromInt(rval.num()+1));
+					return;
+				}
+			}
 			if (args.size() == 2) {
 				if (args.get(0).str().equals("-set")) {
 					value.assign(args.get(1));
+					return;
+				}
+				if (args.get(0).str().equals("-create")) {
+					value.assignLocal(args.get(1));
 					return;
 				}
 				if (args.get(0).str().equals("-add")) {
 					RödaValue rval = value.resolve(false);
 					checkList("-add", rval);
 					rval.list.add(args.get(1));
+					return;
+				}
+				if (args.get(0).str().equals("-append")) {
+					RödaValue rval = value.resolve(false);
+					checkString("-append", rval);
+					value.assign(valueFromString(rval.str() + args.get(1).str()));
 					return;
 				}
 			}
@@ -1078,11 +1230,11 @@ public class Interpreter {
 				  RödaStream in, RödaStream out, boolean redirected) {
 		RödaStream _in = in;
 		int i = 0;
-		Thread[] threads = new Thread[statement.commands.size()];
+		Runnable[] threads = new Runnable[statement.commands.size()];
 		for (Command command : statement.commands) {
 			boolean last = i == statement.commands.size()-1;
 			RödaStream _out = last ? out : new RödaStreamImpl();
-			Pair<Thread, StreamType> tr = evalCommand(command, scope,
+			Pair<Runnable, StreamType> tr = evalCommand(command, scope,
 								  in, out,
 								  _in, _out,
 								  !last || redirected);
@@ -1096,9 +1248,10 @@ public class Interpreter {
 		}
 		i = 0;
 		if (threads.length == 1) threads[0].run();
-		else for (Thread t : threads) {
+		else for (Runnable r : threads) {
 			boolean last = i++ == statement.commands.size()-1;
 			try {
+				Thread t = new Thread(r);
 				t.start();
 				if (last) t.join();
 			} catch (InterruptedException e) {
@@ -1143,7 +1296,7 @@ public class Interpreter {
 		}
 	}
 	
-	public Pair<Thread, StreamType> evalCommand(Command cmd, RödaScope scope, RödaStream in, RödaStream out, RödaStream _in, RödaStream _out, boolean canFinish) {
+	public Pair<Runnable, StreamType> evalCommand(Command cmd, RödaScope scope, RödaStream in, RödaStream out, RödaStream _in, RödaStream _out, boolean canFinish) {
 		if (cmd.type == Command.Type.NORMAL) {
 				RödaValue function = evalExpression(cmd.name, scope, in, out);
 				List<RödaValue> args = cmd.arguments.stream().map(a -> evalExpression(a, scope, in, out)).collect(toList());
@@ -1155,7 +1308,7 @@ public class Interpreter {
 				if (function.type == RödaValue.Type.FUNCTION) {
 					ins = function.function.input;
 				} else ins = new ValueStream();
-				return new Pair<>(new Thread(r), ins);
+				return new Pair<>(r, ins);
 		}
 		
 		if (cmd.type == Command.Type.WHILE || cmd.type == Command.Type.IF) {
@@ -1172,7 +1325,23 @@ public class Interpreter {
 				} while (isWhile);
 				if (canFinish) _out.finish();
 			};
-			return new Pair<>(new Thread(r), new ValueStream());
+			return new Pair<>(r, new ValueStream());
+		}
+
+		if (cmd.type == Command.Type.FOR) {
+			RödaValue list = evalExpression(cmd.list, scope, in, out).impliciteResolve();
+			checkList("for", list);
+			Runnable r = () -> {
+				RödaScope newScope = new RödaScope(scope);
+				for (RödaValue val : list.list) {
+					newScope.setLocal(cmd.variable, val);
+					for (Statement s : cmd.body) {
+						evalStatement(s, newScope, _in, _out, false);
+					}
+				}
+				if (canFinish) _out.finish();
+			};
+			return new Pair<>(r, new ValueStream());
 		}
 
 
@@ -1182,33 +1351,32 @@ public class Interpreter {
 
 	public RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
 		if (exp.type == Expression.Type.STRING) return valueFromString(exp.string);
-		if (exp.type == Expression.Type.NUMBER) return valueFromDouble(exp.number);
+		if (exp.type == Expression.Type.NUMBER) return valueFromInt(exp.number);
 		if (exp.type == Expression.Type.BLOCK) return valueFromFunction(exp.block);
 		if (exp.type == Expression.Type.LIST) return valueFromList(exp.list
 									   .stream()
 									   .map(e
 										->
 										evalExpression(e, scope, in, out)
+										.impliciteResolve()
 										)
 									   .collect(toList()));
 		if (exp.type == Expression.Type.LENGTH
 		    || exp.type == Expression.Type.ELEMENT
 		    || exp.type == Expression.Type.SLICE) {
-			RödaValue list = evalExpression(exp.sub, scope, in, out);
-			if (list.type == RödaValue.Type.REFERENCE) {
-				list = list.resolve(true);
-			}
+			RödaValue list = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 			
 			if (exp.type == Expression.Type.LENGTH) {
-				if (list.type != RödaValue.Type.LIST) error("a " + list.type + " doesn't have a length!");
-				return valueFromDouble(list.list.size());
+				if (!list.isList()) error("a " + list.type + " doesn't have a length!");
+				return valueFromInt(list.list.size());
 			}
 
-			if (list.type != RödaValue.Type.LIST) error("a " + list.type + " doesn't have elements!");
+			if (!list.isList()) error("a " + list.type + " doesn't have elements!");
 			
 			if (exp.type == Expression.Type.ELEMENT) {
-				int index = (int) evalExpression(exp.index, scope, in, out).num();
+				int index = (int) evalExpression(exp.index, scope, in, out).impliciteResolve().num();
 				if (index < 0) index = list.list.size()+index;
+				if (list.list.size() <= index) error("array index out of bounds: index " + index + ", size " + list.list.size());
 				return list.list.get(index);
 			}
 
@@ -1216,11 +1384,13 @@ public class Interpreter {
 				int start, end;
 
 				if (exp.index1 != null)
-					start = (int) evalExpression(exp.index1, scope, in, out).num();
+					start = (int) evalExpression(exp.index1, scope, in, out)
+						.impliciteResolve().num();
 				else start = 0;
 
 				if (exp.index2 != null)
-					end = (int) evalExpression(exp.index2, scope, in, out).num();
+					end = (int) evalExpression(exp.index2, scope, in, out)
+						.impliciteResolve().num();
 				else end = list.list.size();
 				
 			        if (start < 0) start = list.list.size()+start;
@@ -1229,6 +1399,22 @@ public class Interpreter {
 
 				return valueFromList(list.list.subList(start, end));
 			}
+		}
+		if (exp.type == Expression.Type.CONCAT) {
+			RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
+			RödaValue val2 = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
+			return concat(val1, val2);
+		}
+		if (exp.type == Expression.Type.JOIN) {
+			RödaValue list = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
+			String separator = evalExpression(exp.exprB, scope, in, out).impliciteResolve().str();
+			if (!list.isList()) error("can't join a " + list.type);
+			String text = "";
+			int i = 0; for (RödaValue val : list.list) {
+				if (i++ != 0) text += separator;
+				text += val.str();
+			}
+			return valueFromString(text);
 		}
 		if (exp.type == Expression.Type.STATEMENT) {
 			RödaStream _out = makeStream(new ValueStream(), new ValueStream());
@@ -1246,5 +1432,23 @@ public class Interpreter {
 
 		error("unknown expression type " + exp.type);
 		return null;
+	}
+
+	private RödaValue concat(RödaValue val1, RödaValue val2) {
+		if (val1.isList()) {
+			List<RödaValue> newList = new ArrayList<>();
+			for (RödaValue val : val1.list) {
+				newList.add(concat(val, val2));
+			}
+			return valueFromList(newList);
+		}
+		if (val2.isList()) {
+			List<RödaValue> newList = new ArrayList<>();
+			for (RödaValue val : val2.list) {
+				newList.add(concat(val1, val));
+			}
+			return valueFromList(newList);
+		}
+		return valueFromString(val1.str()+val2.str());
 	}
 }

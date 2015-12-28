@@ -21,6 +21,7 @@ import org.kaivos.röda.Interpreter.VoidStream;
 public class Parser {
 	public static final TokenScanner t = new TokenScanner()
 		.addOperatorRule("...")
+		.addOperatorRule("..")
 		.addOperatorRule("->")
 		.addOperators("<>()[]{}|&.:;=#%\n")
 		.addPatternRule(Pattern.compile("[0-9]+\\.[0-9]+"))
@@ -36,9 +37,10 @@ public class Parser {
 	private static void newline(TokenList tl) {
 		if (tl.isNext("\n")) {
 			tl.accept("\n");
-			return;
 		}
-		tl.accept(";");
+		else {
+			tl.accept(";");
+		}
 		maybeNewline(tl);
 	}
 
@@ -195,12 +197,15 @@ public class Parser {
 		enum Type {
 			NORMAL,
 			WHILE,
-			IF
+			IF,
+			FOR
 		}
 		Type type;
 		Expression name;
 		List<Expression> arguments;
 		Statement cond;
+		String variable;
+		Expression list;
 		List<Statement> body;
 		Command() {} // käytä apufunktioita alla
 	}
@@ -225,6 +230,15 @@ public class Parser {
 		Command cmd = new Command();
 		cmd.type = Command.Type.IF;
 		cmd.cond = cond;
+		cmd.body = body;
+		return cmd;
+	}
+	
+	static Command _makeForCommand(String variable, Expression list, List<Statement> body) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.FOR;
+		cmd.variable = variable;
+		cmd.list = list;
 		cmd.body = body;
 		return cmd;
 	}
@@ -259,6 +273,23 @@ public class Parser {
 			return _makeIfCommand(cond, body);
 		}
 
+		if (tl.isNext("for")) {
+			tl.accept("for");
+			String variable = tl.nextString();
+			tl.accept("in");
+			Expression list = parseExpression(tl);
+			maybeNewline(tl);
+			tl.accept("do");
+			maybeNewline(tl);
+			List<Statement> body = new ArrayList<>();
+			while (!tl.isNext("done")) {
+				body.add(parseStatement(tl));
+				newline(tl);
+			}
+			tl.accept("done");
+			return _makeForCommand(variable, list, body);
+		}
+
 		Expression name = parseExpression(tl);
 		List<Expression> arguments = new ArrayList<>();
 		while (!tl.isNext("|") && !tl.isNext(";") && !tl.isNext("\n") && !tl.isNext(")") && !tl.isNext("}") && !tl.isNext("<EOF>")) {
@@ -278,68 +309,126 @@ public class Parser {
 			LIST,
 			LENGTH,
 			ELEMENT,
-			SLICE
+			SLICE,
+			CONCAT,
+			JOIN
 		}
 		Type type;
 		String variable;
 		String string;
-		double number;
+		int number;
 		Statement statement;
 		Function block;
 		List<Expression> list;
-		Expression sub, index, index1, index2;
-		
-		Expression(Type type, String t) {
-			this.type = type;
-			if (type == Type.VARIABLE) variable = t;
-			else string = t;
-		}
-
-		Expression(double d) {
-			this.type = Type.NUMBER;
-			this.number = d;
-		}
-
-		Expression(Statement statement) {
-			this.type = Type.STATEMENT;
-			this.statement = statement;
-		}
-
-		Expression(Function block) {
-			this.type = Type.BLOCK;
-			this.block = block;
-		}
-
-		Expression(List<Expression> list) {
-			this.type = Type.LIST;
-			this.list = list;
-		}
-
-		Expression(Expression sub) {
-			this.type = Type.LENGTH;
-			this.sub = sub;
-		}
-
-		Expression(Expression list, Expression index) {
-			this.type = Type.ELEMENT;
-			this.sub = list;
-			this.index = index;
-		}
-
-		Expression(Expression list, Expression index1, Expression index2) {
-			this.type = Type.SLICE;
-			this.sub = list;
-			this.index1 = index1;
-			this.index2 = index2;
-		}
+		Expression sub, index, index1, index2, exprA, exprB;		
 	}
 
+	private static Expression expressionVariable(String t) {
+		Expression e = new Expression();
+		e.type = Expression.Type.VARIABLE;
+		e.variable = t;
+		return e;
+	}
+
+	private static Expression expressionString(String t) {
+		Expression e = new Expression();
+		e.type = Expression.Type.STRING;
+		e.string = t;
+		return e;
+	}
+
+	private static Expression expressionInt(int d) {
+		Expression e = new Expression();
+		e.type = Expression.Type.NUMBER;
+		e.number = d;
+		return e;
+	}
+
+	private static Expression expressionStatement(Statement statement) {
+		Expression e = new Expression();
+		e.type = Expression.Type.STATEMENT;
+		e.statement = statement;
+		return e;
+	}
+
+	private static Expression expressionFunction(Function block) {
+		Expression e = new Expression();
+		e.type = Expression.Type.BLOCK;
+		e.block = block;
+		return e;
+	}
+
+	private static Expression expressionList(List<Expression> list) { 
+		Expression e = new Expression();
+		e.type = Expression.Type.LIST;
+		e.list = list;
+		return e;
+	}
+
+	private static Expression expressionLength(Expression sub) {
+		Expression e = new Expression();
+		e.type = Expression.Type.LENGTH;
+		e.sub = sub;
+		return e;
+	}
+
+	private static Expression expressionElement(Expression list, Expression index) {
+		Expression e = new Expression();
+		e.type = Expression.Type.ELEMENT;
+		e.sub = list;
+		e.index = index;
+		return e;
+	}
+
+	private static Expression expressionSlice(Expression list, Expression index1, Expression index2) {
+		Expression e = new Expression();
+		e.type = Expression.Type.SLICE;
+		e.sub = list;
+		e.index1 = index1;
+		e.index2 = index2;
+		return e;
+	}
+
+	private static Expression expressionConcat(Expression a, Expression b) {
+		Expression e = new Expression();
+		e.type = Expression.Type.CONCAT;
+		e.exprA = a;
+		e.exprB = b;
+		return e;
+	}
+
+	private static Expression expressionJoin(Expression a, Expression b) {
+		Expression e = new Expression();
+		e.type = Expression.Type.JOIN;
+		e.exprA = a;
+		e.exprB = b;
+		return e;
+	}
+	
 	static Expression parseExpression(TokenList tl) {
+		Expression ans = parseExpressionConcat(tl);
+		while (tl.isNext("&")) {
+			tl.accept("&");
+			ans = expressionJoin(ans, parseExpressionPrimary(tl));
+		}
+		return ans;
+	}
+	
+	static Expression parseExpressionConcat(TokenList tl) {
+		Expression ans = parseExpressionPrimary(tl);
+		while (tl.isNext("..")) {
+			tl.accept("..");
+			ans = expressionConcat(ans, parseExpressionPrimary(tl));
+		}
+		return ans;
+	}
+	
+	static Expression parseExpressionPrimary(TokenList tl) {
 		Expression ans;
 		if (tl.isNext("#")) {
 			tl.accept("#");
 			Expression e = parseExpression(tl);
-			ans = new Expression(e);
+			ans = expressionLength(e);
 		}
 		else if (tl.isNext("{")) {
 			StreamType input = new ValueStream();
@@ -354,7 +443,7 @@ public class Parser {
 			}
 			maybeNewline(tl);
 			tl.accept("}");
-			ans = new Expression(new Function("<block>", new ArrayList<>(), false, input, output, body));
+			ans = expressionFunction(new Function("<block>", new ArrayList<>(), false, input, output, body));
 		}
 		else if (tl.isNext("!")) {
 			tl.accept("!");
@@ -363,7 +452,7 @@ public class Parser {
 			Statement s = parseStatement(tl);
 			maybeNewline(tl);
 			tl.accept(")");
-			ans = new Expression(s);
+			ans = expressionStatement(s);
 		}
 		else if (tl.isNext("(")) {
 			tl.accept("(");
@@ -372,22 +461,22 @@ public class Parser {
 				list.add(parseExpression(tl));
 			}
 			tl.accept(")");
-			ans = new Expression(list);
+			ans = expressionList(list);
 		}
 		else if (tl.isNext("\"")) {
 			tl.accept("\"");
 			String s = tl.nextString();
 			tl.accept("\"");
-		        ans = new Expression(Expression.Type.STRING, s);
+		        ans = expressionString(s);
 		}
-		else if (tl.seekString().matches("[0-9]+(\\.[0-9]+)?")) {
-			ans = new Expression(Double.parseDouble(tl.nextString()));
+		else if (tl.seekString().matches("[0-9]+")) {
+			ans = expressionInt(Integer.parseInt(tl.nextString()));
 		}
 		else if (tl.seekString().startsWith("-")) {
-			ans = new Expression(Expression.Type.STRING, tl.nextString());
+			ans = expressionString(tl.nextString());
 		}
 		else if (tl.isNext("<EOF>")) throw new ParsingException(TokenList.expected("#", "(", "{", "!", "<identifier>", "<number>", "<string>"), tl.next());
-		else ans = new Expression(Expression.Type.VARIABLE, tl.nextString()); // TODO validointi
+		else ans = expressionVariable(tl.nextString()); // TODO validointi
 
 		while (tl.isNext("[")) {
 			tl.accept("[");
@@ -395,9 +484,9 @@ public class Parser {
 			if (tl.isNext(":")) {
 				tl.accept(":");
 				Expression e2 = tl.isNext("]") ? null : parseExpression(tl);
-				ans = new Expression(ans, e1, e2);
+				ans = expressionSlice(ans, e1, e2);
 			}
-			else ans = new Expression(ans, e1);
+			else ans = expressionElement(ans, e1);
 			tl.accept("]");
 		}
 
