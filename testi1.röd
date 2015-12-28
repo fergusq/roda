@@ -20,7 +20,7 @@ main {
 	seq 1 10 | while pull -r arvo; do
 		echo arvo
 	done
-	("sakka" "banaani" "vakka") | grep ".akka" | sed "v" "p" | while pull -r arvo; do
+	("sakka" "banaani" "vakka") | grep ".akka" | replace "v" "p" | while pull -r arvo; do
 		echo arvo
 	done
 	echo !(list "koe" "eok\\")[0]
