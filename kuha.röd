@@ -1,0 +1,127 @@
+hae_kuva sana mones montako {
+	/* asetukset */
+	user_agent -set "Links (2.7; Linux 3.5.0-17-generic x86_64; GNU C 4.7.1; text)"
+	hakukone -set "http://images.google.com/images?q="..sana.."&lr=lang_fi&cr=countryFI"
+	etsitty_url -set "http://t[0-9]\\.gstatic.com/images\\?q=tbn:[a-zA-Z0-9_-]*"
+
+	/* haetaan lista kuvista */
+	kuvat -set !(wcat -U user_agent hakukone | grep -o etsitty_url)
+
+	/* jos kuvia löytyi... */
+	if test #kuvat -gt 0; do
+
+		/* valitaan ensimmäinen kuva */
+		kuva -set kuvat[0]
+
+		/* ladataan kuva */
+		wcat -O mones kuva
+
+		/* palautetaan svg-teksti tarvittaessa */
+		if test montako -not-eq ""; do
+			x_koordinaatti -set !(expr mones "*500/" montako)[0]
+			leveys -set !(expr "500/" montako)[0]
+			push "<image xlink:href='"..mones.."' preserveAspectRatio='none' x='"..x_koordinaatti.."' y='50' width='"..leveys.."' height='150' style='opacity:0.4;'/>"
+		done
+	done
+}
+
+tee_pilakuva nettikuvat ylä ala tiedosto {
+	push "<?xml version='1.0' encoding='UTF-8'?>
+<svg
+ xmlns='http://www.w3.org/2000/svg'
+ xmlns:xlink='http://www.w3.org/1999/xlink' version='1.1'
+ viewBox='0 0 500 244'>
+<style type=\"text/css\">@font-face{font-family:'imppa';src:url('Impact.ttf');}text{font-family:'serif';font-size:35px;fill:white;stroke:black;stroke-width:2px;text-anchor:middle}</style>
+<image xlink:href='kuha.jpg' x='0' y='0' width='500' height='244'/>
+"..nettikuvat.."
+<text x='50%' y='14%'>"..ylä.."</text>
+<text x='50%' y='98%'>"..ala.."</text>
+</svg>" | write "kuha.svg"
+        {} | exec "rsvg-convert" -o tiedosto "kuha.svg"
+}
+
+käsittele_kuhaviesti ketju viesti {
+	/* esikäsitellään viesti */
+	viesti -set !(push viesti | replace "kunhan" "kuha" "Kunhan" "Kuha" "<([^<]+)>" "-\\1-")[0]
+
+	push "käsitellään viesti '" viesti "'\n"
+	
+	/* jaetaan viesti sanoihin */
+	sanat -create !(split viesti)
+	montako -create #sanat
+
+	/* erillinen lista niistä sanoista, joista otetaan kuvia, oletuksena kaikki sanat */
+	kuvasanat -create sanat
+	kuvamontako -create montako
+
+	/* jos kuvia tulisi liikaa, valitaan satunnaisesti vain osa */
+	if test kuvamontako -gt 10; do
+		kuvasanat -set ()
+		kuvamontako -set 5
+
+		/* hypitään satunnaisesti joidenkin kuvien yli */
+		i -create 0
+		while test #kuvasanat -lt 5; do
+			kuvasanat -add sanat[i]
+			i -inc
+			if random; do
+				i -inc
+			done
+		done
+	done
+
+	/* haetaan netistä kivoja kuvia */
+	nettikuvat -create ""
+	laskuri -create 0
+	for sana in kuvasanat; do
+		nettikuvat -append !(hae_kuva sana laskuri kuvamontako)[0]
+		laskuri -inc
+	done
+
+	/* jaetaan sanat kahtia ja tehdään kuva */
+	puoliväli -create !(expr montako "/2")[0]
+	tee_pilakuva nettikuvat sanat[:puoliväli]&" " sanat[puoliväli:]&" " "kuhaonmeemi.png"
+
+	/* lähetetään kuva ketjuun */
+	lähetä_kuva ketju "kuhaonmeemi.png"
+}
+
+lähetä_kuva ketju kuva {
+	{} | exec "curl" --silent tg_photo -F "chat_id="..ketju -F "photo=@"..kuva | {}
+}
+
+main {
+	/* alustetaan botti */
+	token -create "<token>"
+	base_url -create "https://api.telegram.org/bot"..token
+	tg_update -create base_url.."/getUpdates?offset="
+	tg_message -create base_url.."/sendMessage"
+	tg_photo -create base_url.."/sendPhoto"
+
+	offset -create 0
+
+	/* pääsilmukka */
+	while true; do
+		
+		/* haetaan uusimmat päivitykset */
+		päivitykset -create !(wcat tg_update..offset)
+		
+		/* etsitään viestit */
+		offsets -set !(päivitykset | grep -o "(?<=\"update_id\":)[0-9]+")
+		ketjut -create !(päivitykset | grep -o "(?<=\"chat\":\\{\"id\"\\:)[0-9]+")
+		viestit -create !(päivitykset | grep -o "(?<=\"text\":\").*(?=\")")
+
+		/* jos viesti löytyi */
+		if test #viestit -ge 1; do
+
+			/* jos viesti on kuhavitsi, tehdään siitä hauska kuva */
+			if test #!(push viestit[0] | grep ".*[Kk][Uu][Hh][Aa].*") -gt 0; do
+				käsittele_kuhaviesti ketjut[0] viestit[0]
+			done
+
+			/* päivitetään offsettiä */
+			offset -set offsets[0]
+			offset -inc
+		done
+	done
+}
