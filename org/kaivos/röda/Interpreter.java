@@ -21,6 +21,7 @@ import org.kaivos.röda.IOUtils;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.PatternSyntaxException;
 
 import java.net.URL;
 import java.net.URLConnection;
@@ -674,16 +675,20 @@ public class Interpreter {
 
 		G.setLocal("replace", valueFromNativeFunction("replace", (rawArgs, args, scope, in, out) -> {
 					if (args.size() % 2 != 0) error("invalid arguments for replace: even number required (got " + args.size() + ")");
-					for (RödaValue input : in) {
-						String text = input.str();
-						for (int i = 0; i < args.size(); i+=2) {
-							checkString("replace", args.get(i));
-							checkString("replace", args.get(i+1));
-							String pattern = args.get(i).str();
-							String replacement = args.get(i+1).str();
-							text = text.replaceAll(pattern, replacement);
+					try {
+						for (RödaValue input : in) {
+							String text = input.str();
+							for (int i = 0; i < args.size(); i+=2) {
+								checkString("replace", args.get(i));
+								checkString("replace", args.get(i+1));
+								String pattern = args.get(i).str();
+								String replacement = args.get(i+1).str();
+								text = text.replaceAll(pattern, replacement);
+							}
+							out.push(valueFromString(text));
 						}
-						out.push(valueFromString(text));
+					} catch (PatternSyntaxException e) {
+						error("replace: pattern syntax error: " + e.getMessage());
 					}
 				}, Arrays.asList(new Parameter("patterns_and_replacements", false)), true));
 
@@ -1195,7 +1200,28 @@ public class Interpreter {
 					return;
 				}
 			}
-			error("illegal arguments for a variable '" + value.target + "': " + args.stream().map(a->a.str()).collect(joining(" ")));
+			if (args.get(0).str().equals("-replace")) {
+				if (args.size() % 2 != 1) error("invalid arguments for -replace: even number required (got " + (args.size()-1) + ")");
+				RödaValue rval = value.resolve(false);
+				checkString("-replace", rval);
+				
+				String text = rval.str();
+
+				try {
+					for (int j = 1; j < args.size(); j+=2) {
+						checkString(value.target + " -replace", args.get(j));
+						checkString(value.target + " -replace", args.get(j+1));
+						String pattern = args.get(j).str();
+						String replacement = args.get(j+1).str();
+						text = text.replaceAll(pattern, replacement);
+					}
+				} catch (PatternSyntaxException e) {
+					error("replace: pattern syntax error: " + e.getMessage());
+				}
+				value.assign(valueFromString(text));
+				return;
+			}
+			error("illegal arguments for a variable '" + value.target + "': " + args.stream().map(a->a.str()).collect(joining(" ")) + "; perhaps you tried to call a function that doesn't exist?");
 			return;
 		}
 		if (value.type == RödaValue.Type.LIST) {
