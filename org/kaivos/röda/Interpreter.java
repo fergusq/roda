@@ -1492,6 +1492,9 @@ public class Interpreter {
 			RödaValue list = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 			
 			if (exp.type == Expression.Type.LENGTH) {
+				if (list.isString()) {
+					return valueFromInt(list.str().length());
+				}
 				if (!list.isList()) error("a " + list.type + " doesn't have a length!");
 				return valueFromInt(list.list.size());
 			}
