@@ -28,9 +28,10 @@ public class Parser {
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
 		.addStringRule('"','"','\\')
-		.addEscapeCode('\\', '\\')
-		.addEscapeCode('n', '\n')
-		.addEscapeCode('t', '\t')
+		.addEscapeCode('\\', "\\")
+		.addEscapeCode('n', "\n")
+		.addEscapeCode('t', "\t")
+		.addCharacterEscapeCode('x', 2, 16)
 		.dontIgnore('\n') // TODO
 		.appendOnEOF("<EOF>");
 

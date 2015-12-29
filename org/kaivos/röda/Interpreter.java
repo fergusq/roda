@@ -16,9 +16,12 @@ import java.util.function.Supplier;
 import java.util.Random;
 
 import org.kaivos.röda.Calculator;
+import org.kaivos.röda.JSON;
+import org.kaivos.röda.JSON.JSONElement;
 import org.kaivos.röda.IOUtils;
 
 import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.regex.PatternSyntaxException;
@@ -210,6 +213,10 @@ public class Interpreter {
 
 		boolean isList() {
 			return type == Type.LIST;
+		}
+
+		boolean isString() {
+			return type == Type.STRING || type == Type.NUMBER;
 		}
 		
 		boolean isReference() {
@@ -709,6 +716,46 @@ public class Interpreter {
 						}
 					}
 				}, Arrays.asList(new Parameter("flags_and_strings", false)), true));
+
+		G.setLocal("json", valueFromNativeFunction("json", (rawArgs, args, scope, in, out) -> {
+					boolean _stringOutput = false;
+					while (args.size() > 0
+					       && args.get(0).isString()
+					       && args.get(0).str().startsWith("-")) {
+						String flag = args.get(0).str();
+						if (flag.equals("-s")) _stringOutput = true;
+						else error("json: unknown option " + flag);
+						args.remove(0);
+					}
+					boolean stringOutput = _stringOutput;
+					Consumer<String> handler = code -> {
+						JSONElement json = JSON.parseJSON(code);
+						for (JSONElement element : json) {
+							if (!stringOutput) {
+								RödaValue path = valueFromList(element.getPath().stream()
+											       .map(jk -> valueFromString(jk.toString()) )
+											       .collect(toList()));
+								RödaValue value = valueFromString(element.toString());
+								out.push(valueFromList(Arrays.asList(path, value)));
+							} else {
+								out.push(valueFromString(element.getPath().toString() + " " + element.toString()));
+							}
+						}
+					};
+					if (args.size() > 1) argumentOverflow("json", 1, args.size());
+					else if (args.size() == 1) {
+						RödaValue arg = args.get(0);
+						checkString("json", arg);
+						String code = arg.str();
+						handler.accept(code);
+					}
+					else {
+						for (RödaValue value : in) {
+							String code = value.str();
+							handler.accept(code);
+						}
+					}
+				}, Arrays.asList(new Parameter("flags_and_code", false)), true));
 		
 		G.setLocal("list", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
 				        out.push(valueFromList(args));
@@ -1036,8 +1083,10 @@ public class Interpreter {
 	
 	private static void error(String message) {
 		System.err.println("FATAL ERROR: " + message);
-		for (String s : callStack.get()) {
-			System.err.println(s);
+		Stack<String> stack = callStack.get();
+		ListIterator iterator = stack.listIterator(stack.size());
+		while (iterator.hasPrevious()) {
+			System.err.println(iterator.previous());
 		}
 		System.exit(1);
 	}
@@ -1047,20 +1096,30 @@ public class Interpreter {
 	}
 	
 	public void interpret(String code, String filename) {
-		Program program = parse(t.tokenize(code, filename));
-		for (Function f : program.functions) {
-			G.setLocal(f.name, valueFromFunction(f));
+		try {
+			Program program = parse(t.tokenize(code, filename));
+			for (Function f : program.functions) {
+				G.setLocal(f.name, valueFromFunction(f));
+			}
+			
+			RödaValue main = G.resolve("main");
+			if (main == null) return;
+			
+			exec("<runtime>", 0, main, new ArrayList<>(), G, STDIN, STDOUT);
+		} catch (Exception e) {
+			e.printStackTrace();
+			error("java exception");
 		}
-		
-		RödaValue main = G.resolve("main");
-		if (main == null) return;
-		
-		exec(main, new ArrayList<>(), G, STDIN, STDOUT);
 	}
 
 	public void interpretStatement(String code, String filename) {
-		Statement statement = parseStatement(t.tokenize(code, filename));
-		evalStatement(statement, G, STDIN, STDOUT, false);
+		try {
+			Statement statement = parseStatement(t.tokenize(code, filename));
+			evalStatement(statement, G, STDIN, STDOUT, false);
+		} catch (Exception e) {
+			e.printStackTrace();
+			error("java exception");
+		} 
 	}
 	
 	private boolean isReferenceParameter(RödaValue function, int i) {
@@ -1125,9 +1184,10 @@ public class Interpreter {
 	private void argumentUnderflow(String function, int required, int got) {
 		error("illegal number of arguments for '" + function + "': at least " + required + " required (got " + got + ")");
 	}
-	
-	public void exec(RödaValue value, List<RödaValue> rawArgs, RödaScope scope,
-			 RödaStream in, RödaStream out) {
+
+	private void exec(String file, int line,
+			  RödaValue value, List<RödaValue> rawArgs, RödaScope scope,
+			  RödaStream in, RödaStream out) {
 		List<RödaValue> args = new ArrayList<>();
 		int i = 0;
 		for (RödaValue val : rawArgs) {
@@ -1144,6 +1204,17 @@ public class Interpreter {
 			else args.add(val);
 			i++;
 		}
+		
+		callStack.get().push("calling " + value.str()
+				     + " with arguments " + args.stream().map(RödaValue::str).collect(joining(", "))
+				     + "\n\tat " + file + ":" + line);
+		execWithoutErrorHandling(value, rawArgs, args, scope, in, out);
+		callStack.get().pop();
+	}
+	
+	public void execWithoutErrorHandling(RödaValue value, List<RödaValue> rawArgs, List<RödaValue> args,
+					     RödaScope scope, RödaStream in, RödaStream out) {
+		
 		//callStack.push("exec " + value + "("+args+") " + in + " -> " + out);
 		if (value.type == RödaValue.Type.REFERENCE) {
 			if (args.isEmpty()) {
@@ -1295,6 +1366,10 @@ public class Interpreter {
 			boolean last = i++ == statement.commands.size()-1;
 			try {
 				Thread t = new Thread(r);
+				t.setUncaughtExceptionHandler((thread, exception) -> {
+						exception.printStackTrace();
+						error("java exception");
+					});
 				t.start();
 				if (last) t.join();
 			} catch (InterruptedException e) {
@@ -1344,9 +1419,7 @@ public class Interpreter {
 				RödaValue function = evalExpression(cmd.name, scope, in, out);
 				List<RödaValue> args = cmd.arguments.stream().map(a -> evalExpression(a, scope, in, out)).collect(toList());
 				Runnable r = () -> {
-					callStack.get().push("calling " + function.str() + " at " + cmd.file + ":" + cmd.line);
-					exec(function, args, scope, _in, _out);
-					callStack.get().pop();
+					exec(cmd.file, cmd.line, function, args, scope, _in, _out);
 					if (canFinish) _out.finish();
 				};
 				StreamType ins;
@@ -1395,7 +1468,7 @@ public class Interpreter {
 	}
 
 	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
-		callStack.get().push("expression " + exp.type + " at " + exp.file + ":" + exp.line);
+		callStack.get().push("expression " + exp.type + "\n\tat " + exp.file + ":" + exp.line);
 		RödaValue value = evalExpressionWithoutErrorHandling(exp, scope, in, out);
 		callStack.get().pop();
 		return value;
