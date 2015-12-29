@@ -59,6 +59,9 @@ public class Parser {
 	
 	static Program parse(TokenList tl) {
 		//System.err.println(tl);
+
+		maybeNewline(tl);
+
 		List<Function> list = new ArrayList<>();
 		while (!tl.isNext("<EOF>")) {
 			list.add(parseFunction(tl));
