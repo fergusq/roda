@@ -74,7 +74,7 @@ käsittele_kuhaviesti ketju viesti {
 	nettikuvat -create ""
 	laskuri -create 0
 	for sana in kuvasanat; do
-		nettikuvat -append !(hae_kuva sana laskuri kuvamontako)[0]
+		nettikuvat -append !(hae_kuva sana laskuri kuvamontako)&" "
 		laskuri -inc
 	done
 
