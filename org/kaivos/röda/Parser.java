@@ -208,35 +208,45 @@ public class Parser {
 		Expression list;
 		List<Statement> body;
 		Command() {} // käytä apufunktioita alla
+		String file;
+		int line;
 	}
 	
-	static Command _makeNormalCommand(Expression name, List<Expression> arguments) {
+	static Command _makeNormalCommand(String file, int line, Expression name, List<Expression> arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.NORMAL;
+		cmd.file = file;
+		cmd.line = line;
 		cmd.name = name;
 		cmd.arguments = arguments;
 		return cmd;
 	}
 
-	static Command _makeWhileCommand(Statement cond, List<Statement> body) {
+	static Command _makeWhileCommand(String file, int line, Statement cond, List<Statement> body) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.WHILE;
+		cmd.file = file;
+		cmd.line = line;
 		cmd.cond = cond;
 		cmd.body = body;
 		return cmd;
 	}
 
-	static Command _makeIfCommand(Statement cond, List<Statement> body) {
+	static Command _makeIfCommand(String file, int line, Statement cond, List<Statement> body) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.IF;
+		cmd.file = file;
+		cmd.line = line;
 		cmd.cond = cond;
 		cmd.body = body;
 		return cmd;
 	}
 	
-	static Command _makeForCommand(String variable, Expression list, List<Statement> body) {
+	static Command _makeForCommand(String file, int line, String variable, Expression list, List<Statement> body) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.FOR;
+		cmd.file = file;
+		cmd.line = line;
 		cmd.variable = variable;
 		cmd.list = list;
 		cmd.body = body;
@@ -244,6 +254,8 @@ public class Parser {
 	}
 	
 	static Command parseCommand(TokenList tl) {
+		String file = tl.seek().getFile();
+		int line = tl.seek().getLine();
 		if (tl.isNext("while")) {
 			tl.accept("while");
 			Statement cond = parseStatement(tl);
@@ -256,7 +268,7 @@ public class Parser {
 				newline(tl);
 			}
 			tl.accept("done");
-			return _makeWhileCommand(cond, body);
+			return _makeWhileCommand(file, line, cond, body);
 		}
 		if (tl.isNext("if")) {
 			tl.accept("if");
@@ -270,7 +282,7 @@ public class Parser {
 				newline(tl);
 			}
 			tl.accept("done");
-			return _makeIfCommand(cond, body);
+			return _makeIfCommand(file, line, cond, body);
 		}
 
 		if (tl.isNext("for")) {
@@ -287,7 +299,7 @@ public class Parser {
 				newline(tl);
 			}
 			tl.accept("done");
-			return _makeForCommand(variable, list, body);
+			return _makeForCommand(file, line, variable, list, body);
 		}
 
 		Expression name = parseExpression(tl);
@@ -296,7 +308,7 @@ public class Parser {
 			arguments.add(parseExpression(tl));
 		}
 
-		return _makeNormalCommand(name, arguments);
+		return _makeNormalCommand(file, line, name, arguments);
 	}
 	
 	static class Expression {
@@ -320,86 +332,111 @@ public class Parser {
 		Statement statement;
 		Function block;
 		List<Expression> list;
-		Expression sub, index, index1, index2, exprA, exprB;		
+		Expression sub, index, index1, index2, exprA, exprB;
+
+		String file;
+		int line;
 	}
 
-	private static Expression expressionVariable(String t) {
+	private static Expression expressionVariable(String file, int line, String t) {
 		Expression e = new Expression();
 		e.type = Expression.Type.VARIABLE;
+		e.file = file;
+		e.line = line;
 		e.variable = t;
 		return e;
 	}
 
-	private static Expression expressionString(String t) {
+	private static Expression expressionString(String file, int line, String t) {
 		Expression e = new Expression();
 		e.type = Expression.Type.STRING;
+		e.file = file;
+		e.line = line;
 		e.string = t;
 		return e;
 	}
 
-	private static Expression expressionInt(int d) {
+	private static Expression expressionInt(String file, int line, int d) {
 		Expression e = new Expression();
 		e.type = Expression.Type.NUMBER;
+		e.file = file;
+		e.line = line;
 		e.number = d;
 		return e;
 	}
 
-	private static Expression expressionStatement(Statement statement) {
+	private static Expression expressionStatement(String file, int line, Statement statement) {
 		Expression e = new Expression();
 		e.type = Expression.Type.STATEMENT;
+		e.file = file;
+		e.line = line;
 		e.statement = statement;
 		return e;
 	}
 
-	private static Expression expressionFunction(Function block) {
+	private static Expression expressionFunction(String file, int line, Function block) {
 		Expression e = new Expression();
 		e.type = Expression.Type.BLOCK;
+		e.file = file;
+		e.line = line;
 		e.block = block;
 		return e;
 	}
 
-	private static Expression expressionList(List<Expression> list) { 
+	private static Expression expressionList(String file, int line, List<Expression> list) { 
 		Expression e = new Expression();
 		e.type = Expression.Type.LIST;
+		e.file = file;
+		e.line = line;
 		e.list = list;
 		return e;
 	}
 
-	private static Expression expressionLength(Expression sub) {
+	private static Expression expressionLength(String file, int line, Expression sub) {
 		Expression e = new Expression();
 		e.type = Expression.Type.LENGTH;
+		e.file = file;
+		e.line = line;
 		e.sub = sub;
 		return e;
 	}
 
-	private static Expression expressionElement(Expression list, Expression index) {
+	private static Expression expressionElement(String file, int line, Expression list, Expression index) {
 		Expression e = new Expression();
 		e.type = Expression.Type.ELEMENT;
+		e.file = file;
+		e.line = line;
 		e.sub = list;
 		e.index = index;
 		return e;
 	}
 
-	private static Expression expressionSlice(Expression list, Expression index1, Expression index2) {
+	private static Expression expressionSlice(String file, int line, Expression list, Expression index1, Expression index2) {
 		Expression e = new Expression();
 		e.type = Expression.Type.SLICE;
+		e.file = file;
+		e.line = line;
 		e.sub = list;
 		e.index1 = index1;
 		e.index2 = index2;
 		return e;
 	}
 
-	private static Expression expressionConcat(Expression a, Expression b) {
+	private static Expression expressionConcat(String file, int line, Expression a, Expression b) {
 		Expression e = new Expression();
 		e.type = Expression.Type.CONCAT;
+		e.file = file;
+		e.line = line;
 		e.exprA = a;
 		e.exprB = b;
 		return e;
 	}
 
-	private static Expression expressionJoin(Expression a, Expression b) {
+	private static Expression expressionJoin(String file, int line, Expression a, Expression b) {
 		Expression e = new Expression();
 		e.type = Expression.Type.JOIN;
+		e.file = file;
+		e.line = line;
 		e.exprA = a;
 		e.exprB = b;
 		return e;
@@ -408,8 +445,10 @@ public class Parser {
 	static Expression parseExpression(TokenList tl) {
 		Expression ans = parseExpressionConcat(tl);
 		while (tl.isNext("&")) {
+			String file = tl.seek().getFile();
+			int line = tl.seek().getLine();
 			tl.accept("&");
-			ans = expressionJoin(ans, parseExpressionPrimary(tl));
+			ans = expressionJoin(file, line, ans, parseExpressionPrimary(tl));
 		}
 		return ans;
 	}
@@ -417,18 +456,22 @@ public class Parser {
 	static Expression parseExpressionConcat(TokenList tl) {
 		Expression ans = parseExpressionPrimary(tl);
 		while (tl.isNext("..")) {
+			String file = tl.seek().getFile();
+			int line = tl.seek().getLine();
 			tl.accept("..");
-			ans = expressionConcat(ans, parseExpressionPrimary(tl));
+			ans = expressionConcat(file, line, ans, parseExpressionPrimary(tl));
 		}
 		return ans;
 	}
 	
 	static Expression parseExpressionPrimary(TokenList tl) {
+		String file = tl.seek().getFile();
+		int line = tl.seek().getLine();
 		Expression ans;
 		if (tl.isNext("#")) {
 			tl.accept("#");
 			Expression e = parseExpression(tl);
-			ans = expressionLength(e);
+			ans = expressionLength(file, line, e);
 		}
 		else if (tl.isNext("{")) {
 			StreamType input = new ValueStream();
@@ -443,7 +486,7 @@ public class Parser {
 			}
 			maybeNewline(tl);
 			tl.accept("}");
-			ans = expressionFunction(new Function("<block>", new ArrayList<>(), false, input, output, body));
+			ans = expressionFunction(file, line, new Function("<block>", new ArrayList<>(), false, input, output, body));
 		}
 		else if (tl.isNext("!")) {
 			tl.accept("!");
@@ -452,7 +495,7 @@ public class Parser {
 			Statement s = parseStatement(tl);
 			maybeNewline(tl);
 			tl.accept(")");
-			ans = expressionStatement(s);
+			ans = expressionStatement(file, line, s);
 		}
 		else if (tl.isNext("(")) {
 			tl.accept("(");
@@ -461,32 +504,34 @@ public class Parser {
 				list.add(parseExpression(tl));
 			}
 			tl.accept(")");
-			ans = expressionList(list);
+			ans = expressionList(file, line, list);
 		}
 		else if (tl.isNext("\"")) {
 			tl.accept("\"");
 			String s = tl.nextString();
 			tl.accept("\"");
-		        ans = expressionString(s);
+		        ans = expressionString(file, line, s);
 		}
 		else if (tl.seekString().matches("[0-9]+")) {
-			ans = expressionInt(Integer.parseInt(tl.nextString()));
+			ans = expressionInt(file, line, Integer.parseInt(tl.nextString()));
 		}
 		else if (tl.seekString().startsWith("-")) {
-			ans = expressionString(tl.nextString());
+			ans = expressionString(file, line, tl.nextString());
 		}
 		else if (tl.isNext("<EOF>")) throw new ParsingException(TokenList.expected("#", "(", "{", "!", "<identifier>", "<number>", "<string>"), tl.next());
-		else ans = expressionVariable(tl.nextString()); // TODO validointi
+		else ans = expressionVariable(file, line, tl.nextString()); // TODO validointi
 
 		while (tl.isNext("[")) {
+			file = tl.seek().getFile();
+			line = tl.seek().getLine();
 			tl.accept("[");
 			Expression e1 = tl.isNext(":") ? null : parseExpression(tl);
 			if (tl.isNext(":")) {
 				tl.accept(":");
 				Expression e2 = tl.isNext("]") ? null : parseExpression(tl);
-				ans = expressionSlice(ans, e1, e2);
+				ans = expressionSlice(file, line, ans, e1, e2);
 			}
-			else ans = expressionElement(ans, e1);
+			else ans = expressionElement(file, line, ans, e1);
 			tl.accept("]");
 		}
 

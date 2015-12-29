@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Stack;
 import java.util.Optional;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.joining;
@@ -1014,9 +1015,20 @@ public class Interpreter {
 	}
 
 	{ initialize(); initializeIO(); }
+
+	public static ThreadLocal<Stack<String>> callStack = new InheritableThreadLocal<Stack<String>>() {
+			@Override protected Stack<String> childValue(Stack<String> parentValue) {
+				return (Stack<String>) parentValue.clone();
+			}
+		};
+
+	static { callStack.set(new Stack<>()); }
 	
 	private static void error(String message) {
 		System.err.println("FATAL ERROR: " + message);
+		for (String s : callStack.get()) {
+			System.err.println(s);
+		}
 		System.exit(1);
 	}
 	
@@ -1122,7 +1134,7 @@ public class Interpreter {
 			else args.add(val);
 			i++;
 		}
-		//System.err.println("exec " + value + "("+args+") " + in + " -> " + out);
+		//callStack.push("exec " + value + "("+args+") " + in + " -> " + out);
 		if (value.type == RödaValue.Type.REFERENCE) {
 			if (args.isEmpty()) {
 				RödaValue rval = value.resolve(false);
@@ -1301,7 +1313,9 @@ public class Interpreter {
 				RödaValue function = evalExpression(cmd.name, scope, in, out);
 				List<RödaValue> args = cmd.arguments.stream().map(a -> evalExpression(a, scope, in, out)).collect(toList());
 				Runnable r = () -> {
+					callStack.get().push("calling " + function.str() + " at " + cmd.file + ":" + cmd.line);
 					exec(function, args, scope, _in, _out);
+					callStack.get().pop();
 					if (canFinish) _out.finish();
 				};
 				StreamType ins;
@@ -1349,7 +1363,14 @@ public class Interpreter {
 		return null;
 	}
 
-	public RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
+	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
+		callStack.get().push("expression " + exp.type + " at " + exp.file + ":" + exp.line);
+		RödaValue value = evalExpressionWithoutErrorHandling(exp, scope, in, out);
+		callStack.get().pop();
+		return value;
+	}
+	
+	private RödaValue evalExpressionWithoutErrorHandling(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
 		if (exp.type == Expression.Type.STRING) return valueFromString(exp.string);
 		if (exp.type == Expression.Type.NUMBER) return valueFromInt(exp.number);
 		if (exp.type == Expression.Type.BLOCK) return valueFromFunction(exp.block);
