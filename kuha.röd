@@ -1,3 +1,4 @@
+/* hakee kuvan netistä */
 hae_kuva sana mones montako {
 	/* asetukset */
 	user_agent -set "Links (2.7; Linux 3.5.0-17-generic x86_64; GNU C 4.7.1; text)"
@@ -25,6 +26,7 @@ hae_kuva sana mones montako {
 	done
 }
 
+/* tekee svg-kuvan */
 tee_pilakuva nettikuvat ylä ala tiedosto {
 	push "<?xml version='1.0' encoding='UTF-8'?>
 <svg
@@ -40,6 +42,7 @@ tee_pilakuva nettikuvat ylä ala tiedosto {
         {} | exec "rsvg-convert" -o tiedosto "kuha.svg"
 }
 
+/* ohjaa kuvan luomista: käsittelee viestin, lataa kuvat, tekee kuhakuvan ja lähettää sen */
 käsittele_kuhaviesti ketju viesti {
 	/* esikäsitellään viesti */
 	viesti -set !(push viesti | replace "kunhan" "kuha" "Kunhan" "Kuha" "<([^<]+)>" "-\\1-")[0]
@@ -86,10 +89,12 @@ käsittele_kuhaviesti ketju viesti {
 	lähetä_kuva ketju "kuhaonmeemi.png"
 }
 
+/* lähettää kuvan telegramissa annettuun ketjuun */
 lähetä_kuva ketju kuva {
 	{} | exec "curl" --silent tg_photo -F "chat_id="..ketju -F "photo=@"..kuva | {}
 }
 
+/* pääfunktio */
 main {
 	/* alustetaan botti */
 	token -create "<token>"
@@ -115,7 +120,7 @@ main {
 		if test #viestit -ge 1; do
 			
 			/* jos viesti on kuhavitsi, tehdään siitä hauska kuva */
-			if test #!(push viestit[0] | grep ".*[Kk][Uu][Hh][Aa].*") -gt 0; do
+			if test viestit[0] -matches ".*[Kk][Uu][Hh][Aa].*"; do
 				käsittele_kuhaviesti ketjut[0] viestit[0]
 			done
 

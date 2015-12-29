@@ -776,24 +776,29 @@ public class Interpreter {
 					case "-weak_eq": {
 						out.push(valueFromBoolean(a1.weakEq(a2)^not));
 					} break;
+					case "-matches": {
+						checkString("test -matches", a1);
+						checkString("test -matches", a2);
+						out.push(valueFromBoolean(a1.str().matches(a2.str())^not));
+					} break;
 					case "-lt": {
-						checkNumber("test", a1);
-						checkNumber("test", a2);
+						checkNumber("test -lt", a1);
+						checkNumber("test -lt", a2);
 						out.push(valueFromBoolean((a1.num() < a2.num())^not));
 					} break;
 					case "-le": {
-						checkNumber("test", a1);
-						checkNumber("test", a2);
+						checkNumber("test -le", a1);
+						checkNumber("test -le", a2);
 						out.push(valueFromBoolean((a1.num() <= a2.num())^not));
 					} break;
 					case "-gt": {
-						checkNumber("test", a1);
-						checkNumber("test", a2);
+						checkNumber("test -gt", a1);
+						checkNumber("test -gt", a2);
 						out.push(valueFromBoolean((a1.num() > a2.num())^not));
 					} break;
 					case "-ge": {
-						checkNumber("test", a1);
-						checkNumber("test", a2);
+						checkNumber("test -ge", a1);
+						checkNumber("test -ge", a2);
 						out.push(valueFromBoolean((a1.num() >= a2.num())^not));
 					} break;
 					default:
