@@ -344,26 +344,26 @@ Merkki `*` tarkoittaa "nolla tai useampi" ja `+` yksi tai useampi.
 
 ### push
 
-`push arvo+`
+>`push arvo+`
 
 Työntää arvot ulostulovirtaan.
 
 ### pull
 
-`pull [-r] muuttuja+`
+>`pull [-r] muuttuja+`
 
 Lukee muuttujaan arvon sisääntulovirrasta. Jos valitsin `-r` on käytössä, palautetaan jokaista onnistunutta
 lukua kohti ulostulovirtaan arvo `true` ja jokaista epäonnistunutta lukua kohti arvo `false`.
 
 ### seq
 
-`seq alku loppu`
+>`seq alku loppu`
 
 Palauttaa kokonaisluvut välillä `[alku, loppu]`.
 
 ### grep
 
-`grep [-o] regex`
+>`grep [-o] regex`
 
 Lukee sisääntulovirrasta merkkijonoarvoja. Jos merkkijono täsmää annettuun säännölliseen lausekkeeseen, se työnnetään
 ulostulovirtaan. Jos valitsinta `-o` (**o**nly-matching) on käytetty, palautetaan merkkijonoista vain ne osat,
@@ -371,21 +371,21 @@ joihin säännöllinen lauseke täsmää.
 
 ### replace
 
-`replace (regex korvaava)+`
+>`replace (regex korvaava)+`
 
 Lukee sisääntulovirrasta merkkijonoarvoja ja työntää ne ulostulovirtaan siten, että niihin on tehty annetut
 korvaukset järjestyksessä. Käyttää sisäisesti Javan `String.replaceAll`-metodia.
 
 ### split
 
-`split [-s regex] merkkijono`
+>`split [-s regex] merkkijono`
 
 Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **separator**) osoittamista kohdista tai
 oletuksena välilyöntien perusteella.
 
 ### json
 
-`json [-i [-s]] [merkkijono]`
+>`json [-i [-s]] [merkkijono]`
 
 Parsii json-koodin, joka on joko annettu argumenttina tai kaikki sisääntulovirrasta annetut json-koodit (ei molempia).
 Palauttaa koodien puut ulostulovirtaan tai, jos valitsin `-i` on annettu, avain-arvo-parit. Lisävalitsin `-s`
@@ -393,39 +393,45 @@ määrittää, että avaimet annetaan merkkijonoina listojen sijaan. (TODO parem
 
 ### list
 
-`list arvo*`
+>`list arvo*`
 
 Palauttaa argumentit listana.
 
 ### true
 
-`true`
+>`true`
 
 Työntää arvon `true` ulostulovirtaan.
 
 ### false
 
-`false`
+>`false`
 
 Työntää arvon `false` ulostulovirtaan.
 
 ### random
 
-`random [-boolean|-float|-integer]`
+>`random [-boolean|-float|-integer]`
 
 Työntää oletuksena satunnaisen totuusarvon ulostulovirtaan.
 Voi myös palauttaa kokonaisluvun tai liukuluvun merkkijonona.
 
+### time
+
+>`time`
+
+Palauttaa nykyisen ajan millisekuntteina.
+
 ### expr
 
-`expr merkkijono+`
+>`expr merkkijono+`
 
 Yhdistää merkkijonot ja antaa lopputuloksen laskimelle, joka palauttaa vastauksen ulostulovirtaan.
 Tukee tällä hetkellä vain kokonaislukuja.
 
 ### test
 
-`test arvo [-not](-eq|-strong_eq|-weak_eq|-matches|-lt|-le|-gt|-ge) arvo`
+>`test arvo [-not](-eq|-strong_eq|-weak_eq|-matches|-lt|-le|-gt|-ge) arvo`
 
 Vertailee kahta arvoa annetulla operaattorilla. Valitsin `-not` tekee vertailusta käänteisen. Sen on oltava
 kiinni isäntävalitsimessa (ei välilyöntiä).
@@ -438,38 +444,38 @@ mutta vaatii muuten tyypeiltä yhtenevyyttä.
 
 ### head
 
-`head [määrä]`
+>`head [määrä]`
 
 Lukee yhden arvon (tai argumenttina annetun määrän arvoja) ja työntää sen/ne ulostulovirtaan.
 
 ### tail
 
-`tail [määrä]`
+>`tail [määrä]`
 
 Lukee kaikki arvot sisääntulovirrasta ja palauttaa viimeisen arvon (tai viimeiset argumenttina annettu määrä arvoa).
 
 ### write
 
-`write tiedoston_nimi`
+>`write tiedoston_nimi`
 
 Lukee kaiken sisääntulovirrasta, muuttaa arvot merkkijonoiksi ja kirjoittaa ne annettuun tiedostoon.
 
 ### cat
 
-`cat tiedosto*`
+>`cat tiedosto*`
 
 Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 
 ### wcat
 
-`wcat ([-O tiedosto] [-U user_agent] osoite)*`
+>`wcat ([-O tiedosto] [-U user_agent] osoite)*`
 
 Lataa tiedostot annetuista Internet-osoitteista mahdollisesti annetuilla user agenteilla
 ja kirjoittaa ne annettuihin tiedostoihin (tai oletuksena rivi kerrallaan ulostulovirtaan).
 
 ### exec
 
-`exec komento argumentit*`
+>`exec komento argumentit*`
 
 Suorittaa annetun ulkoisen komennon annetuilla argumenteilla. Jos komennolle ei halua antaa syötettä tai sen
 ulostuloa ei halua, voi sen putkittaa nimettömälle funktiolle:

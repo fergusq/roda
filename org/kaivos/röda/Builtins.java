@@ -257,6 +257,10 @@ class Builtins {
 				        out.push(valueFromBoolean(false));
 				}, Arrays.asList(), false));
 
+		S.setLocal("time", valueFromNativeFunction("time", (rawArgs, args, scope, in, out) -> {
+				        out.push(valueFromInt((int) System.currentTimeMillis()));
+				}, Arrays.asList(), false));
+
 		Random rnd = new Random();
 		
 		S.setLocal("random", valueFromNativeFunction("random", (rawArgs, args, scope, in, out) -> {
