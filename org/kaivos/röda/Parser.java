@@ -486,23 +486,23 @@ public class Parser {
 	}
 	
 	static Expression parseExpression(TokenList tl) {
-		Expression ans = parseExpressionConcat(tl);
+		Expression ans = parseExpressionJoin(tl);
+		while (tl.isNext("..")) {
+			String file = tl.seek().getFile();
+			int line = tl.seek().getLine();
+			tl.accept("..");
+			ans = expressionConcat(file, line, ans, parseExpressionJoin(tl));
+		}
+		return ans;
+	}
+	
+	static Expression parseExpressionJoin(TokenList tl) {
+		Expression ans = parseExpressionPrimary(tl);
 		while (tl.isNext("&")) {
 			String file = tl.seek().getFile();
 			int line = tl.seek().getLine();
 			tl.accept("&");
 			ans = expressionJoin(file, line, ans, parseExpressionPrimary(tl));
-		}
-		return ans;
-	}
-	
-	static Expression parseExpressionConcat(TokenList tl) {
-		Expression ans = parseExpressionPrimary(tl);
-		while (tl.isNext("..")) {
-			String file = tl.seek().getFile();
-			int line = tl.seek().getLine();
-			tl.accept("..");
-			ans = expressionConcat(file, line, ans, parseExpressionPrimary(tl));
 		}
 		return ans;
 	}
