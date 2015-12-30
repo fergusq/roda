@@ -137,7 +137,7 @@ main {
 							teksti -set text[1]
 						})
 					})
-					käsittele_kuhaviesti ketju viesti
+					käsittele_kuhaviesti ketju teksti
 				done
 			})
 			
