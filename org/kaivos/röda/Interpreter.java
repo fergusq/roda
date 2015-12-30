@@ -18,6 +18,11 @@ import java.util.Random;
 import org.kaivos.röda.Calculator;
 import org.kaivos.röda.JSON;
 import org.kaivos.röda.JSON.JSONElement;
+import org.kaivos.röda.JSON.JSONInteger;
+import org.kaivos.röda.JSON.JSONString;
+import org.kaivos.röda.JSON.JSONList;
+import org.kaivos.röda.JSON.JSONMap;
+
 import org.kaivos.röda.IOUtils;
 
 import java.util.Iterator;
@@ -267,6 +272,10 @@ public class Interpreter {
 		val.type = RödaValue.Type.LIST;
 		val.list = list;
 		return val;
+	}
+
+	public static RödaValue valueFromList(RödaValue... elements) {
+		return valueFromList(new ArrayList<>(Arrays.asList(elements)));
 	}
 	
 	public static RödaValue valueFromFunction(Function function) {
@@ -719,27 +728,66 @@ public class Interpreter {
 
 		G.setLocal("json", valueFromNativeFunction("json", (rawArgs, args, scope, in, out) -> {
 					boolean _stringOutput = false;
+					boolean _iterativeOutput = false;
 					while (args.size() > 0
 					       && args.get(0).isString()
 					       && args.get(0).str().startsWith("-")) {
 						String flag = args.get(0).str();
 						if (flag.equals("-s")) _stringOutput = true;
+						if (flag.equals("-i")) _iterativeOutput = true;
 						else error("json: unknown option " + flag);
 						args.remove(0);
 					}
 					boolean stringOutput = _stringOutput;
+					boolean iterativeOutput = _iterativeOutput;
 					Consumer<String> handler = code -> {
-						JSONElement json = JSON.parseJSON(code);
-						for (JSONElement element : json) {
-							if (!stringOutput) {
-								RödaValue path = valueFromList(element.getPath().stream()
-											       .map(jk -> valueFromString(jk.toString()) )
-											       .collect(toList()));
-								RödaValue value = valueFromString(element.toString());
-								out.push(valueFromList(Arrays.asList(path, value)));
-							} else {
-								out.push(valueFromString(element.getPath().toString() + " " + element.toString()));
+						JSONElement root = JSON.parseJSON(code);
+						if (iterativeOutput) {
+							for (JSONElement element : root) {
+								if (!stringOutput) {
+									RödaValue path = valueFromList(element.getPath().stream()
+												       .map(jk -> valueFromString(jk.toString()) )
+												       .collect(toList()));
+									RödaValue value = valueFromString(element.toString());
+									out.push(valueFromList(path, value));
+								} else {
+									out.push(valueFromString(element.getPath().toString() + " " + element.toString()));
+								}
 							}
+						} else { // rekursiivinen ulostulo
+							// apuluokka rekursion mahdollistamiseksi
+							class R<I> { I i; }
+							R<java.util.function.Function<JSONElement, RödaValue>>
+							makeRöda = new R<>();
+							makeRöda.i = json -> {
+								RödaValue elementName = valueFromString(json.getElementName());
+								RödaValue value;
+								if (json instanceof JSONInteger) {
+									value = valueFromInt(((JSONInteger) json).getValue());
+								}
+								else if (json instanceof JSONString) {
+									value = valueFromString(((JSONString) json).getValue());
+								}
+								else if (json instanceof JSONList) {
+									value = valueFromList(((JSONList) json).getElements()
+											      .stream()
+											      .map(j -> makeRöda.i.apply(j))
+											      .collect(toList()));
+								}
+								else if (json instanceof JSONMap) {
+									value = valueFromList(((JSONMap) json).getElements().entrySet()
+											      .stream()
+											      .map(e -> valueFromList(valueFromString(e.getKey().getKey()),
+														      makeRöda.i.apply(e.getValue())))
+											      .collect(toList()));
+								}
+								else {
+									value = valueFromString(json.toString());
+								}
+								return valueFromList(elementName, value);
+							};
+							out.push(makeRöda.i.apply(root));
+							
 						}
 					};
 					if (args.size() > 1) argumentOverflow("json", 1, args.size());
@@ -756,7 +804,7 @@ public class Interpreter {
 						}
 					}
 				}, Arrays.asList(new Parameter("flags_and_code", false)), true));
-		
+
 		G.setLocal("list", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
 				        out.push(valueFromList(args));
 				}, Arrays.asList(new Parameter("values", false)), true));
@@ -1071,7 +1119,7 @@ public class Interpreter {
 			};
 	}
 
-	{ initialize(); initializeIO(); }
+	{ initialize(); initializeIO(); /*System.out.println(G.map.keySet());*/ }
 
 	public static ThreadLocal<Stack<String>> callStack = new InheritableThreadLocal<Stack<String>>() {
 			@Override protected Stack<String> childValue(Stack<String> parentValue) {

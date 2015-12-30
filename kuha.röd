@@ -29,23 +29,23 @@ hae_kuva sana mones montako {
 /* tekee svg-kuvan */
 tee_pilakuva nettikuvat ylä ala tiedosto {
 	push "<?xml version='1.0' encoding='UTF-8'?>
-<svg
- xmlns='http://www.w3.org/2000/svg'
- xmlns:xlink='http://www.w3.org/1999/xlink' version='1.1'
- viewBox='0 0 500 244'>
-<style type=\"text/css\">@font-face{font-family:'imppa';src:url('Impact.ttf');}text{font-family:'serif';font-size:35px;fill:white;stroke:black;stroke-width:2px;text-anchor:middle}</style>
-<image xlink:href='kuha.jpg' x='0' y='0' width='500' height='244'/>
-"..nettikuvat.."
-<text x='50%' y='14%'>"..ylä.."</text>
-<text x='50%' y='98%'>"..ala.."</text>
-</svg>" | write "kuha.svg"
+	<svg
+	xmlns='http://www.w3.org/2000/svg'
+	xmlns:xlink='http://www.w3.org/1999/xlink' version='1.1'
+	viewBox='0 0 500 244'>
+	<style type=\"text/css\">@font-face{font-family:'imppa';src:url('Impact.ttf');}text{font-family:'serif';font-size:35px;fill:white;stroke:black;stroke-width:2px;text-anchor:middle}</style>
+	<image xlink:href='kuha.jpg' x='0' y='0' width='500' height='244'/>
+	"..nettikuvat.."
+	<text x='50%' y='14%'>"..ylä.."</text>
+	<text x='50%' y='98%'>"..ala.."</text>
+	</svg>" | write "kuha.svg"
         {} | exec "rsvg-convert" -o tiedosto "kuha.svg"
 }
 
 /* ohjaa kuvan luomista: käsittelee viestin, lataa kuvat, tekee kuhakuvan ja lähettää sen */
 käsittele_kuhaviesti ketju viesti {
 	/* esikäsitellään viesti */
-	viesti -set !(push viesti | replace "kunhan" "kuha" "Kunhan" "Kuha" "<([^<]+)>" "-\\1-")[0]
+	viesti -replace "kunhan" "kuha" "Kunhan" "Kuha" "<([^<]+)>" "-\\1-"
 
 	push "käsitellään viesti '" viesti "'\n"
 	
@@ -97,36 +97,58 @@ lähetä_kuva ketju kuva {
 /* pääfunktio */
 main {
 	/* alustetaan botti */
-	token -create "<token>"
+	token -create !(cat "token.txt")[0]
 	base_url -create "https://api.telegram.org/bot"..token
 	tg_update -create base_url.."/getUpdates?offset="
 	tg_message -create base_url.."/sendMessage"
 	tg_photo -create base_url.."/sendPhoto"
 
 	offset -create 0
-
+	
 	/* pääsilmukka */
 	while true; do
 		
 		/* haetaan uusimmat päivitykset */
-		päivitykset -create !(wcat tg_update..offset)
+		koodi -create !(wcat tg_update..offset)&" "
+		parsittu -create !(json koodi)[0]
 		
-		/* etsitään viestit */
-		offsets -set !(päivitykset | grep -o "(?<=\"update_id\":)-?[0-9]+")
-		ketjut -create !(päivitykset | grep -o "(?<=\"chat\":\\{\"id\"\\:)-?[0-9]+")
-		viestit -create !(päivitykset | grep -o "(?<=\"text\":\")[^\"]*(?=\")")
-
-		/* jos viesti löytyi */
-		if test #viestit -ge 1; do
-			
-			/* jos viesti on kuhavitsi, tehdään siitä hauska kuva */
-			if test viestit[0] -matches ".*[Kk][Uu][Hh][Aa].*"; do
-				käsittele_kuhaviesti ketjut[0] viestit[0]
+		/* käydään läpi puu ja etsitään viestit */
+		for noodi in parsittu[1]; do
+			if test noodi[0] -eq "result"; do
+				päivitykset -create noodi[1]
+				for päivitys in päivitykset[1]; do
+					ketju -create 0
+					teksti -create ""
+					for noodi in päivitys[1]; do
+						if test noodi[0] -eq "update_id"; do
+							offset -set noodi[1][1]
+						done
+						if test noodi[0] -eq "message"; do
+							viesti -create noodi[1]
+							for noodi in viesti[1]; do
+								if test noodi[0] -eq "chat"; do
+									chatti -create noodi[1]
+									for noodi in chatti[1]; do
+										if test noodi[0] -eq "id"; do
+											ketju -set noodi[1][1]
+										done
+									done
+								done
+								if test noodi[0] -eq "text"; do
+									teksti -set noodi[1][1]
+								done
+							done
+						done
+					done
+					/* jos viesti on kuhavitsi, tehdään siitä hauska kuva */
+					if test teksti -matches ".*[Kk][Uu][Hh][Aa].*"; do
+						push "ketju: " ketju "\n"
+						käsittele_kuhaviesti ketju teksti
+					done
+				done
 			done
-
-			/* päivitetään offsettiä */
-			offset -set offsets[0]
-			offset -inc
 		done
+
+		offset -inc
 	done
 }

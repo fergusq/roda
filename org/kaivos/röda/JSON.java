@@ -29,6 +29,7 @@ public class JSON {
 		.separateIdentifiersAndPunctuation(false)
 		.addStringRule('"','"','\\')
 		.addEscapeCode('\\', "\\")
+		.addEscapeCode('/', "/")
 		.addEscapeCode('n', "\n")
 		.addEscapeCode('r', "\r")
 		.addEscapeCode('t', "\t")
@@ -94,6 +95,8 @@ public class JSON {
 		public List<JSONKey> getPath() {
 			return path;
 		}
+
+		public abstract String getElementName();
 	}
 	
 	public static class JSONList extends JSONElement {
@@ -118,6 +121,11 @@ public class JSON {
 			}
 			ans += "]";
 			return ans;
+		}
+
+		@Override
+		public String getElementName() {
+			return "LIST";
 		}
 
 		@Override
@@ -158,13 +166,13 @@ public class JSON {
 	}
 	
 	public static class JSONMap extends JSONElement {
-		private final Map<JSONKey, JSONElement> elements;
-		private JSONMap(List<JSONKey> path, Map<JSONKey, JSONElement> elements) {
+		private final Map<JSONKeyString, JSONElement> elements;
+		private JSONMap(List<JSONKey> path, Map<JSONKeyString, JSONElement> elements) {
 			super(path);
 			this.elements = Collections.unmodifiableMap(elements);
 		}
 
-		public Map<JSONKey, JSONElement> getElements() {
+		public Map<JSONKeyString, JSONElement> getElements() {
 			return elements;
 		}
 
@@ -172,7 +180,7 @@ public class JSON {
 		public String toString() {
 			String ans = "{";
 			int i = 0;
-			for (Map.Entry<JSONKey, JSONElement> entry : elements.entrySet()) {
+			for (Map.Entry<JSONKeyString, JSONElement> entry : elements.entrySet()) {
 				if (i != 0) ans += ",";
 				ans += entry.getKey().toString();
 				ans += ":";
@@ -181,6 +189,11 @@ public class JSON {
 			}
 			ans += "}";
 			return ans;
+		}
+
+		@Override
+		public String getElementName() {
+			return "MAP";
 		}
 
 		@Override
@@ -223,8 +236,10 @@ public class JSON {
 
 	private static abstract class JSONAtomic<T> extends JSONElement {
 		protected final T value;
-		private JSONAtomic(List<JSONKey> path, T value) {
+		private final String elementName;
+		private JSONAtomic(String elementName, List<JSONKey> path, T value) {
 			super(path);
+			this.elementName = elementName;
 			this.value = value;
 		}
 
@@ -235,6 +250,11 @@ public class JSON {
 		@Override
 		public String toString() {
 			return value.toString();
+		}
+
+		@Override
+		public String getElementName() {
+			return elementName;
 		}
 
 		@Override
@@ -261,7 +281,7 @@ public class JSON {
 	
 	public static class JSONString extends JSONAtomic<String> {
 		private JSONString(List<JSONKey> path, String value) {
-			super(path, value);
+			super("STRING", path, value);
 		}
 
 		@Override
@@ -271,34 +291,39 @@ public class JSON {
 	}
 	public static class JSONInteger extends JSONAtomic<Integer> {
 		private JSONInteger(List<JSONKey> path, int value) {
-			super(path, value);
+			super("NUMBER", path, value);
 		}
 	}
 	public static class JSONDouble extends JSONAtomic<Double> {
 		private JSONDouble(List<JSONKey> path, double value) {
-			super(path, value);
+			super("NUMBER", path, value);
 		}
 	}
 	
 	public static enum JSONConstants {
-		TRUE("true"),
-		FALSE("false"),
-		NULL("null");
+		TRUE("true", "BOOLEAN"),
+		FALSE("false", "BOOLEAN"),
+		NULL("null", "NULL");
 
-		private String name;
+		private String name, elementName;
 
-		JSONConstants(String name) {
+		JSONConstants(String name, String elementName) {
 			this.name = name;
+			this.elementName = elementName;
 		}
 
 		public String getName() {
 			return name;
 		}
+
+		public String getElementName() {
+			return elementName;
+		}
 	}
 
 	public static class JSONConstant extends JSONAtomic<JSONConstants> {
 		private JSONConstant(List<JSONKey> path, JSONConstants value) {
-			super(path, value);
+			super(value.getElementName(), path, value);
 		}
 
 		@Override
@@ -326,7 +351,7 @@ public class JSON {
 			tl.accept("\"");
 			return new JSONString(new ArrayList<>(path), text);
 		}
-		if (tl.seekString().matches("[0-9]+")) {
+		if (tl.seekString().matches("-?[0-9]+")) {
 			int integer = Integer.parseInt(tl.nextString());
 			return new JSONInteger(new ArrayList<>(path), integer);
 		}
@@ -359,13 +384,13 @@ public class JSON {
 	}
 
 	private static JSONMap parseMap(TokenList tl, Stack<JSONKey> path) {
-		Map<JSONKey, JSONElement> map = new HashMap<>();
+		Map<JSONKeyString, JSONElement> map = new HashMap<>();
 		tl.accept("{");
 		int i = 0;
 		while (!tl.isNext("}")) {
 			if (i != 0) tl.accept(",");
 			tl.accept("\"");
-			JSONKey key = new JSONKeyString(tl.nextString());
+			JSONKeyString key = new JSONKeyString(tl.nextString());
 			tl.accept("\"");
 			tl.accept(":");
 			path.push(key);
