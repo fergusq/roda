@@ -137,7 +137,9 @@ main {
 							teksti -set text[1]
 						})
 					})
-					käsittele_kuhaviesti ketju teksti
+					if test teksti -matches ".*\\b[Kk][Uu][Hh][Aa]"; do
+						käsittele_kuhaviesti ketju teksti
+					done
 				done
 			})
 			
