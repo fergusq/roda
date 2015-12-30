@@ -137,7 +137,7 @@ main {
 							teksti -set text[1]
 						})
 					})
-					push ketju ": " teksti "\n"
+					käsittele_kuhaviesti ketju viesti
 				done
 			})
 			
