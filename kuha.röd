@@ -107,47 +107,48 @@ main {
 	
 	/* pääsilmukka */
 	while true; do
-		
-		/* haetaan uusimmat päivitykset */
-		koodi -create !(wcat tg_update..offset)&" "
-		parsittu -create !(json koodi)[0]
-		
-		/* käydään läpi puu ja etsitään viestit */
-		for noodi in parsittu[1]; do
-			if test noodi[0] -eq "result"; do
-				päivitykset -create noodi[1]
-				for päivitys in päivitykset[1]; do
-					ketju -create 0
-					teksti -create ""
-					for noodi in päivitys[1]; do
-						if test noodi[0] -eq "update_id"; do
-							offset -set noodi[1][1]
-						done
-						if test noodi[0] -eq "message"; do
-							viesti -create noodi[1]
-							for noodi in viesti[1]; do
-								if test noodi[0] -eq "chat"; do
-									chatti -create noodi[1]
-									for noodi in chatti[1]; do
-										if test noodi[0] -eq "id"; do
-											ketju -set noodi[1][1]
+		try do
+			/* haetaan uusimmat päivitykset */
+			koodi -create !(wcat tg_update..offset)&" "
+			parsittu -create !(json koodi)[0]
+			
+			/* käydään läpi puu ja etsitään viestit */
+			for noodi in parsittu[1]; do
+				if test noodi[0] -eq "result"; do
+					päivitykset -create noodi[1]
+					for päivitys in päivitykset[1]; do
+						ketju -create 0
+						teksti -create ""
+						for noodi in päivitys[1]; do
+							if test noodi[0] -eq "update_id"; do
+								offset -set noodi[1][1]
+							done
+							if test noodi[0] -eq "message"; do
+								viesti -create noodi[1]
+								for noodi in viesti[1]; do
+									if test noodi[0] -eq "chat"; do
+										chatti -create noodi[1]
+										for noodi in chatti[1]; do
+											if test noodi[0] -eq "id"; do
+												ketju -set noodi[1][1]
+											done
 										done
 									done
-								done
-								if test noodi[0] -eq "text"; do
-									teksti -set noodi[1][1]
+									if test noodi[0] -eq "text"; do
+										teksti -set noodi[1][1]
+									done
 								done
 							done
 						done
-					done
-					/* jos viesti on kuhavitsi, tehdään siitä hauska kuva */
-					if test teksti -matches ".*[Kk][Uu][Hh][Aa].*"; do
-						käsittele_kuhaviesti ketju teksti
+						/* jos viesti on kuhavitsi, tehdään siitä hauska kuva */
+						if test teksti -matches ".*[Kk][Uu][Hh][Aa].*"; do
+							käsittele_kuhaviesti ketju teksti
+						done
 					done
 				done
 			done
+			
+			offset -inc
 		done
-
-		offset -inc
 	done
 }
