@@ -14,14 +14,14 @@ Alla on yksinkertainen duplicate-funktio, joka lukee yhden arvon ja palauttaa ka
 kutsutaan `main`-funktiosta, lukee se syötettä suoraan standardisyötteestä.
 ```
 duplicate {
-     pull value
-     push value
-     push value
+	pull value
+	push value
+	push value
 }
 
 main {
-     push "Syötä tekstiä: "
-     duplicate
+	push "Syötä tekstiä: "
+	duplicate
 }
 ```
 
@@ -37,10 +37,10 @@ kaiken mahdollisen syötteen:
 
 ```
 duplicate {
-    while pull -r value; do
-        push value
-	push value
-    done
+	while pull -r value; do
+		push value
+		push value
+	done
 }
 ```
 
@@ -80,9 +80,9 @@ Funktiolla voi ottaa vaihtelevan määrän argumentteja, jolloin viimeiselle par
 
 ```
 duplicate_files files... {
-    for file in files; do
-        cat file | duplicate
-    done
+	for file in files; do
+		cat file | duplicate
+	done
 }
 ```
 
@@ -91,9 +91,9 @@ lukee kaksi arvoa, tekee niistä listan ja asettaa sen muuttujaan.
 
 ```
 pull_twice &variable {
-    pull value1
-    pull value2
-    variable -set (value1 value2)
+	pull value1
+	pull value2
+	variable -set (value1 value2)
 }
 ```
 
@@ -190,14 +190,14 @@ Sisäänrakennetuista funktioista vain `true`, `false`, `test` (ks. alempana) ja
 
 ```
 if test ikä -lt 18; do
-    pull "Olet liian nuori!\n"
+	pull "Olet liian nuori!\n"
 done
 ```
 
 ```
 while test vastaus -not-matches "kyllä|ei"; do
-    push "Vastaa kyllä tai ei: "
-    pull vastaus
+	push "Vastaa kyllä tai ei: "
+	pull vastaus
 done
 ```
 
@@ -206,7 +206,7 @@ done
 ```
 tytöt -create (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
 for tyttö in tytöt; do
-    push "Hänen nimensä on "..tyttö[0].." ja hän on syntynyt vuonna "..tyttö[1].."\n"
+	push "Hänen nimensä on "..tyttö[0].." ja hän on syntynyt vuonna "..tyttö[1].."\n"
 done
 ```
 
@@ -216,10 +216,10 @@ kannattaa käyttää vain palvelimissa ym. joissa prosessin on pysyttävä virhe
 
 ```
 while true; do
-    try do
-        hae viestit
-	käsittele viestit
-    done
+	try do
+		hae viestit
+		käsittele viestit
+	done
 done
 ```
 
@@ -282,8 +282,8 @@ Seuraava ohjelma tulostaa tiedoston rivinumeroiden kera.
 rivit -create !(cat tiedosto)
 i -create 1
 for rivi in rivit; do
-    push i " " rivi "\n"
-    i -inc
+	push i " " rivi "\n"
+	i -inc
 done
 ```
 
@@ -297,11 +297,11 @@ Seuraavassa koodissa määritellään `filter`-funktio, joka lukee arvoja ja pal
 
 ```
 filter cond_function {
-    while pull -r value; do
-        if cond_function value; do
-	    push value
+	while pull -r value; do
+		if cond_function value; do
+			push value
+		done
 	done
-    done
 }
 ```
 
@@ -311,7 +311,7 @@ Funktiota käytetään antamalla sille nimetön funktio (tai tavallinenkin funkt
 ```
 tytöt -create (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
 tytöt | filter { |tyttö|; test tyttö[1] -gt 1995 } | while pull -r tyttö; do
-    push tyttö " on vielä nuori.\n"
+	push tyttö " on vielä nuori.\n"
 done
 ```
 
