@@ -837,7 +837,7 @@ public class Interpreter {
 					java.util.function.Function<Integer, RödaValue> next = i -> {
 						switch (i) {
 						case INTEGER: return valueFromInt(rnd.nextInt());
-						case FLOAT: return valueFromInt(rnd.nextInt());
+						case FLOAT: return valueFromString(rnd.nextDouble()+"");
 						case BOOLEAN: return valueFromBoolean(rnd.nextBoolean());
 						}
 						return null;
