@@ -42,7 +42,7 @@ public final class IOUtils {
 	}
 
 	public static final Iterable<String> readerIterator(BufferedReader r) {
-		return () -> new Iterator() {
+		return () -> new Iterator<String>() {
 				String buffer;
 				{
 					updateBuffer();
