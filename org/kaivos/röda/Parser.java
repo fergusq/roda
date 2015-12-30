@@ -202,7 +202,9 @@ public class Parser {
 			NORMAL,
 			WHILE,
 			IF,
-			FOR
+			FOR,
+			TRY,
+			TRY_DO
 		}
 		Type type;
 		Expression name;
@@ -211,6 +213,7 @@ public class Parser {
 		String variable;
 		Expression list;
 		List<Statement> body;
+		Command cmd;
 		Command() {} // käytä apufunktioita alla
 		String file;
 		int line;
@@ -254,6 +257,24 @@ public class Parser {
 		cmd.variable = variable;
 		cmd.list = list;
 		cmd.body = body;
+		return cmd;
+	}
+
+	static Command _makeTryCommand(String file, int line, List<Statement> body) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.TRY_DO;
+		cmd.file = file;
+		cmd.line = line;
+		cmd.body = body;
+		return cmd;
+	}
+
+	static Command _makeTryCommand(String file, int line, Command command) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.TRY;
+		cmd.file = file;
+		cmd.line = line;
+		cmd.cmd = command;
 		return cmd;
 	}
 	
@@ -304,6 +325,24 @@ public class Parser {
 			}
 			tl.accept("done");
 			return _makeForCommand(file, line, variable, list, body);
+		}
+
+		if (tl.isNext("try")) {
+			tl.accept("try");
+			maybeNewline(tl);
+			if (tl.isNext("do")) {
+				tl.accept("do");
+				maybeNewline(tl);
+				List<Statement> body = new ArrayList<>();
+				while (!tl.isNext("done")) {
+					body.add(parseStatement(tl));
+					newline(tl);
+				}
+				tl.accept("done");
+				return _makeTryCommand(file, line, body);
+			} else {
+				return _makeTryCommand(file, line, parseCommand(tl));
+			}
 		}
 
 		Expression name = parseExpression(tl);

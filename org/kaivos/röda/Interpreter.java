@@ -1462,7 +1462,11 @@ public class Interpreter {
 		}
 	}
 	
-	public Pair<Runnable, StreamType> evalCommand(Command cmd, RödaScope scope, RödaStream in, RödaStream out, RödaStream _in, RödaStream _out, boolean canFinish) {
+	public Pair<Runnable, StreamType> evalCommand(Command cmd,
+						      RödaScope scope,
+						      RödaStream in, RödaStream out,
+						      RödaStream _in, RödaStream _out,
+						      boolean canFinish) {
 		if (cmd.type == Command.Type.NORMAL) {
 				RödaValue function = evalExpression(cmd.name, scope, in, out);
 				List<RödaValue> args = cmd.arguments.stream().map(a -> evalExpression(a, scope, in, out)).collect(toList());
@@ -1505,6 +1509,29 @@ public class Interpreter {
 						evalStatement(s, newScope, _in, _out, false);
 					}
 				}
+				if (canFinish) _out.finish();
+			};
+			return new Pair<>(r, new ValueStream());
+		}
+
+		if (cmd.type == Command.Type.TRY_DO) {
+			Runnable r = () -> {
+				try {
+					RödaScope newScope = new RödaScope(scope);
+					for (Statement s : cmd.body) {
+						evalStatement(s, newScope, _in, _out, false);
+					}
+				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
+				if (canFinish) _out.finish();
+			};
+			return new Pair<>(r, new ValueStream());
+		}
+
+		if (cmd.type == Command.Type.TRY) {
+			Runnable r = () -> {
+				try {
+				        evalCommand(cmd.cmd, scope, in, out, _in, _out, false);
+				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
 				if (canFinish) _out.finish();
 			};
 			return new Pair<>(r, new ValueStream());
