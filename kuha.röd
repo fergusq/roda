@@ -89,6 +89,11 @@ käsittele_kuhaviesti ketju viesti {
 	lähetä_kuva ketju "kuhaonmeemi.png"
 }
 
+/* lähettää viesti telegramissa annettuun ketjuun */
+lähetä_viesti ketju viesti {
+	{} | exec "curl" --silent tg_message -F "chat_id="..ketju -F "text="..viesti | {}
+}
+
 /* lähettää kuvan telegramissa annettuun ketjuun */
 lähetä_kuva ketju kuva {
 	{} | exec "curl" --silent tg_photo -F "chat_id="..ketju -F "photo=@"..kuva | {}
@@ -112,8 +117,11 @@ main {
 	tg_update -create base_url.."/getUpdates?offset="
 	tg_message -create base_url.."/sendMessage"
 	tg_photo -create base_url.."/sendPhoto"
-
+	
 	offset -create 0
+	
+	aika_viimeksi -create !(time)[0]
+	tiheitä_viestejä -create 0
 	
 	/* pääsilmukka */
 	while true; do
@@ -136,9 +144,27 @@ main {
 						}) ("text" { |text|
 							teksti -set text[1]
 						})
+						if test tiheitä_viestejä -gt 3; do
+							hae_tiedot viesti ("from" { |user|
+								hae_tiedot user ("id" { |id|
+									ketju -set id[1]
+								})	
+							})
+						done
 					})
 					if test teksti -matches ".*\\b[Kk][Uu][Hh][Aa]"; do
 						käsittele_kuhaviesti ketju teksti
+						aika -create !(time)[0]
+						aikaa_kulunut -create !(expr aika "-" aika_viimeksi)[0]
+						if test aikaa_kulunut -lt 10000; do
+							tiheitä_viestejä -inc
+							if test tiheitä_viestejä -eq 4; do
+								lähetä_viesti ketju "Rauhoittukaa, kuha on nyt hetken tauolla"
+							done
+						else
+							tiheitä_viestejä -set 0
+						done
+						aika_viimeksi -set aika
 					done
 				done
 			})

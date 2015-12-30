@@ -415,6 +415,7 @@ public class Interpreter {
 	static void error(String message) {
 		System.err.println("FATAL ERROR: " + message);
 		printStackTrace();
+		callStack.get().clear();
 		throw new FatalException(message);
 	}
 
@@ -432,8 +433,6 @@ public class Interpreter {
 	
 	public void interpret(String code, String filename) {
 		try {
-			callStack.get().clear();
-			
 			Program program = parse(t.tokenize(code, filename));
 			for (Function f : program.functions) {
 				G.setLocal(f.name, valueFromFunction(f));
@@ -455,8 +454,6 @@ public class Interpreter {
 
 	public void interpretStatement(String code, String filename) {
 		try {
-			callStack.get().clear();
-			
 			Statement statement = parseStatement(t.tokenize(code, filename));
 			evalStatement(statement, G, STDIN, STDOUT, false);
 		} catch (FatalException e) {
@@ -785,14 +782,21 @@ public class Interpreter {
 			boolean isWhile = cmd.type == Command.Type.WHILE;
 			Runnable r = () -> {
 				RödaScope newScope = new RödaScope(scope);
+				boolean goToElse = true;
 				do {
 					RödaStream condOut = makeStream(new ValueStream(), new BooleanStream());
 					evalStatement(cmd.cond, scope, _in, condOut, true);
 					if (!condOut.pull().bool()) break;
+					goToElse = false;
 					for (Statement s : cmd.body) {
 						evalStatement(s, newScope, _in, _out, false);
 					}
 				} while (isWhile);
+				if (goToElse && cmd.elseBody != null) {
+					for (Statement s : cmd.elseBody) {
+						evalStatement(s, newScope, _in, _out, false);
+					}
+				}
 				if (canFinish) _out.finish();
 			};
 			return new Pair<>(r, new ValueStream());

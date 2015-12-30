@@ -212,7 +212,7 @@ public class Parser {
 		Statement cond;
 		String variable;
 		Expression list;
-		List<Statement> body;
+		List<Statement> body, elseBody;
 		Command cmd;
 		Command() {} // käytä apufunktioita alla
 		String file;
@@ -229,23 +229,15 @@ public class Parser {
 		return cmd;
 	}
 
-	static Command _makeWhileCommand(String file, int line, Statement cond, List<Statement> body) {
+	static Command _makeIfOrWhileCommand(String file, int line, boolean isWhile,
+					     Statement cond, List<Statement> body, List<Statement> elseBody) {
 		Command cmd = new Command();
-		cmd.type = Command.Type.WHILE;
+		cmd.type = isWhile ? Command.Type.WHILE : Command.Type.IF;
 		cmd.file = file;
 		cmd.line = line;
 		cmd.cond = cond;
 		cmd.body = body;
-		return cmd;
-	}
-
-	static Command _makeIfCommand(String file, int line, Statement cond, List<Statement> body) {
-		Command cmd = new Command();
-		cmd.type = Command.Type.IF;
-		cmd.file = file;
-		cmd.line = line;
-		cmd.cond = cond;
-		cmd.body = body;
+		cmd.elseBody = elseBody;
 		return cmd;
 	}
 	
@@ -281,33 +273,26 @@ public class Parser {
 	static Command parseCommand(TokenList tl) {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
-		if (tl.isNext("while")) {
-			tl.accept("while");
+		if (tl.isNext("while") || tl.isNext("if")) {
+			boolean isWhile = tl.nextString().equals("while");
 			Statement cond = parseStatement(tl);
 			maybeNewline(tl);
 			tl.accept("do");
 			maybeNewline(tl);
-			List<Statement> body = new ArrayList<>();
-			while (!tl.isNext("done")) {
+			List<Statement> body = new ArrayList<>(), elseBody = null;
+			while (!tl.isNext("done") && !tl.isNext("else")) {
 				body.add(parseStatement(tl));
 				newline(tl);
 			}
-			tl.accept("done");
-			return _makeWhileCommand(file, line, cond, body);
-		}
-		if (tl.isNext("if")) {
-			tl.accept("if");
-			Statement cond = parseStatement(tl);
-			maybeNewline(tl);
-			tl.accept("do");
-			maybeNewline(tl);
-			List<Statement> body = new ArrayList<>();
-			while (!tl.isNext("done")) {
-				body.add(parseStatement(tl));
-				newline(tl);
+			if (tl.isNext("else")) {
+				elseBody = new ArrayList<>();
+				while (!tl.isNext("done")) {
+					elseBody.add(parseStatement(tl));
+					newline(tl);
+				}
 			}
 			tl.accept("done");
-			return _makeIfCommand(file, line, cond, body);
+			return _makeIfOrWhileCommand(file, line, isWhile, cond, body, elseBody);
 		}
 
 		if (tl.isNext("for")) {
