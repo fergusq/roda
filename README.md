@@ -2,6 +2,28 @@
 
 Röda on uusi ohjelmointikieleni! Se perustuu syntaksiltaan ja ominaisuuksiltaan sh-skripteihin.
 
+## Käyttäminen
+
+Röda vaati toimiakseen [Nept-kirjaston](https://github.com/fergusq/nept). Käännä kirjasto ja aseta
+.class-tiedostot kansioon `nept`.
+
+Neptin ja Rödan kääntäminen:
+
+```sh
+$ git clone https://github.com/fergusq/nept
+$ cd nept
+nept $ mkdir bin
+nept $ javac -d bin -sourcepath src src/org/kaivos/nept/parser/*.java
+nept $ cd ..
+$ git clone https://github.com/fergusq/roda
+$ cd roda
+roda $ ln -s ../nept/bin nept
+roda $ mkdir bin
+roda $ javac -d bin -cp nept -sourcepath . org/kaivos/röda/Röda.java
+```
+
+Rödan mukana tulee interaktiivinen tulkki, jota voi käyttää valitsimella `-i`.
+
 ## Perustietoja
 
 Röda-funktiolla on parametrit, sekä sisään- ja ulostulo, jotka ovat jonoja. Funktio ei varsinaisesti
