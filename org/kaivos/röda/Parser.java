@@ -517,10 +517,24 @@ public class Parser {
 			ans = expressionLength(file, line, e);
 		}
 		else if (tl.isNext("{")) {
+			List<Parameter> parameters = new ArrayList<>();
+			boolean isVarargs = false;
 			StreamType input = new ValueStream();
 			StreamType output = new ValueStream();
 			tl.accept("{");
 			maybeNewline(tl);
+			if (tl.isNext("|")) {
+				tl.accept("|");
+				while (!tl.isNext("|")) {
+					parameters.add(parseParameter(tl));
+					if (tl.isNext("...")) {
+						tl.accept("...");
+						isVarargs = true;
+					}
+				}
+				tl.accept("|");
+				newline(tl);
+			}
 			List<Statement> body = new ArrayList<>();
 			while (!tl.isNext("}")) {
 				body.add(parseStatement(tl));
@@ -529,7 +543,7 @@ public class Parser {
 			}
 			maybeNewline(tl);
 			tl.accept("}");
-			ans = expressionFunction(file, line, new Function("<block>", new ArrayList<>(), false, input, output, body));
+			ans = expressionFunction(file, line, new Function("<block>", parameters, isVarargs, input, output, body));
 		}
 		else if (tl.isNext("!")) {
 			tl.accept("!");

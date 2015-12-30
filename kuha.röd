@@ -4,19 +4,19 @@ hae_kuva sana mones montako {
 	user_agent -set "Links (2.7; Linux 3.5.0-17-generic x86_64; GNU C 4.7.1; text)"
 	hakukone -set "http://images.google.com/images?q="..sana.."&lr=lang_fi&cr=countryFI"
 	etsitty_url -set "http://t[0-9]\\.gstatic.com/images\\?q=tbn:[a-zA-Z0-9_-]*"
-
+	
 	/* haetaan lista kuvista */
 	kuvat -set !(wcat -U user_agent hakukone | grep -o etsitty_url)
-
+	
 	/* jos kuvia löytyi... */
 	if test #kuvat -gt 0; do
-
+		
 		/* valitaan ensimmäinen kuva */
 		kuva -set kuvat[0]
-
+		
 		/* ladataan kuva */
 		wcat -O mones kuva
-
+		
 		/* palautetaan svg-teksti tarvittaessa */
 		if test montako -not-eq ""; do
 			x_koordinaatti -set !(expr mones "*500/" montako)[0]
@@ -94,6 +94,16 @@ lähetä_kuva ketju kuva {
 	{} | exec "curl" --silent tg_photo -F "chat_id="..ketju -F "photo=@"..kuva | {}
 }
 
+hae_tiedot kartta haut... {
+	for noodi in kartta[1]; do
+		for haku in haut; do
+			if test noodi[0] -eq haku[0]; do
+				haku[1] noodi[1]
+			done
+		done
+	done
+}
+
 /* pääfunktio */
 main {
 	/* alustetaan botti */
@@ -112,41 +122,24 @@ main {
 			koodi -create !(wcat tg_update..offset)&" "
 			parsittu -create !(json koodi)[0]
 			
-			/* käydään läpi puu ja etsitään viestit */
-			for noodi in parsittu[1]; do
-				if test noodi[0] -eq "result"; do
-					päivitykset -create noodi[1]
-					for päivitys in päivitykset[1]; do
-						ketju -create 0
-						teksti -create ""
-						for noodi in päivitys[1]; do
-							if test noodi[0] -eq "update_id"; do
-								offset -set noodi[1][1]
-							done
-							if test noodi[0] -eq "message"; do
-								viesti -create noodi[1]
-								for noodi in viesti[1]; do
-									if test noodi[0] -eq "chat"; do
-										chatti -create noodi[1]
-										for noodi in chatti[1]; do
-											if test noodi[0] -eq "id"; do
-												ketju -set noodi[1][1]
-											done
-										done
-									done
-									if test noodi[0] -eq "text"; do
-										teksti -set noodi[1][1]
-									done
-								done
-							done
-						done
-						/* jos viesti on kuhavitsi, tehdään siitä hauska kuva */
-						if test teksti -matches ".*[Kk][Uu][Hh][Aa].*"; do
-							käsittele_kuhaviesti ketju teksti
-						done
-					done
+			hae_tiedot parsittu ("result" { |päivitykset|
+				for päivitys in päivitykset[1]; do
+					ketju -create 0
+					teksti -create ""
+					hae_tiedot päivitys ("update_id" { |id|
+						offset -set id[1]
+					}) ("message" { |viesti|
+						hae_tiedot viesti ("chat" { |chat|
+							hae_tiedot chat ("id" { |id|
+								ketju -set id[1]
+							})
+						}) ("text" { |text|
+							teksti -set text[1]
+						})
+					})
+					push ketju ": " teksti "\n"
 				done
-			done
+			})
 			
 			offset -inc
 		done

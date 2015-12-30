@@ -284,6 +284,14 @@ public class Interpreter {
 		val.function = function;
 		return val;
 	}
+	
+	public static RödaValue valueFromFunction(Function function, RödaScope localScope) {
+		RödaValue val = new RödaValue();
+		val.type = RödaValue.Type.FUNCTION;
+		val.function = function;
+		val.scope = localScope;
+		return val;
+	}
 
 	public static RödaValue valueFromNativeFunction(String name, NativeFunctionBody body, List<Parameter> parameters, boolean isVarargs) {
 		RödaValue val = new RödaValue();
@@ -354,7 +362,8 @@ public class Interpreter {
 		 return stream;
 	}
 
-	private static int C;
+	/* pitää kirjaa virroista debug-viestejä varten */
+	private static int streamCounter;
 	
 	private static class RödaStreamImpl extends RödaStream {
 		BlockingQueue<RödaValue> queue = new LinkedBlockingQueue<>();
@@ -393,7 +402,9 @@ public class Interpreter {
 		@Override
 		public String toString() {
 			return ""+(char)('A'+id);
-		} int id; { id = C++; }
+		}
+
+		int id; { id = streamCounter++; }
 	}
 	
 	static abstract class StreamType {
@@ -1358,10 +1369,11 @@ public class Interpreter {
 				if (args.size() < parameters.size()-1)
 					argumentUnderflow(name, parameters.size()-1, args.size());
 			}
-			RödaScope newScope = new RödaScope(scope);
+			// joko nimettömän funktion paikallinen scope tai tämä scope
+			RödaScope newScope = new RödaScope(value.scope == null ? scope : value.scope);
 			int j = 0;
 			for (Parameter p : parameters) {
-				if (isVarargs && j == parameters.size()-2) break;
+				if (isVarargs && j == parameters.size()-1) break;
 				newScope.setLocal(p.name, args.get(j++));
 			}
 			if (isVarargs) {
@@ -1552,7 +1564,7 @@ public class Interpreter {
 	private RödaValue evalExpressionWithoutErrorHandling(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
 		if (exp.type == Expression.Type.STRING) return valueFromString(exp.string);
 		if (exp.type == Expression.Type.NUMBER) return valueFromInt(exp.number);
-		if (exp.type == Expression.Type.BLOCK) return valueFromFunction(exp.block);
+		if (exp.type == Expression.Type.BLOCK) return valueFromFunction(exp.block, scope);
 		if (exp.type == Expression.Type.LIST) return valueFromList(exp.list
 									   .stream()
 									   .map(e
