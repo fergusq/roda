@@ -45,7 +45,7 @@ tee_pilakuva nettikuvat ylä ala tiedosto {
 /* ohjaa kuvan luomista: käsittelee viestin, lataa kuvat, tekee kuhakuvan ja lähettää sen */
 käsittele_kuhaviesti ketju viesti {
 	/* esikäsitellään viesti */
-	viesti -replace "kunhan" "kuha" "Kunhan" "Kuha" "<([^<]+)>" "-\\1-"
+	viesti -replace "kunhan" "kuha" "Kunhan" "Kuha" "<([^<]+)>" "injektio" "<!--" "kommentti"
 
 	push "käsitellään viesti '" viesti "'\n"
 	
