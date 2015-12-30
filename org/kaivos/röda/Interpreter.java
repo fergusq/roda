@@ -5,28 +5,27 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.Stack;
-import java.util.Optional;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.joining;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.Random;
-
-import org.kaivos.röda.Calculator;
-import org.kaivos.röda.JSON;
-import org.kaivos.röda.JSON.JSONElement;
-import org.kaivos.röda.JSON.JSONInteger;
-import org.kaivos.röda.JSON.JSONString;
-import org.kaivos.röda.JSON.JSONList;
-import org.kaivos.röda.JSON.JSONMap;
-
-import org.kaivos.röda.IOUtils;
-
 import java.util.Iterator;
 import java.util.ListIterator;
+
+import java.util.Random;
+import java.util.Optional;
+
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.joining;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ExecutionException;
+
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.regex.PatternSyntaxException;
@@ -44,6 +43,15 @@ import java.io.File;
 
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+
+import org.kaivos.röda.Calculator;
+import org.kaivos.röda.IOUtils;
+import org.kaivos.röda.JSON;
+import org.kaivos.röda.JSON.JSONElement;
+import org.kaivos.röda.JSON.JSONInteger;
+import org.kaivos.röda.JSON.JSONString;
+import org.kaivos.röda.JSON.JSONList;
+import org.kaivos.röda.JSON.JSONMap;
 
 import static org.kaivos.röda.Parser.*;
 
@@ -1139,15 +1147,25 @@ public class Interpreter {
 		};
 
 	static { callStack.set(new Stack<>()); }
+
+	private static class FatalException extends RuntimeException {
+		private FatalException(String message) {
+			super(message);
+		}
+	}
 	
 	private static void error(String message) {
 		System.err.println("FATAL ERROR: " + message);
+		printStackTrace();
+		throw new FatalException(message);
+	}
+
+	private static void printStackTrace() {
 		Stack<String> stack = callStack.get();
 		ListIterator iterator = stack.listIterator(stack.size());
 		while (iterator.hasPrevious()) {
 			System.err.println(iterator.previous());
 		}
-		System.exit(1);
 	}
 	
 	public void interpret(String code) {
@@ -1156,6 +1174,8 @@ public class Interpreter {
 	
 	public void interpret(String code, String filename) {
 		try {
+			callStack.get().clear();
+			
 			Program program = parse(t.tokenize(code, filename));
 			for (Function f : program.functions) {
 				G.setLocal(f.name, valueFromFunction(f));
@@ -1165,19 +1185,25 @@ public class Interpreter {
 			if (main == null) return;
 			
 			exec("<runtime>", 0, main, new ArrayList<>(), G, STDIN, STDOUT);
+		} catch (FatalException e) {
+			// viesti on jo tulostettu
 		} catch (Exception e) {
 			e.printStackTrace();
-			error("java exception");
+			printStackTrace();
 		}
 	}
 
 	public void interpretStatement(String code, String filename) {
 		try {
+			callStack.get().clear();
+			
 			Statement statement = parseStatement(t.tokenize(code, filename));
 			evalStatement(statement, G, STDIN, STDOUT, false);
+		} catch (FatalException e) {
+			// viesti on jo tulostettu
 		} catch (Exception e) {
 			e.printStackTrace();
-			error("java exception");
+		        printStackTrace();
 		} 
 	}
 	
@@ -1400,11 +1426,13 @@ public class Interpreter {
 		error("can't execute a value of type " + value.type.toString());
 	}
 
-	public void evalStatement(Statement statement, RödaScope scope,
+	private ExecutorService executor = Executors.newCachedThreadPool();
+	
+	private void evalStatement(Statement statement, RödaScope scope,
 				  RödaStream in, RödaStream out, boolean redirected) {
 		RödaStream _in = in;
 		int i = 0;
-		Runnable[] threads = new Runnable[statement.commands.size()];
+		Runnable[] runnables = new Runnable[statement.commands.size()];
 		for (Command command : statement.commands) {
 			boolean last = i == statement.commands.size()-1;
 			RödaStream _out = last ? out : new RödaStreamImpl();
@@ -1412,7 +1440,7 @@ public class Interpreter {
 								  in, out,
 								  _in, _out,
 								  !last || redirected);
-			threads[i] = tr.first();
+			runnables[i] = tr.first();
 			if (i != 0) {
 				_in.outHandler = tr.second().newHandler();
 				_in.inHandler = new ValueStream().newHandler();
@@ -1421,20 +1449,31 @@ public class Interpreter {
 			i++;
 		}
 		i = 0;
-		if (threads.length == 1) threads[0].run();
-		else for (Runnable r : threads) {
-			boolean last = i++ == statement.commands.size()-1;
+		if (runnables.length == 1) runnables[0].run();
+		else {
+			Future<Void> last = null;
+			for (Runnable r : runnables) {
+				boolean first = i++ == 0;
+				Future<Void> previous = last;
+			        Callable<Void> task = () -> {
+					if (!first) {
+						try {
+							previous.get();
+						} catch (InterruptedException|ExecutionException e) {
+							e.printStackTrace();
+							error("java exception");
+						}
+					}
+					r.run();
+					return null;
+				};
+				last = executor.submit(task);
+			}
 			try {
-				Thread t = new Thread(r);
-				t.setUncaughtExceptionHandler((thread, exception) -> {
-						exception.printStackTrace();
-						error("java exception");
-					});
-				t.start();
-				if (last) t.join();
-			} catch (InterruptedException e) {
+				last.get();
+			} catch (InterruptedException|ExecutionException e) {
 				e.printStackTrace();
-				error("threading error");
+				error("java exception");
 			}
 		}
 	}
