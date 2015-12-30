@@ -286,6 +286,7 @@ public class Parser {
 			}
 			if (tl.isNext("else")) {
 				tl.accept("else");
+				maybeNewline(tl);
 				elseBody = new ArrayList<>();
 				while (!tl.isNext("done")) {
 					elseBody.add(parseStatement(tl));
