@@ -1,0 +1,21 @@
+/* hakee kuvan netistä */
+hae_kuva sana tiedosto {
+	sana -set !(sana | replace " " "+")[0]
+	
+	/* asetukset */
+	user_agent -set "Links (2.7; Linux 3.5.0-17-generic x86_64; GNU C 4.7.1; text)"
+	hakukone -set "http://images.google.com/images?q="..sana.."&lr=lang_fi&cr=countryFI"
+	etsitty_url -set "http://t[0-9]\\.gstatic.com/images\\?q=tbn:[a-zA-Z0-9_-]*"
+	
+	/* haetaan lista kuvista */
+	kuvat -set !(wcat -U user_agent hakukone | grep -o etsitty_url)
+	
+	/* jos kuvia löytyi... */
+	if test #kuvat -gt 0; do
+		/* valitaan ensimmäinen kuva */
+		kuva -set kuvat[0]
+		
+		/* ladataan kuva */
+		wcat -O tiedosto kuva	
+	done
+}

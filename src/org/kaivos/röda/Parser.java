@@ -16,11 +16,11 @@ import org.kaivos.nept.parser.OperatorLibrary;
 import org.kaivos.nept.parser.OperatorPrecedenceParser;
 import org.kaivos.nept.parser.ParsingException;
 
-import org.kaivos.röda.Interpreter.StreamType;
-import org.kaivos.röda.Interpreter.ValueStream;
-import org.kaivos.röda.Interpreter.ByteStream;
-import org.kaivos.röda.Interpreter.LineStream;
-import org.kaivos.röda.Interpreter.VoidStream;
+import static org.kaivos.röda.RödaStream.StreamType;
+import static org.kaivos.röda.RödaStream.ValueStream;
+import static org.kaivos.röda.RödaStream.ByteStream;
+import static org.kaivos.röda.RödaStream.LineStream;
+import static org.kaivos.röda.RödaStream.VoidStream;
 
 public class Parser {
 	public static final TokenScanner t = new TokenScanner()

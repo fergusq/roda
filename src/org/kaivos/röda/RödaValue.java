@@ -6,9 +6,9 @@ import java.util.Arrays;
 
 import static java.util.stream.Collectors.joining;
 
+import org.kaivos.röda.RödaStream;
 import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Interpreter.RödaScope;
-import static org.kaivos.röda.Interpreter.RödaStream;
 import static org.kaivos.röda.Parser.Function;
 import static org.kaivos.röda.Parser.Parameter;
 

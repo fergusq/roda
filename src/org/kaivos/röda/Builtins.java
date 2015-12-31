@@ -245,6 +245,14 @@ class Builtins {
 					}
 				}, Arrays.asList(new Parameter("flags_and_code", false)), true));
 
+		S.setLocal("import", valueFromNativeFunction("import", (rawArgs, args, scope, in, out) -> {
+				        for (RödaValue value : args) {
+						checkString("import", value);
+						String file = value.str();
+						Interpreter.loadFile(file, S);
+					}
+				}, Arrays.asList(new Parameter("files", false)), true));
+		
 		S.setLocal("list", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
 				        out.push(valueFromList(args));
 				}, Arrays.asList(new Parameter("values", false)), true));

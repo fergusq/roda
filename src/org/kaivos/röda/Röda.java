@@ -34,10 +34,15 @@ public class Röda {
 					try {
 						c.interpretStatement(line, "<line "+ i++ +">");
 					} catch (ParsingException e) {
-						System.err.println("[E] " + e.getMessage());
+						System.out.println("[E] " + e.getMessage());
+					} catch (Interpreter.RödaException e) {
+						System.out.println("[E] " + e.getMessage());
+						for (String step : e.getStack()) {
+							System.out.println(step);
+						}
 					}
 				}
-				System.out.print("> ");
+				System.out.print("\n> ");
 			}
 
 			return;
@@ -54,6 +59,11 @@ public class Röda {
 				c.interpret(code, file);
 			} catch (ParsingException e) {
 				System.err.println("[E] " + e.getMessage());
+			} catch (Interpreter.RödaException e) {
+				System.err.println("[E] " + e.getMessage());
+				for (String step : e.getStack()) {
+					System.err.println(step);
+				}
 			}
 			return;
 		}

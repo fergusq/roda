@@ -4,13 +4,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Deque;
 import java.util.ArrayDeque;
-import java.util.Iterator;
 
 import java.util.Optional;
-
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.joining;
@@ -19,18 +16,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutionException;
 
 import java.util.regex.PatternSyntaxException;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.RödaValue.*;
+import org.kaivos.röda.RödaStream;
+import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Parser.*;
 
 import org.kaivos.nept.parser.ParsingException;
@@ -39,276 +37,6 @@ public class Interpreter {
 	
 	/*** INTERPRETER ***/
 
-	public static abstract class RödaStream implements Iterable<RödaValue> {
-		StreamHandler inHandler;
-		StreamHandler outHandler;
-
-		abstract RödaValue get();
-		abstract void put(RödaValue value);
-		abstract void finish();
-		abstract boolean finished();
-		
-		final void push(RödaValue value) {
-			inHandler.handlePush(this::finished, this::put, value);
-		}
-
-		final RödaValue pull() {
-			return outHandler.handlePull(this::finished, this::get);
-		}
-
-		final RödaValue readAll() {
-			return outHandler.handleReadAll(this::finished, this::get);
-		}
-
-		@Override
-		public Iterator<RödaValue> iterator() {
-			return new Iterator<RödaValue>() {
-				RödaValue buffer;
-				{
-					buffer = pull();
-				}
-
-				@Override public boolean hasNext() {
-					return buffer != null;
-				}
-
-				@Override public RödaValue next() {
-					RödaValue tmp = buffer;
-					buffer = pull();
-					return tmp;
-				}
-			};
-		}
-	}
-
-	public static RödaStream makeStream(StreamType in, StreamType out) {
-		 RödaStream stream = new RödaStreamImpl();
-		 stream.inHandler = in.newHandler();
-		 stream.outHandler = out.newHandler();
-		 return stream;
-	}
-
-	/* pitää kirjaa virroista debug-viestejä varten */
-	private static int streamCounter;
-	
-	private static class RödaStreamImpl extends RödaStream {
-		BlockingQueue<RödaValue> queue = new LinkedBlockingQueue<>();
-		boolean finished = false;
-
-		@Override
-		RödaValue get() {
-			//System.err.println("<PULL " + this + ">");
-			while (queue.isEmpty() && !finished);
-
-			if (finished()) return null;
-			try {
-				return queue.take();
-			} catch (InterruptedException e) {
-				error("threading error");
-				return null;
-			}
-		}
-
-		@Override
-		void put(RödaValue value) {
-			//System.err.println("<PUSH " + value + " to " + this + ">");
-			queue.add(value);
-		}
-
-		@Override
-		boolean finished() {
-			return finished && queue.isEmpty();
-		}
-
-		@Override
-		void finish() {
-			finished = true;
-		}
-
-		@Override
-		public String toString() {
-			return ""+(char)('A'+id);
-		}
-
-		int id; { id = streamCounter++; }
-	}
-	
-	static abstract class StreamType {
-		abstract StreamHandler newHandler();
-	}
-	private interface StreamHandler {
-		void handlePush(Supplier<Boolean> finished, Consumer<RödaValue> put, RödaValue value);
-		RödaValue handlePull(Supplier<Boolean> finished, Supplier<RödaValue> get);
-		RödaValue handleReadAll(Supplier<Boolean> finished, Supplier<RödaValue> get);
-	}
-	static class LineStream extends StreamType {
-		String sep;
-		LineStream() { sep="\n"; }
-		LineStream(String sep) { this.sep=sep; }
-		StreamHandler newHandler() {
-			return new StreamHandler() {
-				StringBuffer buffer = new StringBuffer();
-				RödaValue valueBuffer;
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					if (!value.isString()) {
-						put.accept(value);
-						return;
-					}
-					for (String line : value.str().split(sep)) {
-						put.accept(valueFromString(line));
-					}
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					if (valueBuffer != null) {
-						RödaValue val = valueBuffer;
-						valueBuffer = null;
-						return val;
-					}
-					do {
-						RödaValue val = get.get();
-						if (!val.isString()) {
-							if (buffer.length() != 0) {
-								valueBuffer = val;
-								return valueFromString(buffer.toString());
-							}
-							return val;
-						}
-						String str = val.str();
-						if (str.indexOf(sep) >= 0) {
-							String ans = str.substring(0, str.indexOf(sep));
-							ans = buffer.toString() + ans;
-							buffer = new StringBuffer(str.substring(str.indexOf(sep)+1));
-							return valueFromString(ans);
-						}
-						buffer = buffer.append(str);
-					} while (true);
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							Supplier<RödaValue> get) {
-					StringBuilder all = new StringBuilder();
-					while (!finished.get()) {
-						RödaValue val = get.get();
-						if (val == null) break;
-						all = all.append(val.str());
-					}
-					return valueFromString(all.toString());
-				}
-				
-			};
-		}
-	}
-	static class VoidStream extends StreamType {
-		StreamHandler newHandler() {
-			return new StreamHandler() {
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					// nop
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					error("can't pull from a void stream");
-					return null;
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							       Supplier<RödaValue> get) {
-					error("can't pull from a void stream");
-					return null;
-				}
-			};
-		}
-	}
-	static class ByteStream extends StreamType {
-		StreamHandler newHandler() {
-			return new StreamHandler() {
-				List<Character> queue = new ArrayList<>();
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					if (!value.isString()) {
-						put.accept(value);
-						return;
-					}
-					for (char chr : value.str().toCharArray())
-						put.accept(valueFromString(String.valueOf(chr)));
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					if (queue.isEmpty()) {
-						RödaValue val = get.get();
-						if (!val.isString()) return val;
-						for (char chr : val.str().toCharArray())
-							queue.add(chr);
-					}
-					return valueFromString(String.valueOf(queue.remove(0)));
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							       Supplier<RödaValue> get) {
-					StringBuilder all = new StringBuilder();
-					while (!finished.get()) {
-						RödaValue val = get.get();
-						if (val == null) break;
-						all = all.append(val.str());
-					}
-					return valueFromString(all.toString());
-				}
-			};
-		}
-	}
-	static class BooleanStream extends StreamType {
-		StreamHandler newHandler() {
-			return new StreamHandler() {
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					put.accept(value);
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					RödaValue value = get.get();
-					return valueFromBoolean(value.bool());
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							       Supplier<RödaValue> get) {
-					boolean all = true;
-					while (!finished.get()) {
-						RödaValue val = get.get();
-						if (val == null) break;
-						all &= val.bool();
-					}
-					return valueFromBoolean(all);
-				}
-			};
-		}
-	}
-	static class ValueStream extends StreamType {
-		StreamHandler newHandler() {
-			return new StreamHandler() {
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					put.accept(value);
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					return get.get();
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							       Supplier<RödaValue> get) {
-				        List<RödaValue> list = new ArrayList<RödaValue>();
-					while (true) {
-						RödaValue val = get.get();
-						if (val == null) break;
-						list.add(val);
-					}
-					return valueFromList(list);
-				}
-			};
-		}
-	}
 	
 	public static class RödaScope {
 		Optional<RödaScope> parent;
@@ -395,8 +123,17 @@ public class Interpreter {
 			};
 	}
 
-	{ Builtins.populate(G); initializeIO(); /*System.out.println(G.map.keySet());*/ }
+	{ Builtins.populate(G); /*System.out.println(G.map.keySet());*/ }
 
+	public Interpreter() {
+		initializeIO();
+	}
+
+	public Interpreter(RödaStream in, RödaStream out) {
+		STDIN = in;
+		STDOUT = out;
+	}
+	
 	public static ThreadLocal<ArrayDeque<String>> callStack = new InheritableThreadLocal<ArrayDeque<String>>() {
 			@Override protected ArrayDeque<String> childValue(ArrayDeque<String> parentValue) {
 				return new ArrayDeque<>(parentValue);
@@ -406,24 +143,27 @@ public class Interpreter {
 	static { callStack.set(new ArrayDeque<>()); }
 
 	@SuppressWarnings("serial")
-	private static class FatalException extends RuntimeException {
-		private FatalException(String message) {
+	public static class RödaException extends RuntimeException {
+		private ArrayDeque<String> stack;
+		private RödaException(String message, ArrayDeque<String> stack) {
 			super(message);
+			this.stack = stack;
+		}
+
+		public Deque<String> getStack() {
+			return stack;
 		}
 	}
 	
 	static void error(String message) {
-		System.err.println("FATAL ERROR: " + message);
-		printStackTrace();
+		RödaException e = new RödaException(message, new ArrayDeque<>(callStack.get()));
 		callStack.get().clear();
-		throw new FatalException(message);
+		throw e;
 	}
 
 	private static void printStackTrace() {
-		ArrayDeque<String> stack = callStack.get();
-		Iterator<String> iterator = stack.iterator();
-		while (iterator.hasNext()) {
-			System.err.println(iterator.next());
+	        for (String step : callStack.get()) {
+			System.err.println(step);
 		}
 	}
 	
@@ -433,17 +173,14 @@ public class Interpreter {
 	
 	public void interpret(String code, String filename) {
 		try {
-			Program program = parse(t.tokenize(code, filename));
-			for (Function f : program.functions) {
-				G.setLocal(f.name, valueFromFunction(f));
-			}
+		        load(code, filename, G);
 			
 			RödaValue main = G.resolve("main");
 			if (main == null) return;
 			
 			exec("<runtime>", 0, main, new ArrayList<>(), G, STDIN, STDOUT);
-		} catch (FatalException e) {
-			// viesti on jo tulostettu
+		} catch (RödaException e) {
+			throw e;
 		} catch (ParsingException e) {
 			throw e;
 		} catch (Exception e) {
@@ -452,12 +189,44 @@ public class Interpreter {
 		}
 	}
 
+	public static void load(String code, String filename, RödaScope scope) {
+		try {
+			Program program = parse(t.tokenize(code, filename));
+			for (Function f : program.functions) {
+				scope.setLocal(f.name, valueFromFunction(f));
+			}
+		} catch (RödaException e) {
+			throw e;
+		} catch (ParsingException e) {
+			throw e;
+		} catch (Exception e) {
+			e.printStackTrace();
+			printStackTrace();
+		}
+	}
+
+	public static void loadFile(String filename, RödaScope scope) {
+		try {
+			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
+			String code = "";
+			String line = "";
+			while ((line = in.readLine()) != null) {
+				code += line + "\n";
+			}
+			in.close();
+			load(code, filename, scope);
+		} catch (IOException e) {
+			e.printStackTrace();
+			error("io error");
+		}
+	}
+
 	public void interpretStatement(String code, String filename) {
 		try {
 			Statement statement = parseStatement(t.tokenize(code, filename));
 			evalStatement(statement, G, STDIN, STDOUT, false);
-		} catch (FatalException e) {
-			// viesti on jo tulostettu
+		} catch (RödaException e) {
+			throw e;
 		} catch (ParsingException e) {
 			throw e;
 		} catch (Exception e) {

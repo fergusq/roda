@@ -1,29 +1,8 @@
-/* hakee kuvan netistä */
-hae_kuva sana mones montako {
-	/* asetukset */
-	user_agent -set "Links (2.7; Linux 3.5.0-17-generic x86_64; GNU C 4.7.1; text)"
-	hakukone -set "http://images.google.com/images?q="..sana.."&lr=lang_fi&cr=countryFI"
-	etsitty_url -set "http://t[0-9]\\.gstatic.com/images\\?q=tbn:[a-zA-Z0-9_-]*"
-	
-	/* haetaan lista kuvista */
-	kuvat -set !(wcat -U user_agent hakukone | grep -o etsitty_url)
-	
-	/* jos kuvia löytyi... */
-	if test #kuvat -gt 0; do
-		
-		/* valitaan ensimmäinen kuva */
-		kuva -set kuvat[0]
-		
-		/* ladataan kuva */
-		wcat -O mones kuva
-		
-		/* palautetaan svg-teksti tarvittaessa */
-		if test montako -not-eq ""; do
-			x_koordinaatti -set !(expr mones "*500/" montako)[0]
-			leveys -set !(expr "500/" montako)[0]
-			push "<image xlink:href='"..mones.."' preserveAspectRatio='none' x='"..x_koordinaatti.."' y='50' width='"..leveys.."' height='150' style='opacity:0.4;'/>"
-		done
-	done
+hae_kuva_ja_tee_koodi sana mones montako {
+	hae_kuva sana mones
+	x_koordinaatti -set 'mones*500/montako'
+	leveys -set '500/montako'
+	push "<image xlink:href='"..mones.."' preserveAspectRatio='none' x='"..x_koordinaatti.."' y='50' width='"..leveys.."' height='150' style='opacity:0.4;'/>"
 }
 
 /* tekee svg-kuvan */
@@ -77,7 +56,7 @@ käsittele_kuhaviesti ketju viesti {
 	nettikuvat -create ""
 	laskuri -create 0
 	for sana in kuvasanat; do
-		nettikuvat -append !(hae_kuva sana laskuri kuvamontako)&" "
+		nettikuvat -append !(hae_kuva_ja_tee_koodi sana laskuri kuvamontako)&" "
 		laskuri -inc
 	done
 
@@ -111,6 +90,8 @@ hae_tiedot kartta haut... {
 
 /* pääfunktio */
 main {
+	import "kuvahaku.röd"
+	
 	/* alustetaan botti */  
 	token -create !(cat "token.txt")[0]
 	base_url -create "https://api.telegram.org/bot"..token
