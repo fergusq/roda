@@ -19,7 +19,7 @@ $ git clone https://github.com/fergusq/roda
 $ cd roda
 roda $ ln -s ../nept/bin nept
 roda $ mkdir bin
-roda $ javac -d bin -cp nept -sourcepath . org/kaivos/röda/Röda.java
+roda $ javac -d bin -cp nept -sourcepath src src/org/kaivos/röda/Röda.java
 ```
 
 Rödan mukana tulee interaktiivinen tulkki, jota voi käyttää valitsimella `-i`.
