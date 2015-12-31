@@ -192,8 +192,12 @@ public class RödaValue {
 	boolean isString() {
 		return type == Type.STRING || type == Type.NUMBER;
 	}
+
+	boolean isBoolean() {
+		return type == Type.BOOLEAN;
+	}
 	
-	boolean isReference() {
+	Boolean isReference() {
 		return type == Type.REFERENCE;
 	}
 

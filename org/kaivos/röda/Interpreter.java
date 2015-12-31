@@ -936,6 +936,78 @@ public class Interpreter {
 			}
 			return v;
 		}
+		if (exp.type == Expression.Type.CALCULATOR) {
+			if (exp.isUnary) {
+				RödaValue sub = evalExpression(exp.sub, scope, in, out).impliciteResolve();
+				switch (exp.ctype) {
+				case NOT:
+					if (!sub.isBoolean()) error("tried to NOT a " + sub.typeString());
+					return valueFromBoolean(!sub.bool());
+				case NEG:
+					if (!sub.isNumber()) error("tried to NEG a " + sub.typeString());
+					return valueFromInt(-sub.num());
+				case BNOT:
+					if (!sub.isNumber()) error("tried to BNOT a " + sub.typeString());
+					return valueFromInt(~sub.num());
+				}
+			}
+			else {
+				RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
+				RödaValue val2 = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
+				switch (exp.ctype) {
+				case AND:
+					if (!val1.isBoolean()) error("tried to AND a " + val1.typeString());
+					if (!val2.isBoolean()) error("tried to AND a " + val2.typeString());
+					return valueFromBoolean(val1.bool() && val2.bool());
+				case OR:
+					if (!val1.isBoolean()) error("tried to OR a " + val1.typeString());
+					if (!val2.isBoolean()) error("tried to OR a " + val2.typeString());
+					return valueFromBoolean(val1.bool() || val2.bool());
+				case XOR:
+					if (!val1.isBoolean()) error("tried to XOR a " + val1.typeString());
+					if (!val2.isBoolean()) error("tried to XOR a " + val2.typeString());
+					return valueFromBoolean(val1.bool() ^ val2.bool());
+				case EQ:
+					return valueFromBoolean(val1.halfEq(val2));
+				case NEQ:
+					return valueFromBoolean(!val1.halfEq(val2));
+				}
+				if (!val1.isNumber()) error("tried to " + exp.ctype + " a " + val1.typeString());
+				if (!val2.isNumber()) error("tried to " + exp.ctype + " a " + val2.typeString());
+				switch (exp.ctype) {
+				case MUL:
+					return valueFromInt(val1.num()*val2.num());
+				case DIV:
+					return valueFromInt(val1.num()/val2.num());
+				case ADD:
+					return valueFromInt(val1.num()+val2.num());
+				case SUB:
+					return valueFromInt(val1.num()-val2.num());
+				case BAND:
+					return valueFromInt(val1.num()&val2.num());
+				case BOR:
+					return valueFromInt(val1.num()|val2.num());
+				case BXOR:
+					return valueFromInt(val1.num()^val2.num());
+				case BLSHIFT:
+					return valueFromInt(val1.num()<<val2.num());
+				case BRSHIFT:
+					return valueFromInt(val1.num()>>val2.num());
+				case BRRSHIFT:
+					return valueFromInt(val1.num()>>>val2.num());
+				case LT:
+					return valueFromBoolean(val1.num()<val2.num());
+				case GT:
+					return valueFromBoolean(val1.num()>val2.num());
+				case LE:
+					return valueFromBoolean(val1.num()<=val2.num());
+				case GE:
+					return valueFromBoolean(val1.num()>=val2.num());
+				}
+			}
+			error("unknown expression type " + exp.ctype);
+			return null;
+		}
 
 		error("unknown expression type " + exp.type);
 		return null;

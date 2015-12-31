@@ -82,7 +82,7 @@ käsittele_kuhaviesti ketju viesti {
 	done
 
 	/* jaetaan sanat kahtia ja tehdään kuva */
-	puoliväli -create !(expr montako "/2")[0]
+	puoliväli -create 'montako/2'
 	tee_pilakuva nettikuvat sanat[:puoliväli]&" " sanat[puoliväli:]&" " "kuhaonmeemi.png"
 
 	/* lähetetään kuva ketjuun */
@@ -111,7 +111,7 @@ hae_tiedot kartta haut... {
 
 /* pääfunktio */
 main {
-	/* alustetaan botti */
+	/* alustetaan botti */  
 	token -create !(cat "token.txt")[0]
 	base_url -create "https://api.telegram.org/bot"..token
 	tg_update -create base_url.."/getUpdates?offset="
@@ -155,7 +155,7 @@ main {
 					if test teksti -matches ".*\\b[Kk][Uu][Hh][Aa].*"; do
 						käsittele_kuhaviesti ketju teksti
 						aika -create !(time)[0]
-						aikaa_kulunut -create !(expr aika "-" aika_viimeksi)[0]
+						aikaa_kulunut -create 'aika - aika_viimeksi'
 						if test aikaa_kulunut -lt 10000; do
 							tiheitä_viestejä -inc
 							if test tiheitä_viestejä -eq 4; do

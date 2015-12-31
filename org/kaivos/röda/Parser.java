@@ -8,8 +8,12 @@ import java.util.HashMap;
 
 import java.util.regex.Pattern;
 
+import java.util.function.BinaryOperator;
+
 import org.kaivos.nept.parser.TokenList;
 import org.kaivos.nept.parser.TokenScanner;
+import org.kaivos.nept.parser.OperatorLibrary;
+import org.kaivos.nept.parser.OperatorPrecedenceParser;
 import org.kaivos.nept.parser.ParsingException;
 
 import org.kaivos.röda.Interpreter.StreamType;
@@ -24,15 +28,15 @@ public class Parser {
 		.addOperatorRule("..")
 		.addOperatorRule("->")
 		.addOperators("<>()[]{}|&.:;=#%\n")
-		.addPatternRule(Pattern.compile("[0-9]+\\.[0-9]+"))
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
+		.addStringRule('\'', '\'', '\0')
 		.addStringRule('"','"','\\')
 		.addEscapeCode('\\', "\\")
 		.addEscapeCode('n', "\n")
 		.addEscapeCode('t', "\t")
 		.addCharacterEscapeCode('x', 2, 16)
-		.dontIgnore('\n') // TODO
+		.dontIgnore('\n')
 		.appendOnEOF("<EOF>");
 
 	private static void newline(TokenList tl) {
@@ -353,9 +357,37 @@ public class Parser {
 			ELEMENT,
 			SLICE,
 			CONCAT,
-			JOIN
+			JOIN,
+			CALCULATOR
+		}
+		enum CType {
+			MUL,
+			DIV,
+			ADD,
+			SUB,
+			BAND,
+			BOR,
+			BXOR,
+			BRSHIFT,
+			BRRSHIFT,
+			BLSHIFT,
+			EQ,
+			NEQ,
+			LT,
+			GT,
+			LE,
+			GE,
+			AND,
+			OR,
+			XOR,
+			
+			NEG,
+			BNOT,
+			NOT
 		}
 		Type type;
+		CType ctype;
+		boolean isUnary;
 		String variable;
 		String string;
 		int number;
@@ -471,8 +503,33 @@ public class Parser {
 		e.exprB = b;
 		return e;
 	}
+
+	private static Expression expressionCalculator(String file, int line, Expression.CType type,
+						       Expression a, Expression b) {
+		Expression e = new Expression();
+		e.type = Expression.Type.CALCULATOR;
+		e.ctype = type;
+		e.isUnary = false;
+		e.file = file;
+		e.line = line;
+		e.exprA = a;
+		e.exprB = b;
+		return e;
+	}
+
+	private static Expression expressionCalculatorUnary(String file, int line, Expression.CType type,
+							    Expression sub) {
+		Expression e = new Expression();
+		e.type = Expression.Type.CALCULATOR;
+		e.ctype = type;
+		e.isUnary = true;
+		e.file = file;
+		e.line = line;
+		e.sub = sub;
+		return e;
+	}
 	
-	static Expression parseExpression(TokenList tl) {
+	private static Expression parseExpression(TokenList tl) {
 		Expression ans = parseExpressionJoin(tl);
 		while (tl.isNext("..")) {
 			String file = tl.seek().getFile();
@@ -483,7 +540,7 @@ public class Parser {
 		return ans;
 	}
 	
-	static Expression parseExpressionJoin(TokenList tl) {
+	private static Expression parseExpressionJoin(TokenList tl) {
 		Expression ans = parseExpressionPrimary(tl);
 		while (tl.isNext("&")) {
 			String file = tl.seek().getFile();
@@ -493,15 +550,21 @@ public class Parser {
 		}
 		return ans;
 	}
-	
-	static Expression parseExpressionPrimary(TokenList tl) {
+       
+	private static Expression parseExpressionPrimary(TokenList tl) {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
 		Expression ans;
-		if (tl.isNext("#")) {
+		if (tl.isNext("'")) {
+			tl.accept("'");
+			String expr = tl.nextString();
+			tl.accept("'");
+			ans = parseCalculatorExpression(calculatorScanner.tokenize(expr, file, line));
+		}
+		else if (tl.isNext("#")) {
 			tl.accept("#");
-			Expression e = parseExpression(tl);
-			ans = expressionLength(file, line, e);
+			Expression e = parseExpressionPrimary(tl);
+			return expressionLength(file, line, e);
 		}
 		else if (tl.isNext("{")) {
 			List<Parameter> parameters = new ArrayList<>();
@@ -565,9 +628,15 @@ public class Parser {
 		else if (tl.isNext("<EOF>")) throw new ParsingException(TokenList.expected("#", "(", "{", "!", "<identifier>", "<number>", "<string>"), tl.next());
 		else ans = expressionVariable(file, line, tl.nextString()); // TODO validointi
 
+		ans = parseArrayAccessIfPossible(tl, ans);
+
+		return ans;
+	}
+
+	private static Expression parseArrayAccessIfPossible(TokenList tl, Expression ans) {
 		while (tl.isNext("[")) {
-			file = tl.seek().getFile();
-			line = tl.seek().getLine();
+			String file = tl.seek().getFile();
+			int line = tl.seek().getLine();
 			tl.accept("[");
 			Expression e1 = tl.isNext(":") ? null : parseExpression(tl);
 			if (tl.isNext(":")) {
@@ -578,6 +647,109 @@ public class Parser {
 			else ans = expressionElement(file, line, ans, e1);
 			tl.accept("]");
 		}
+		return ans;
+	}
+	
+	public static final TokenScanner calculatorScanner = new TokenScanner()
+		.addOperatorRule("&&")
+		.addOperatorRule("||")
+		.addOperatorRule("^^")
+		.addOperatorRule("!=")
+		.addOperatorRule("<=")
+		.addOperatorRule(">=")
+		.addOperatorRule("<<")
+		.addOperatorRule(">>")
+		.addOperatorRule(">>>")
+		.addOperators("#()[:]+-*/<>~!\n")
+		.separateIdentifiersAndPunctuation(false)
+		.addCommentRule("/*", "*/")
+		.dontIgnore('\n')
+		.appendOnEOF("<EOF>");
+	
+	private static OperatorLibrary<Expression> library;
+	private static OperatorPrecedenceParser<Expression> opparser;
+
+	private static BinaryOperator<Expression> op(Expression.CType type) {
+		return (a, b) -> expressionCalculator(a.file, a.line, type, a, b);
+	}
+	
+	static {
+		/* Declares the operator library – all operators use parsePrimary() as their RHS parser */
+		library = new OperatorLibrary<>(tl -> parseCalculatorPrimary(tl));
+		
+		/* Declares the operators*/
+		library.add("&&", op(Expression.CType.AND));
+		library.add("||", op(Expression.CType.OR));
+		library.add("^^", op(Expression.CType.XOR));
+		library.increaseLevel();
+		library.add("=", op(Expression.CType.EQ));
+		library.add("!=", op(Expression.CType.NEQ));
+		library.increaseLevel();
+		library.add("<", op(Expression.CType.LT));
+		library.add(">", op(Expression.CType.GT));
+		library.add("<=", op(Expression.CType.LE));
+		library.add(">=", op(Expression.CType.GE));
+		library.increaseLevel();
+		library.add("&", op(Expression.CType.BAND));
+		library.add("|", op(Expression.CType.BOR));
+		library.add("^", op(Expression.CType.BXOR));
+		library.add("<<", op(Expression.CType.BLSHIFT));
+		library.add(">>", op(Expression.CType.BRSHIFT));
+		library.add(">>>", op(Expression.CType.BRRSHIFT));
+		library.increaseLevel();
+		library.add("+", op(Expression.CType.ADD));
+		library.add("-", op(Expression.CType.SUB));
+		library.increaseLevel();
+		library.add("*", op(Expression.CType.MUL));
+		library.add("/", op(Expression.CType.DIV));
+		
+		/* Declares the OPP*/
+		opparser = OperatorPrecedenceParser.fromLibrary(library);
+	}
+	
+	private static Expression parseCalculatorExpression(TokenList tl) {
+		Expression e = opparser.parse(tl);
+		tl.accept("<EOF>");
+		return e;
+	}
+
+	private static Expression parseCalculatorPrimary(TokenList tl) {
+		String file = tl.seek().getFile();
+		int line = tl.seek().getLine();
+		Expression ans;
+		if (tl.isNext("-")) {
+			tl.accept("-");
+			return expressionCalculatorUnary(file, line, Expression.CType.NEG,
+							 parseCalculatorPrimary(tl));
+		}
+		if (tl.isNext("~")) {
+			tl.accept("~");
+			return expressionCalculatorUnary(file, line, Expression.CType.BNOT,
+							 parseCalculatorPrimary(tl));
+		}
+		if (tl.isNext("!")) {
+			tl.accept("!");
+			return expressionCalculatorUnary(file, line, Expression.CType.NOT,
+							 parseCalculatorPrimary(tl));
+		}
+		if (tl.isNext("#")) {
+			tl.accept("#");
+			return expressionLength(file, line, parseCalculatorPrimary(tl));
+		}
+		if (tl.isNext("(")) {
+			tl.accept("(");
+			Expression e = parseCalculatorExpression(tl);
+			tl.accept(")");
+			ans = e;
+		}
+		else if (tl.seekString().matches("[0-9]+")) {
+			ans = expressionInt(file, line, Integer.parseInt(tl.nextString()));
+		}
+		else {
+		        ans = expressionVariable(file, line, tl.nextString());
+		}
+
+		ans = parseArrayAccessIfPossible(tl, ans);
 
 		return ans;
 	}

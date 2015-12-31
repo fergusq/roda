@@ -297,7 +297,7 @@ class Builtins {
 		
 		S.setLocal("expr", valueFromNativeFunction("expr", (rawArgs, args, scope, in, out) -> {
 				        String expression = args.stream().map(RödaValue::str).collect(joining(" "));
-					out.push(valueFromInt(Calculator.eval(expression)));
+					out.push(valueFromString(String.valueOf(Calculator.eval(expression))));
 				}, Arrays.asList(new Parameter("expressions", false)), true));
 
 		S.setLocal("test", valueFromNativeFunction("test", (rawArgs, args, scope, in, out) -> {
