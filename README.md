@@ -199,6 +199,7 @@ nimi -create "Lissu"
 }
 push nimi /* tulostaa Lissun */
 ```
+Muuttujan voi tuhota kokonaan käyttäen silmukkaa ja `-defined`-lippua.
 
 Ilman argumentteja muuttuja työntää oman arvonsa ulostulovirtaansa. Näin muuttujan arvoa voi helposti putkittaa:
 ```
@@ -369,24 +370,17 @@ done
 Tässä listassa sulkuja `()` käytetään ryhmittelemiseen, `[]` valinnaisuuteen ja merkkiä `|` vaihtoehtoon.
 Merkki `*` tarkoittaa "nolla tai useampi" ja `+` yksi tai useampi.
 
-### push
+### cat
 
->`push arvo+`
+>`cat tiedosto*`
 
-Työntää arvot ulostulovirtaan.
+Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 
-### pull
+### false
 
->`pull [-r] muuttuja+`
+>`false`
 
-Lukee muuttujaan arvon sisääntulovirrasta. Jos valitsin `-r` on käytössä, palautetaan jokaista onnistunutta
-lukua kohti ulostulovirtaan arvo `true` ja jokaista epäonnistunutta lukua kohti arvo `false`.
-
-### seq
-
->`seq alku loppu`
-
-Palauttaa kokonaisluvut välillä `[alku, loppu]`.
+Työntää arvon `false` ulostulovirtaan.
 
 ### grep
 
@@ -396,19 +390,33 @@ Lukee sisääntulovirrasta merkkijonoarvoja. Jos merkkijono täsmää annettuun 
 ulostulovirtaan. Jos valitsinta `-o` (**o**nly-matching) on käytetty, palautetaan merkkijonoista vain ne osat,
 joihin säännöllinen lauseke täsmää.
 
-### replace
+### expr
 
->`replace (regex korvaava)+`
+>`expr merkkijono+`
 
-Lukee sisääntulovirrasta merkkijonoarvoja ja työntää ne ulostulovirtaan siten, että niihin on tehty annetut
-korvaukset järjestyksessä. Käyttää sisäisesti Javan `String.replaceAll`-metodia.
+Yhdistää merkkijonot ja antaa lopputuloksen laskimelle, joka palauttaa vastauksen ulostulovirtaan.
+Tukee tällä hetkellä vain liukulukuja.
 
-### split
+### exec
 
->`split [-s regex] merkkijono`
+>`exec komento argumentit*`
 
-Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **s**eparator) osoittamista kohdista tai
-oletuksena välilyöntien perusteella.
+Suorittaa annetun ulkoisen komennon annetuilla argumenteilla. Jos komennolle ei halua antaa syötettä tai sen
+ulostuloa ei halua, voi sen putkittaa nimettömälle funktiolle:
+
+`{} | exec komento argumentit | {}`
+
+### head
+
+>`head [määrä]`
+
+Lukee yhden arvon (tai argumenttina annetun määrän arvoja) ja työntää sen/ne ulostulovirtaan.
+
+### import
+
+>`import tiedosto+`
+
+Suorittaa annetut Röda-tiedostot.
 
 ### json
 
@@ -424,17 +432,18 @@ määrittää, että avaimet annetaan merkkijonoina listojen sijaan. (TODO parem
 
 Palauttaa argumentit listana.
 
-### true
+### pull
 
->`true`
+>`pull [-r] muuttuja+`
 
-Työntää arvon `true` ulostulovirtaan.
+### push
 
-### false
+>`push arvo+`
 
->`false`
+Työntää arvot ulostulovirtaan.
 
-Työntää arvon `false` ulostulovirtaan.
+Lukee muuttujaan arvon sisääntulovirrasta. Jos valitsin `-r` on käytössä, palautetaan jokaista onnistunutta
+lukua kohti ulostulovirtaan arvo `true` ja jokaista epäonnistunutta lukua kohti arvo `false`.
 
 ### random
 
@@ -443,18 +452,25 @@ Työntää arvon `false` ulostulovirtaan.
 Työntää oletuksena satunnaisen totuusarvon ulostulovirtaan.
 Voi myös palauttaa kokonaisluvun tai liukuluvun merkkijonona.
 
-### time
+### replace
 
->`time`
+>`replace (regex korvaava)+`
 
-Palauttaa nykyisen ajan millisekuntteina.
+Lukee sisääntulovirrasta merkkijonoarvoja ja työntää ne ulostulovirtaan siten, että niihin on tehty annetut
+korvaukset järjestyksessä. Käyttää sisäisesti Javan `String.replaceAll`-metodia.
 
-### expr
+### seq
 
->`expr merkkijono+`
+>`seq alku loppu`
 
-Yhdistää merkkijonot ja antaa lopputuloksen laskimelle, joka palauttaa vastauksen ulostulovirtaan.
-Tukee tällä hetkellä vain kokonaislukuja.
+Palauttaa kokonaisluvut välillä `[alku, loppu]`.
+
+### split
+
+>`split [-s regex] merkkijono`
+
+Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **s**eparator) osoittamista kohdista tai
+oletuksena välilyöntien perusteella.
 
 ### test
 
@@ -469,29 +485,23 @@ mutta vaatii muuten tyypeiltä yhtenevyyttä.
 - `-weak_eq` muuttaa operandit merkkijonoiksi ja vertailee niitä.
 - `-matches` vertailee ensimmäistä operandia toiseen, jonka se olettaa olevan säännöllinen lauseke.
 
-### head
-
->`head [määrä]`
-
-Lukee yhden arvon (tai argumenttina annetun määrän arvoja) ja työntää sen/ne ulostulovirtaan.
-
 ### tail
 
 >`tail [määrä]`
 
 Lukee kaikki arvot sisääntulovirrasta ja palauttaa viimeisen arvon (tai viimeiset argumenttina annettu määrä arvoa).
 
-### write
+### time
 
->`write tiedoston_nimi`
+>`time`
 
-Lukee kaiken sisääntulovirrasta, muuttaa arvot merkkijonoiksi ja kirjoittaa ne annettuun tiedostoon.
+Palauttaa nykyisen ajan millisekuntteina.
 
-### cat
+### true
 
->`cat tiedosto*`
+>`true`
 
-Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
+Työntää arvon `true` ulostulovirtaan.
 
 ### wcat
 
@@ -500,17 +510,8 @@ Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 Lataa tiedostot annetuista Internet-osoitteista mahdollisesti annetuilla user agenteilla
 ja kirjoittaa ne annettuihin tiedostoihin (tai oletuksena rivi kerrallaan ulostulovirtaan).
 
-### import
+### write
 
->`import tiedosto+`
+>`write tiedoston_nimi`
 
-Suorittaa annetut Röda-tiedostot.
-
-### exec
-
->`exec komento argumentit*`
-
-Suorittaa annetun ulkoisen komennon annetuilla argumenteilla. Jos komennolle ei halua antaa syötettä tai sen
-ulostuloa ei halua, voi sen putkittaa nimettömälle funktiolle:
-
-`{} | exec komento argumentit | {}`
+Lukee kaiken sisääntulovirrasta, muuttaa arvot merkkijonoiksi ja kirjoittaa ne annettuun tiedostoon.
