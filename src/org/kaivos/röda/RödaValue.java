@@ -47,9 +47,9 @@ public class RödaValue {
 	// LIST
 	List<RödaValue> list;
 	
-	RödaValue() {} // käytä apufunktioita
+	private RödaValue() {} // käytä apufunktioita
 	
-	RödaValue copy() {
+	public RödaValue copy() {
 		RödaValue val = new RödaValue();
 		val.type = type;
 		val.text = text;
@@ -66,7 +66,7 @@ public class RödaValue {
 		return val;
 	}
 	
-	String str() {
+	public String str() {
 		if (type == Type.BOOLEAN) return bool ? "true" : "false";
 		if (type == Type.STRING) return text;
 		if (type == Type.NUMBER) return ""+number;
@@ -82,13 +82,13 @@ public class RödaValue {
 		return null;
 	}
 	
-	boolean bool() {
+	public boolean bool() {
 		if (type == Type.BOOLEAN) return bool;
 		if (type == Type.REFERENCE) return scope.resolve(target).bool();
 			return true;
 	}
 	
-	int num() {
+	public int num() {
 		if (type == Type.NUMBER) return number;
 		if (type == Type.STRING) {
 			try {
@@ -101,7 +101,7 @@ public class RödaValue {
 		return -1;
 	}
 	
-	RödaValue resolve(boolean implicite) {
+	public RödaValue resolve(boolean implicite) {
 		if (type == Type.REFERENCE) {
 			RödaValue t = scope.resolve(target);
 			if (t == null) error("variable not found (via " + (implicite ? "implicite" : "explicite") + " reference): " + target);
@@ -173,35 +173,35 @@ public class RödaValue {
 		}
 	}
 	
-	boolean isFunction() {
+	public boolean isFunction() {
 		return type == Type.FUNCTION || type == Type.NATIVE_FUNCTION;
 	}
 	
-	boolean isNativeFunction() {
+	public boolean isNativeFunction() {
 		return type == Type.NATIVE_FUNCTION;
 	}
 	
-	boolean isList() {
+	public boolean isList() {
 		return type == Type.LIST;
 	}
 
-	boolean isNumber() {
+	public boolean isNumber() {
 		return type == Type.STRING || type == Type.NUMBER;
 	}
 	
-	boolean isString() {
+	public boolean isString() {
 		return type == Type.STRING || type == Type.NUMBER;
 	}
 
-	boolean isBoolean() {
+	public boolean isBoolean() {
 		return type == Type.BOOLEAN;
 	}
 	
-	Boolean isReference() {
+	public Boolean isReference() {
 		return type == Type.REFERENCE;
 	}
 
-	String typeString() {
+	public String typeString() {
 		return type.toString();
 	}
 	

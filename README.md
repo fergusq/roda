@@ -212,7 +212,7 @@ Sisäänrakennetuista funktioista vain `true`, `false`, `test` (ks. alempana) ja
 
 ```
 if test ikä -lt 18; do
-	pull "Olet liian nuori!\n"
+	push "Olet liian nuori!\n"
 done
 ```
 
@@ -333,7 +333,7 @@ Funktiota käytetään antamalla sille nimetön funktio (tai tavallinenkin funkt
 ```
 tytöt -create (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
 tytöt | filter { |tyttö|; test tyttö[1] -gt 1995 } | while pull -r tyttö; do
-	push tyttö " on vielä nuori.\n"
+	push tyttö[0] " on vielä nuori.\n"
 done
 ```
 
@@ -380,7 +380,7 @@ korvaukset järjestyksessä. Käyttää sisäisesti Javan `String.replaceAll`-me
 
 >`split [-s regex] merkkijono`
 
-Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **separator**) osoittamista kohdista tai
+Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **s**eparator) osoittamista kohdista tai
 oletuksena välilyöntien perusteella.
 
 ### json

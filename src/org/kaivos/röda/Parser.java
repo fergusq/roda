@@ -559,7 +559,9 @@ public class Parser {
 			tl.accept("'");
 			String expr = tl.nextString();
 			tl.accept("'");
-			ans = parseCalculatorExpression(calculatorScanner.tokenize(expr, file, line));
+			TokenList tlc = calculatorScanner.tokenize(expr, file, line);
+			ans = parseCalculatorExpression(tlc);
+			tlc.accept("<EOF>");
 		}
 		else if (tl.isNext("#")) {
 			tl.accept("#");
@@ -660,7 +662,7 @@ public class Parser {
 		.addOperatorRule("<<")
 		.addOperatorRule(">>")
 		.addOperatorRule(">>>")
-		.addOperators("#()[:]+-*/<>~!\n")
+		.addOperators("#()[:]=+-*/<>&|^~!\n")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
 		.dontIgnore('\n')
@@ -709,7 +711,6 @@ public class Parser {
 	
 	private static Expression parseCalculatorExpression(TokenList tl) {
 		Expression e = opparser.parse(tl);
-		tl.accept("<EOF>");
 		return e;
 	}
 

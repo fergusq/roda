@@ -58,11 +58,13 @@ public class Interpreter {
 		synchronized void set(String name, RödaValue value) {
 			if (parent.isPresent() && parent.get().resolve(name) != null)
 				parent.get().set(name, value);
-			else map.put(name, value);
+			else {
+			        map.put(name, value);
+			}
 		}
 
 		synchronized void setLocal(String name, RödaValue value) {
-			map.put(name, value);
+		        map.put(name, value);
 		}
 	}
 	
@@ -185,7 +187,7 @@ public class Interpreter {
 			throw e;
 		} catch (Exception e) {
 			e.printStackTrace();
-			printStackTrace();
+			error("java exception");
 		}
 	}
 
@@ -201,7 +203,7 @@ public class Interpreter {
 			throw e;
 		} catch (Exception e) {
 			e.printStackTrace();
-			printStackTrace();
+			error("java exception");
 		}
 	}
 
@@ -231,7 +233,7 @@ public class Interpreter {
 			throw e;
 		} catch (Exception e) {
 			e.printStackTrace();
-		        printStackTrace();
+			error("java exception");
 		} 
 	}
 	
@@ -346,7 +348,7 @@ public class Interpreter {
 				}
 				if (args.get(0).str().equals("-dec")) {
 					checkNumber("-dec", rval);
-					value.assign(valueFromInt(rval.num()+1));
+					value.assign(valueFromInt(rval.num()-1));
 					return;
 				}
 			}
@@ -356,7 +358,7 @@ public class Interpreter {
 					return;
 				}
 				if (args.get(0).str().equals("-create")) {
-					value.assignLocal(args.get(1));
+				        value.assignLocal(args.get(1));
 					return;
 				}
 				if (args.get(0).str().equals("-add")) {
@@ -700,6 +702,9 @@ public class Interpreter {
 		if (exp.type == Expression.Type.VARIABLE) {
 			RödaValue v = scope.resolve(exp.variable);
 			if (v == null) return valueFromReference(scope, exp.variable);
+			if (v.isReference()) {
+				return v;
+			}
 			if (!v.isFunction()) {
 				return valueFromReference(scope, exp.variable);
 			}
