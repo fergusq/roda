@@ -332,7 +332,6 @@ public class Interpreter {
 		if (value.isReference()) {
 			if (args.isEmpty()) {
 				RödaValue rval = value.resolve(false);
-				if (rval == null) error("variable not found (via explicite reference): " + value.target);
 				if (rval.isList())
 					for (RödaValue item : rval.list)
 						out.push(item);
@@ -340,19 +339,24 @@ public class Interpreter {
 				return;
 			}
 			if (args.size() == 1) {
-				RödaValue rval = value.resolve(false);
 				if (args.get(0).str().equals("-inc")) {
+					RödaValue rval = value.resolve(false);
 					checkNumber("-inc", rval);
 					value.assign(valueFromInt(rval.num()+1));
 					return;
 				}
 				if (args.get(0).str().equals("-dec")) {
+					RödaValue rval = value.resolve(false);
 					checkNumber("-dec", rval);
 					value.assign(valueFromInt(rval.num()-1));
 					return;
 				}
 				if (args.get(0).str().equals("-undefine")) {
 				        value.assign(null);
+					return;
+				}
+				if (args.get(0).str().equals("-defined")) {
+				        out.push(valueFromBoolean(value.scope.resolve(value.target) != null));
 					return;
 				}
 			}
@@ -540,7 +544,7 @@ public class Interpreter {
 						      RödaStream _in, RödaStream _out,
 						      boolean canFinish) {
 		if (cmd.type == Command.Type.NORMAL) {
-				RödaValue function = evalExpression(cmd.name, scope, in, out);
+			RödaValue function = evalExpression(cmd.name, scope, in, out, false);
 				List<RödaValue> args = cmd.arguments.stream().map(a -> evalExpression(a, scope, in, out)).collect(toList());
 				Runnable r = () -> {
 					exec(cmd.file, cmd.line, function, args, scope, _in, _out);
@@ -620,15 +624,22 @@ public class Interpreter {
 		error("unknown command");
 		return null;
 	}
-
+	
 	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
+		return evalExpression(exp, scope, in, out, true);
+	}
+	
+	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out,
+					 boolean allowFunctionReferences) {
 		callStack.get().push("expression " + exp.type + "\n\tat " + exp.file + ":" + exp.line);
-		RödaValue value = evalExpressionWithoutErrorHandling(exp, scope, in, out);
+		RödaValue value = evalExpressionWithoutErrorHandling(exp, scope, in, out, allowFunctionReferences);
 		callStack.get().pop();
 		return value;
 	}
 	
-	private RödaValue evalExpressionWithoutErrorHandling(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
+	private RödaValue evalExpressionWithoutErrorHandling(Expression exp, RödaScope scope,
+							     RödaStream in, RödaStream out,
+							     boolean allowFunctionReferences) {
 		if (exp.type == Expression.Type.STRING) return valueFromString(exp.string);
 		if (exp.type == Expression.Type.NUMBER) return valueFromInt(exp.number);
 		if (exp.type == Expression.Type.BLOCK) return valueFromFunction(exp.block, scope);
@@ -712,7 +723,7 @@ public class Interpreter {
 			if (v.isReference()) {
 				return v;
 			}
-			if (!v.isFunction()) {
+			if (!v.isFunction() || allowFunctionReferences) {
 				return valueFromReference(scope, exp.variable);
 			}
 			return v;

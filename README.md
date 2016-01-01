@@ -182,6 +182,24 @@ ikä -inc
 voimat -dec
 ```
 
+Muuttujan voi tuhota käyttämällä lippua `-undefine`.
+Normaalisti muuttujia ei kuitenkaan tarvitse tuhota erikseen.
+```
+nimi -undefine
+```
+Muuttujan tuhoaminen ei poista muuttujaa varmasti, sillä se saattaa olla määritelty jollakin toisellakin ohjelman
+tasolla.
+```
+nimi -create "Lissu"
+{
+	nimi -create "Emilia"
+	push nimi "\n" /* tulostaa Emilian */
+	nimi -undefine
+	push nimi "\n" /* tulostaa Lissun */
+}
+push nimi /* tulostaa Lissun */
+```
+
 Ilman argumentteja muuttuja työntää oman arvonsa ulostulovirtaansa. Näin muuttujan arvoa voi helposti putkittaa:
 ```
 tarina -create "hänen nimensä oli Mark ja syntymävuotensa 2014"
@@ -192,6 +210,15 @@ Jos muuttujan arvo on kuitenkin lista, työnnetään jokainen alkio yksitellen (
 Jos muuttujan haluaa työntää varmasti sellaisenaan, voi käyttää komentoa `push`:
 ```
 push muuttuja | komento
+```
+
+Jos funktiota haluaa käsitellä muuttujana, on käytettävä operaattoria `&`. Tällöin tulkki käsittelee
+komentoa muuttujana eikä funktiokutsuna.
+
+```
+f -create { |d|; ... }
+f data
+&f -undefine
 ```
 
 ##### Listat
@@ -472,6 +499,12 @@ Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 
 Lataa tiedostot annetuista Internet-osoitteista mahdollisesti annetuilla user agenteilla
 ja kirjoittaa ne annettuihin tiedostoihin (tai oletuksena rivi kerrallaan ulostulovirtaan).
+
+### import
+
+>`import tiedosto+`
+
+Suorittaa annetut Röda-tiedostot.
 
 ### exec
 
