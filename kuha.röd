@@ -152,6 +152,8 @@ main {
 				done
 			})
 			
+			{} | exec "sleep" 10 | {}
+			
 			offset -inc
 		done
 	done
