@@ -124,6 +124,8 @@ main {
 							})
 						}) ("text" { |text|
 							teksti -set text[1]
+						}) ("caption" { |text|
+							teksti -set text[1]
 						})
 						if test tiheitä_viestejä -gt 3; do
 							hae_tiedot viesti ("from" { |user|
