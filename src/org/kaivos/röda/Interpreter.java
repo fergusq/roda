@@ -328,7 +328,7 @@ public class Interpreter {
 	public void execWithoutErrorHandling(RödaValue value, List<RödaValue> rawArgs, List<RödaValue> args,
 					     RödaScope scope, RödaStream in, RödaStream out) {
 		
-		//callStack.push("exec " + value + "("+args+") " + in + " -> " + out);
+		//System.err.println("exec " + value + "("+args+") " + in + " -> " + out);
 		if (value.isReference()) {
 			if (args.isEmpty()) {
 				RödaValue rval = value.resolve(false);
@@ -349,6 +349,10 @@ public class Interpreter {
 				if (args.get(0).str().equals("-dec")) {
 					checkNumber("-dec", rval);
 					value.assign(valueFromInt(rval.num()-1));
+					return;
+				}
+				if (args.get(0).str().equals("-undefine")) {
+				        value.assign(null);
 					return;
 				}
 			}
@@ -698,6 +702,9 @@ public class Interpreter {
 			RödaStream _out = makeStream(new ValueStream(), new ValueStream());
 			evalStatement(exp.statement, scope, in, _out, true);
 			return _out.readAll();
+		}
+		if (exp.type == Expression.Type.REFERENCE) {
+			return valueFromReference(scope, exp.variable);
 		}
 		if (exp.type == Expression.Type.VARIABLE) {
 			RödaValue v = scope.resolve(exp.variable);

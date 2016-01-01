@@ -336,9 +336,10 @@ public class Parser {
 			}
 		}
 
-		Expression name = parseExpression(tl);
+		Expression name = parseExpressionCommand(tl);
 		List<Expression> arguments = new ArrayList<>();
-		while (!tl.isNext("|") && !tl.isNext(";") && !tl.isNext("\n") && !tl.isNext(")") && !tl.isNext("}") && !tl.isNext("<EOF>")) {
+		while (!tl.isNext("|") && !tl.isNext(";") && !tl.isNext("\n")
+		       && !tl.isNext(")") && !tl.isNext("}") && !tl.isNext("<EOF>")) {
 			arguments.add(parseExpression(tl));
 		}
 
@@ -348,6 +349,7 @@ public class Parser {
 	static class Expression {
 		enum Type {
 			VARIABLE,
+			REFERENCE,
 			STRING,
 			NUMBER,
 			STATEMENT,
@@ -403,6 +405,15 @@ public class Parser {
 	private static Expression expressionVariable(String file, int line, String t) {
 		Expression e = new Expression();
 		e.type = Expression.Type.VARIABLE;
+		e.file = file;
+		e.line = line;
+		e.variable = t;
+		return e;
+	}
+
+	private static Expression expressionReference(String file, int line, String t) {
+		Expression e = new Expression();
+		e.type = Expression.Type.REFERENCE;
 		e.file = file;
 		e.line = line;
 		e.variable = t;
@@ -473,7 +484,8 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionSlice(String file, int line, Expression list, Expression index1, Expression index2) {
+	private static Expression expressionSlice(String file, int line,
+						  Expression list, Expression index1, Expression index2) {
 		Expression e = new Expression();
 		e.type = Expression.Type.SLICE;
 		e.file = file;
@@ -550,7 +562,18 @@ public class Parser {
 		}
 		return ans;
 	}
-       
+
+	private static Expression parseExpressionCommand(TokenList tl) {
+		String file = tl.seek().getFile();
+		int line = tl.seek().getLine();
+		if (tl.isNext("&")) {
+			tl.accept("&");
+			String name = tl.nextString();
+			return expressionReference(file, line, name);
+		}
+		return parseExpressionPrimary(tl);
+	}
+	
 	private static Expression parseExpressionPrimary(TokenList tl) {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
