@@ -213,9 +213,9 @@ Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
 |:-----------:| ------------------ | -------------------------------------------------- |
 | `:=`        | `nimi := "Liisa"`  | Luo uuden muuttujan nykyiseen muuttujaympäristöön. |
 | `=`         | `nimi = "Maija"`   | Ylikirjoittaa aiemmin luodun muuttujan arvon.      |
-| `?`         | `nimi?`            | Työntää ulostulovirtaan totuusarvon `true` tai`false` riippuen siitä, onko muuttuja olemassa |
+| `?`         | `nimi?`            | Työntää ulostulovirtaan totuusarvon `true` tai `false` riippuen siitä, onko muuttuja olemassa |
 | `+=`        | `tytöt += "Nea"`   | Lisää listaan elementin.                           |
-| `.=`        | `tytöt .= ("Annabella" "Linn") | Yhdistää listaan toisen listan.        |
+| `.=`        | `tytöt .= ("Annabella" "Linn")` | Yhdistää listaan toisen listan.       |
 | `.=`        | `nimi .= sukunimi` | Lisää tekstin merkkijonon loppuun.                 |
 | `~=`        | `nimi ~= "ae" "ä"` | Tekee annetut korvaukset merkkijonoon, toimii kuten funktio `replace`. |
 | `+=`, `-=`, `*=`, `/=` | `pisteet *= 2` | Suorittaa laskutoimituksen lukumuuttujalla. |
@@ -270,7 +270,7 @@ done
 
 Funktion argumentit (ja kutsuttava funktio itsekin) ovat lausekkeita. Lauseke voi olla joko muuttuja,
 luku, merkkijono, lippu, lista, komento tai nimetön funktio. Lisäksi Rödassa on muutama operaattori
-merkkijonojen ja listojen käsittelemiseen. Aritmeettisia operaattoreita ei vielä ole.
+merkkijonojen ja listojen käsittelemiseen.
 
 #### Luvut, merkkijonot ja liput
 
@@ -314,6 +314,24 @@ kokonimet := sisarukset.." "..sukunimi
 push "Sisarusten koko nimet ovat " kokonimet&" ja " ".\n"
 ```
 
+Operaattorit taulukossa:
+
+| Operaattori | Selitys               | Ottaa                                   | Palauttaa              |
+| `..`        | Yhdistää merkkijonoja | 2 merkkijonoa tai listan ja merkkijonon | Merkkijonon tai listan |
+| `&`         | Yhdistää listan alkiot merkkijonoksi | Listan ja merkkijonon    | Merkkijonon            |
+| `#`         | Palauttaa arvon pituuden | Listan tai merkkijonon               | Kokonaisluvun          |
+| `[]`        | Palauttaa listan alkion  | Listan ja kokonaisluvun              | Alkion                 |
+| `[:]`       | Palauttaa listan osalistan | Listan ja nollasta kahteen kokonaisluku | Listan            |
+
+Laskujärjestys:
+
+| Sija | Operaattorit |
+|:----:| ------------ |
+| 1.   | `[]`, `[:]`  |
+| 2.   | `#`          |
+| 3.   | `&`          |
+| 4.   | `..`         |
+
 #### Komento
 
 Lauseke voi olla myös komento tai putkitettuja komentoja. Tälloin lausekkeen arvoksi tulee lista,
@@ -355,6 +373,56 @@ tytöt | filter { |tyttö|; test tyttö[1] -gt 1995 } | while pull -r tyttö; do
 	push tyttö[0] " on vielä nuori.\n"
 done
 ```
+
+#### Aritmetiikkatila
+
+Koska Rödan muu syntaksi varaa jo sulut `( )` ja miinusmerkin `-`, ei niitä voi käyttää laskutoimituksiin.
+Tämän rajoituksen kiertämiseksi Rödassa on aritmetiikkatila, jossa tavallinen syntaksi ei enää päde.
+Tilaan pääsee heittomerkillä `'`.
+```
+p := 'i/2+7'
+k := '(p-10)*2'
+```
+
+Aritmetiikkatilassa voi käyttää tavallisia sulkeita. Lisäksi seuraavat operaattorit ovat käytössä:
+
+| Operaattori | Selitys                     | Ottaa             | Palauttaa     |
+|:-----------:| --------------------------- | ----------------- | ------------- |
+| `&&`        | Looginen JA                 | 2 totuusarvoa     | Totuusarvon   |
+| `||`        | Looginen TAI                | 2 totuusarvoa     | Totuusarvon   |
+| `^^`        | Looginen JOKO-TAI           | 2 totuusarvoa     | Totuusarvon   |
+| `=`         | Yhtäsuuruus                 | Mitä tahansa      | Totuusarvon   |
+| `!=`        | Erisuuruus                  | Mitä tahansa      | Totuusarvon   |
+| `<`         | Pienempi kuin               | 2 kokonaislukua   | Totuusarvon   |
+| `>`         | Suurempi kuin               | 2 kokonaislukua   | Totuusarvon   |
+| `<=`        | Pienempi tai yhtäsuuri kuin | 2 kokonaislukua   | Totuusarvon   |
+| `>=`        | Suurempi tai yhtäsuuri kuin | 2 kokonaislukua   | Totuusarvon   |
+| `&`         | Bittitason JA               | 2 kokonaislukua   | Kokonaisluvun |
+| `|`         | Bittitason TAI              | 2 kokonaislukua   | Kokonaisluvun |
+| `^`         | Bittitason JOKO-TAI         | 2 kokonaislukua   | Kokonaisluvun |
+| `<<`        | Bittitason vasen siirto     | 2 kokonaislukua   | Kokonaisluvun |
+| `>>`        | Bittitason oikea siirto     | 2 kokonaislukua   | Kokonaisluvun |
+| `>>>`       | Bittitason etumerkitön oikea siirto | 2 kokonaislukua | Kokonaisluvun |
+| `+`         | Yhteenlasku                 | 2 kokonaislukua   | Kokonaisluvun |
+| `-`         | Vähennyslasku               | 2 kokonaislukua   | Kokonaisluvun |
+| `*`         | Kertolasku                  | 2 kokonaislukua   | Kokonaisluvun |
+| `/`         | Jakolasku                   | 2 kokonaislukua   | Kokonaisluvun |
+| Unäärinen `-` | Vastaluku                 | Kokonaisluvun     | Kokonaisluvun |
+| Unäärinen `~` | Bittitason EI             | Kokonaisluvun     | Kokonaisluvun |
+| Unäärinen `!` | Looginen EI               | Totuusarvon       | Totuusarvon   |
+
+Laskujärjestys:
+
+| Sija | Operaattorit                                               |
+|:----:| ---------------------------------------------------------- |
+| 1.   | `[]`, `[:]`                                                |
+| 2.   | Unäärinen `-`, unäärinen `~`, unäärinen `!`, unäärinen `#` |
+| 3.   | `*`, `/`                                                   |
+| 4.   | `+`, binäärinen `-`                                        |
+| 5.   | `&`, `|`, `^`, `<<`, `>>`, `>>>`                           |
+| 6.   | `<`, `>`, `<=`, `>=`                                       |
+| 7.   | `=`, `!=`                                                  |
+| 8.   | `&&`, `||`, `^^`                                           |
 
 ## Lista sisäänrakennetuista funktioista
 
