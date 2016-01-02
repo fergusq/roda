@@ -1,6 +1,9 @@
 apply plugin: 'java'
+
+targetCompatibility = 1.8
 sourceCompatibility = 1.8
 version = 'a1.0'
+
 repositories {
     mavenCentral()
 }
@@ -8,5 +11,15 @@ dependencies {
     compile project(':nept')
     testCompile 'junit:junit:4.12'
 }
+
 sourceSets.main.java.srcDirs = ['src']
 sourceSets.test.java.srcDirs = ['test']
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes "Main-Class": "org.kaivos.röda.Röda"
+    }
+    baseName = project.name + "-all"
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}

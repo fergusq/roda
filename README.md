@@ -4,22 +4,14 @@ Röda on uusi ohjelmointikieleni! Se perustuu syntaksiltaan ja ominaisuuksiltaan
 
 ## Käyttäminen
 
-Röda vaati toimiakseen [Nept-kirjaston](https://github.com/fergusq/nept). Käännä kirjasto ja aseta
-.class-tiedostot kansioon `nept`.
+Röda vaati toimiakseen [Nept-kirjaston](https://github.com/fergusq/nept).
 
-Neptin ja Rödan kääntäminen:
+Neptin ja Rödan kääntäminen Gradlella:
 
 ```sh
-$ git clone https://github.com/fergusq/nept
-$ cd nept
-nept $ mkdir bin
-nept $ javac -d bin -sourcepath src src/org/kaivos/nept/parser/*.java
-nept $ cd ..
-$ git clone https://github.com/fergusq/roda
+$ git clone --recursive https://github.com/fergusq/roda.git
 $ cd roda
-roda $ ln -s ../nept/bin nept
-roda $ mkdir bin
-roda $ javac -d bin -cp nept -sourcepath src src/org/kaivos/röda/Röda.java
+roda $ gradle build
 ```
 
 Rödan mukana tulee interaktiivinen tulkki, jota voi käyttää valitsimella `-i`.
