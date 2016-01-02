@@ -656,7 +656,14 @@ public class Interpreter {
 				error("unknown operator " + cmd.operator);
 				r = null;
 			}
-			return new Pair<>(r, new ValueStream());
+			Runnable finalR = () -> {
+				callStack.get().push("variable command " + e.asString() + " " + cmd.operator + " "
+						     + args.stream().map(RödaValue::str).collect(joining(" "))
+						     + "\n\tat " + cmd.file + ":" + cmd.line);
+				r.run();
+				callStack.get().pop();
+			};
+			return new Pair<>(finalR, new ValueStream());
 		}
 		
 		if (cmd.type == Command.Type.WHILE || cmd.type == Command.Type.IF) {
