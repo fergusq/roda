@@ -53,7 +53,7 @@ class Builtins {
 					for (RödaValue value : args) {
 						out.push(value);
 					}
-					out.push("\n");
+					out.push(valueFromString("\n"));
 				}, Arrays.asList(new Parameter("values", false)), true));
 		S.setLocal("push", valueFromNativeFunction("push", (rawArgs, args, scope, in, out) -> {
 					if (args.isEmpty()) {

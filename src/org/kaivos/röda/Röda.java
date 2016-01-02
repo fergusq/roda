@@ -43,7 +43,7 @@ public class Röda {
 						if (e.getCause() != null) e.getCause().printStackTrace();
 					}
 				}
-				System.out.print("\n> ");
+				System.out.print("> ");
 			}
 
 			return;

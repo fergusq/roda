@@ -504,7 +504,7 @@ public class Interpreter {
 				.map(a -> evalExpression(a, scope, in, out).impliciteResolve()).collect(toList());
 			Expression e = cmd.name;
 			if (e.type != Expression.Type.VARIABLE && e.type != Expression.Type.ELEMENT)
-				error("bad lvalue for " + cmd.operator + ": " + e.asString());
+				error("bad lvalue for '" + cmd.operator + "': " + e.asString());
 			Consumer<RödaValue> assign, assignLocal;
 			if (e.type == Expression.Type.VARIABLE) {
 				assign = v -> {
@@ -620,7 +620,7 @@ public class Interpreter {
 				r = () -> {
 					RödaValue rval = resolve.get();
 					checkString(".=", rval);
-					if (args.size() % 2 != 0) error("invalid arguments for ~=: even number required (got " + (args.size()-1) + ")");
+					if (args.size() % 2 != 0) error("invalid arguments for '~=': even number required (got " + (args.size()-1) + ")");
 					String text = rval.str();
 					try {
 						for (int j = 0; j < args.size(); j+=2) {
@@ -631,7 +631,7 @@ public class Interpreter {
 							text = text.replaceAll(pattern, replacement);
 						}
 					} catch (PatternSyntaxException ex) {
-						error(e.asString()+"~=: pattern syntax exception: "
+						error("'"+e.asString()+"~=': pattern syntax exception: "
 						      + ex.getMessage());
 					}
 					assign.accept(valueFromString(text));
@@ -641,7 +641,7 @@ public class Interpreter {
 			case "?": {
 				r = () -> {
 					if (e.type != Expression.Type.VARIABLE)
-						error("bad lvalue for ?: " + e.asString());
+						error("bad lvalue for '?': " + e.asString());
 					_out.push(valueFromBoolean(scope.resolve(e.variable) != null));
 				};
 			} break;
