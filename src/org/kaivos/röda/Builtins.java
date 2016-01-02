@@ -45,6 +45,16 @@ class Builtins {
 	private Builtins() {}
 
 	static void populate(RödaScope S) {
+		S.setLocal("print", valueFromNativeFunction("print", (rawArgs, args, scope, in, out) -> {
+					if (args.isEmpty()) {
+						argumentUnderflow("print", 1, 0);
+						return;
+					}
+					for (RödaValue value : args) {
+						out.push(value);
+					}
+					out.push("\n");
+				}, Arrays.asList(new Parameter("values", false)), true));
 		S.setLocal("push", valueFromNativeFunction("push", (rawArgs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("push", 1, 0);
@@ -80,9 +90,19 @@ class Builtins {
 							if (readMode) out.push(valueFromBoolean(false));
 							continue;
 						}
-						value.scope.set(value.target, pulled);
+						value.assign(pulled);
 						//System.err.println("="+pulled);
 						if (readMode) out.push(valueFromBoolean(true));
+					}
+				}, Arrays.asList(new Parameter("variables", true)), true));
+
+		S.setLocal("undefine", valueFromNativeFunction("undefine", (rawArgs, args, scope, in, out) -> {
+					for (RödaValue value : rawArgs) {
+						if (!value.isReference())
+							error("invalid argument for undefine: "
+							      + "only references accepted");
+
+						value.assign(null);
 					}
 				}, Arrays.asList(new Parameter("variables", true)), true));
 

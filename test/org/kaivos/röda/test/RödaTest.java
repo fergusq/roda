@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import static java.util.stream.Collectors.joining;
 
 import org.kaivos.röda.Interpreter;
+import static org.kaivos.röda.Interpreter.RödaException;
 import org.kaivos.röda.RödaStream;
 import static org.kaivos.röda.RödaStream.*;
 import org.kaivos.röda.RödaValue;
@@ -43,7 +44,7 @@ public class RödaTest {
 
 	@Test
 	public void testVariablesInCalculation() {
-		assertEquals("13", eval("main{a -create 6;b -create 1;b -set 2;push '1+a*b';}"));
+		assertEquals("13", eval("main{a:=6;b:=1;b=2;push'1+a*b';}"));
 	}
 
 	/* README:n esimerkit (hieman muutettuina)*/
@@ -71,55 +72,55 @@ public class RödaTest {
 	@Test
 	public void testReference() {
 		assertEquals("(abba musiikki)",
-			     eval("pull_twice &var{pull a1;pull a2;var -set (a1 a2)}"
+			     eval("pull_twice &var{pull a1;pull a2;var=(a1 a2)}"
 				  + "main{push\"abba\"\"musiikki\"|pull_twice v;push v}"));
 	}
 
 	@Test
 	public void testVariableFlagCreate() {
-		assertEquals("tieto.txt", eval("main{tiedosto -create \"tieto.txt\";push tiedosto}"));
+		assertEquals("tieto.txt", eval("main{tiedosto:=\"tieto.txt\";push tiedosto}"));
 		init();
-		assertEquals("73", eval("main{ikä -create 73;push ikä}"));
+		assertEquals("73", eval("main{ikä:=73;push ikä}"));
 		init();
 		assertEquals("(Annamari Reetta Vilma)",
-			     eval("main{tytöt -create (\"Annamari\" \"Reetta\" \"Vilma\");push tytöt}"));
+			     eval("main{tytöt:=(\"Annamari\" \"Reetta\" \"Vilma\");push tytöt}"));
 	}
 
 	@Test
 	public void testVariableFlagSet() {
-		assertEquals("74", eval("main{ikä -create 73;ikä -set 74;push ikä}"));
+		assertEquals("74", eval("main{ikä:=73;ikä=74;push ikä}"));
 	}
 
 	@Test
 	public void testVariableFlagAdd() {
 		assertEquals("(Annamari Reetta Vilma Maija)",
-			     eval("main{tytöt -create (\"Annamari\" \"Reetta\" \"Vilma\");"
-				  + "tytöt -add \"Maija\";push tytöt}"));
+			     eval("main{tytöt:=(\"Annamari\" \"Reetta\" \"Vilma\");"
+				  + "tytöt+=\"Maija\";push tytöt}"));
 	}
 
 	@Test
 	public void testVariableFlagPut() {
 		assertEquals("(Annamari Liisa Vilma)",
-			     eval("main{tytöt -create (\"Annamari\" \"Reetta\" \"Vilma\");"
-				  + "tytöt -put 1 \"Liisa\";push tytöt}"));
+			     eval("main{tytöt:=(\"Annamari\" \"Reetta\" \"Vilma\");"
+				  + "tytöt[1]=\"Liisa\";push tytöt}"));
 	}
 
 	@Test
 	public void testVariableFlagIncDec() {
 		assertEquals("72,11",
-			     eval("main{ikä -create 73;voimat -create 10;ikä -dec;voimat -inc;push ikä voimat}"));
+			     eval("main{ikä:=73;voimat:=10;ikä--;voimat++;push ikä voimat}"));
 	}
 
-	@Test
+	@Test(expected=RödaException.class)
 	public void testPushingStringVariable() {
 		assertEquals("abba",
-			     eval("main{v -create \"abba\";v}"));
+			     eval("main{v:=\"abba\";v}"));
 	}
 
 	@Test
 	public void testPushingListVariable() {
 		assertEquals("joki,virta",
-			     eval("main{l -create (\"joki\" \"virta\");l}"));
+			     eval("main{l:=(\"joki\" \"virta\");l}"));
 	}
 
 	@Test
@@ -131,33 +132,33 @@ public class RödaTest {
 	@Test
 	public void testIf() {
 		assertEquals("Olet liian nuori!\n",
-			     eval("main{ikä -create 16;if test ikä -lt 18;do push\"Olet liian nuori!\\n\";done}"));
+			     eval("main{ikä:=16;if test ikä -lt 18;do push\"Olet liian nuori!\\n\";done}"));
 	}
 
 	@Test
 	public void testIfWithFalseCondition() {
 		assertEquals("",
-			     eval("main{ikä -create 24;if test ikä -lt 18;do push\"Olet liian nuori!\\n\";done}"));
+			     eval("main{ikä:=24;if test ikä -lt 18;do push\"Olet liian nuori!\\n\";done}"));
 	}
 
 	@Test
 	public void testIfElse() {
 		assertEquals("Tervetuloa!\n",
-			     eval("main{ikä -create 24;if test ikä -ge 18;do push\"Tervetuloa!\\n\";"
+			     eval("main{ikä:=24;if test ikä -ge 18;do push\"Tervetuloa!\\n\";"
 				  + "else push\"Olet liian nuori!\\n\";done}"));
 	}
 
 	@Test
 	public void testIfElseWithFalseCondition() {
 		assertEquals("Olet liian nuori!\n",
-			     eval("main{ikä -create 16;if test ikä -ge 18;do push\"Tervetuloa!\\n\";"
+			     eval("main{ikä:=16;if test ikä -ge 18;do push\"Tervetuloa!\\n\";"
 				  + "else push\"Olet liian nuori!\\n\";done}"));
 	}
 
 	@Test
 	public void testFor() {
 		assertEquals("nimi Annamari; syntynyt 1996,nimi Reetta; syntynyt 1992,nimi Vilma; syntynyt 1999",
-			     eval("main{tytöt -create ((\"Annamari\" 1996) (\"Reetta\" 1992) (\"Vilma\" 1999));"
+			     eval("main{tytöt:=((\"Annamari\" 1996) (\"Reetta\" 1992) (\"Vilma\" 1999));"
 				  + "for tyttö in tytöt;"
 				  + "do push\"nimi \"..tyttö[0]..\"; syntynyt \"..tyttö[1];"
 				  + "done}"));
@@ -169,7 +170,7 @@ public class RödaTest {
 			     eval("main{push #\"Make M. Muikku\"}"));
 		init();
 		assertEquals("11",
-			     eval("main{nimi -create \"Make Muikku\";push #nimi}"));
+			     eval("main{nimi:=\"Make Muikku\";push #nimi}"));
 	}
 
 	@Test
@@ -178,7 +179,7 @@ public class RödaTest {
 			     eval("main{push \"Make \"..\"M. Muikku\"}"));
 		init();
 		assertEquals("Serkku S. Muikku",
-			     eval("main{nimi -create \"S.\";push \"Serkku \"..nimi..\" Muikku\"}"));
+			     eval("main{nimi:=\"S.\";push \"Serkku \"..nimi..\" Muikku\"}"));
 	}
 
 	@Test
@@ -187,7 +188,7 @@ public class RödaTest {
 			     eval("main{push #(\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\")}"));
 		init();
 		assertEquals("3",
-			     eval("main{a -create (\"Reetta\" \"Vilma\" \"Susanna\");push #a}"));
+			     eval("main{a:=(\"Reetta\" \"Vilma\" \"Susanna\");push #a}"));
 	}
 
 	@Test
@@ -196,7 +197,7 @@ public class RödaTest {
 			     eval("main{push (\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\")[1]}"));
 		init();
 		assertEquals("Vilma",
-			     eval("main{a -create (\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\");push a[2]}"));
+			     eval("main{a:=(\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\");push a[2]}"));
 	}
 
 	@Test
@@ -205,7 +206,7 @@ public class RödaTest {
 			     eval("main{push (\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\")[-1]}"));
 		init();
 		assertEquals("Annamari",
-			     eval("main{a -create (\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\");push a[-4]}"));
+			     eval("main{a:=(\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\");push a[-4]}"));
 	}
 
 	@Test
@@ -214,7 +215,7 @@ public class RödaTest {
 			     eval("main{push (\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\")[1:3]}"));
 		init();
 		assertEquals("(Annamari Reetta)",
-			     eval("main{a -create (\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\");push a[0:-2]}"));
+			     eval("main{a:=(\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\");push a[0:-2]}"));
 	}
 
 	@Test
@@ -223,7 +224,7 @@ public class RödaTest {
 			     eval("main{push (\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\")&\"_\"}"));
 		init();
 		assertEquals("Annamari ja Reetta ja Vilma ja Susanna",
-			     eval("main{a -create (\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\");push a&\" ja \"}"));
+			     eval("main{a:=(\"Annamari\" \"Reetta\" \"Vilma\" \"Susanna\");push a&\" ja \"}"));
 	}
 
 	@Test
@@ -255,7 +256,7 @@ public class RödaTest {
 		assertEquals("Vilma on vielä nuori.",
 			     eval("filter c{while pull -r v;do if c v;do push v;done;done}"
 				  + "main{"
-				  + "tytöt -create ((\"Annamari\" 1996) (\"Reetta\" 1992) (\"Vilma\" 1999));"
+				  + "tytöt:=((\"Annamari\" 1996) (\"Reetta\" 1992) (\"Vilma\" 1999));"
 				  + "tytöt|filter{|tyttö|;test tyttö[1] -gt 1996}|while pull -r tyttö;do "
 				  + "push tyttö[0]..\" on vielä nuori.\";done"
 				  + "}"));

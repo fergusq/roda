@@ -49,8 +49,8 @@ public class LexerTest {
 
 	@Test
 	public void testOperators() {
-		assertEquals("<, ->, ), ;, .., [, %, ., (, >, }, #, =, ], {, |, \n, ..., :, \", , \", &, <EOF>",
-			     lex("<->);..[%.(>}#=]{|\n...:\"\"&"));
+		assertEquals("<, ->, ), ;, .., [, %, ., (, >, ~=, }, #, =, ], {, ++, |, \n, ..., :, \", , \", &, <EOF>",
+			     lex("<->);..[%.(>~=}#=]{++|\n...:\"\"&"));
 	}
 
 	@Test
@@ -74,8 +74,8 @@ public class LexerTest {
 
 	@Test
 	public void testLinesAndText() {
-		assertEquals("a-b, --d, -e, f--gh-ij-, k-, <EOF>",
-			     lex("a-b --d -e f--gh-ij- k-"));
+		assertEquals("a-b, --, --d, -e, f--gh-ij-, k-, <EOF>",
+			     lex("a-b-- --d -e f--gh-ij- k-"));
 	}
 
 	@Test

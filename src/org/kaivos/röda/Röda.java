@@ -40,6 +40,7 @@ public class Röda {
 						for (String step : e.getStack()) {
 							System.out.println(step);
 						}
+						if (e.getCause() != null) e.getCause().printStackTrace();
 					}
 				}
 				System.out.print("\n> ");
@@ -64,6 +65,7 @@ public class Röda {
 				for (String step : e.getStack()) {
 					System.err.println(step);
 				}
+				if (e.getCause() != null) e.getCause().printStackTrace();
 			}
 			return;
 		}

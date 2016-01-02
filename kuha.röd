@@ -1,7 +1,7 @@
 hae_kuva_ja_tee_koodi sana mones montako {
 	hae_kuva sana mones
-	x_koordinaatti -set 'mones*500/montako'
-	leveys -set '500/montako'
+	x_koordinaatti := 'mones*500/montako'
+	leveys := '500/montako'
 	push "<image xlink:href='"..mones.."' preserveAspectRatio='none' x='"..x_koordinaatti.."' y='50' width='"..leveys.."' height='150' style='opacity:0.4;'/>"
 }
 
@@ -24,44 +24,44 @@ tee_pilakuva nettikuvat ylä ala tiedosto {
 /* ohjaa kuvan luomista: käsittelee viestin, lataa kuvat, tekee kuhakuvan ja lähettää sen */
 käsittele_kuhaviesti ketju viesti {
 	/* esikäsitellään viesti */
-	viesti -replace "kunhan" "kuha" "Kunhan" "Kuha" "&" "&amp;" "<" "&lt;"
+	viesti ~= "kunhan" "kuha" "Kunhan" "Kuha" "&" "&amp;" "<" "&lt;"
 
 	push "käsitellään viesti '" viesti "'\n"
 	
 	/* jaetaan viesti sanoihin */
-	sanat -create !(split viesti)
-	montako -create #sanat
+	sanat := !(split viesti)
+	montako := #sanat
 
 	/* erillinen lista niistä sanoista, joista otetaan kuvia, oletuksena kaikki sanat */
-	kuvasanat -create sanat
-	kuvamontako -create montako
+	kuvasanat := sanat
+	kuvamontako := montako
 
 	/* jos kuvia tulisi liikaa, valitaan satunnaisesti vain osa */
 	if test kuvamontako -gt 10; do
-		kuvasanat -set ()
-		kuvamontako -set 5
+		kuvasanat = ()
+		kuvamontako = 5
 
 		/* hypitään satunnaisesti joidenkin kuvien yli */
-		i -create 0
+		i := 0
 		while test #kuvasanat -lt 5; do
-			kuvasanat -add sanat[i]
-			i -inc
+			kuvasanat += sanat[i]
+			i ++
 			if random; do
-				i -inc
+				i ++
 			done
 		done
 	done
 
 	/* haetaan netistä kivoja kuvia */
-	nettikuvat -create ""
-	laskuri -create 0
+	nettikuvat := ""
+	laskuri := 0
 	for sana in kuvasanat; do
-		nettikuvat -append !(hae_kuva_ja_tee_koodi sana laskuri kuvamontako)&" "
-		laskuri -inc
+		nettikuvat += !(hae_kuva_ja_tee_koodi sana laskuri kuvamontako)&" "
+		laskuri ++
 	done
 
 	/* jaetaan sanat kahtia ja tehdään kuva */
-	puoliväli -create 'montako/2'
+	puoliväli := 'montako/2'
 	tee_pilakuva nettikuvat sanat[:puoliväli]&" " sanat[puoliväli:]&" " "kuhaonmeemi.png"
 
 	/* lähetetään kuva ketjuun */
@@ -93,68 +93,68 @@ main {
 	import "kuvahaku.röd"
 	
 	/* alustetaan botti */  
-	token -create !(cat "token.txt")[0]
-	base_url -create "https://api.telegram.org/bot"..token
-	tg_update -create base_url.."/getUpdates?offset="
-	tg_message -create base_url.."/sendMessage"
-	tg_photo -create base_url.."/sendPhoto"
+	token := !(cat "token.txt")[0]
+	base_url := "https://api.telegram.org/bot"..token
+	tg_update := base_url.."/getUpdates?offset="
+	tg_message := base_url.."/sendMessage"
+	tg_photo := base_url.."/sendPhoto"
 	
-	offset -create 0
+	offset := 0
 	
-	aika_viimeksi -create !(time)[0]
-	tiheitä_viestejä -create 0
+	aika_viimeksi := !(time)[0]
+	tiheitä_viestejä := 0
 	
 	/* pääsilmukka */
 	while true; do
 		try do
 			/* haetaan uusimmat päivitykset */
-			koodi -create !(wcat tg_update..offset)&" "
-			parsittu -create !(json koodi)[0]
+			koodi := !(wcat tg_update..offset)&" "
+			parsittu := !(json koodi)[0]
 			
 			hae_tiedot parsittu ("result" { |päivitykset|
 				for päivitys in päivitykset[1]; do
-					ketju -create 0
-					teksti -create ""
+					ketju := 0
+					teksti := ""
 					hae_tiedot päivitys ("update_id" { |id|
-						offset -set id[1]
+						offset = id[1]
 					}) ("message" { |viesti|
 						hae_tiedot viesti ("chat" { |chat|
 							hae_tiedot chat ("id" { |id|
-								ketju -set id[1]
+								ketju = id[1]
 							})
 						}) ("text" { |text|
-							teksti -set text[1]
+							teksti = text[1]
 						}) ("caption" { |text|
-							teksti -set text[1]
+							teksti = text[1]
 						})
 						if test tiheitä_viestejä -gt 3; do
 							hae_tiedot viesti ("from" { |user|
 								hae_tiedot user ("id" { |id|
-									ketju -set id[1]
+									ketju = id[1]
 								})	
 							})
 						done
 					})
 					if test teksti -matches ".*\\b[Kk][Uu][Hh][Aa].*"; do
 						käsittele_kuhaviesti ketju teksti
-						aika -create !(time)[0]
-						aikaa_kulunut -create 'aika - aika_viimeksi'
+						aika := !(time)[0]
+						aikaa_kulunut := 'aika - aika_viimeksi'
 						if test aikaa_kulunut -lt 10000; do
-							tiheitä_viestejä -inc
+							tiheitä_viestejä ++
 							if test tiheitä_viestejä -eq 4; do
 								lähetä_viesti ketju "Rauhoittukaa, kuha on nyt hetken tauolla"
 							done
 						else
-							tiheitä_viestejä -set 0
+							tiheitä_viestejä = 0
 						done
-						aika_viimeksi -set aika
+						aika_viimeksi = aika
 					done
 				done
 			})
 			
 			{} | exec "sleep" 10 | {}
 			
-			offset -inc
+			offset ++
 		done
 	done
 }

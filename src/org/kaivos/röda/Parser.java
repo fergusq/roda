@@ -27,7 +27,16 @@ public class Parser {
 		.addOperatorRule("...")
 		.addOperatorRule("..")
 		.addOperatorRule("->")
-		.addOperators("<>()[]{}|&.:;=#%\n")
+		.addOperatorRule(":=")
+		.addOperatorRule("~=")
+		.addOperatorRule(".=")
+		.addOperatorRule("+=")
+		.addOperatorRule("-=")
+		.addOperatorRule("*=")
+		.addOperatorRule("/=")
+		.addOperatorRule("++")
+		.addPatternRule(Pattern.compile("--(?!\\p{L})"))
+		.addOperators("<>()[]{}|&.:;=#%?\n")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
 		.addStringRule('\'', '\'', '\0')
@@ -208,10 +217,12 @@ public class Parser {
 			IF,
 			FOR,
 			TRY,
-			TRY_DO
+			TRY_DO,
+			VARIABLE
 		}
 		Type type;
 		Expression name;
+		String operator;
 		List<Expression> arguments;
 		Statement cond;
 		String variable;
@@ -232,6 +243,18 @@ public class Parser {
 		cmd.arguments = arguments;
 		return cmd;
 	}
+	
+	static Command _makeVariableCommand(String file, int line, Expression name,
+					    String operator, List<Expression> arguments) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.VARIABLE;
+		cmd.file = file;
+		cmd.line = line;
+		cmd.name = name;
+		cmd.operator = operator;
+		cmd.arguments = arguments;
+		return cmd;
+	}
 
 	static Command _makeIfOrWhileCommand(String file, int line, boolean isWhile,
 					     Statement cond, List<Statement> body, List<Statement> elseBody) {
@@ -245,7 +268,8 @@ public class Parser {
 		return cmd;
 	}
 	
-	static Command _makeForCommand(String file, int line, String variable, Expression list, List<Statement> body) {
+	static Command _makeForCommand(String file, int line, String variable,
+				       Expression list, List<Statement> body) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.FOR;
 		cmd.file = file;
@@ -336,20 +360,26 @@ public class Parser {
 			}
 		}
 
-		Expression name = parseExpressionCommand(tl);
+		Expression name = parseExpression(tl);
+		String operator = null;
+		if (tl.isNext(":=", "=", "++", "--", "+=", "-=", "*=", "/=", ".=", "~=", "?")) {
+			operator = tl.nextString();
+		}
+		
 		List<Expression> arguments = new ArrayList<>();
 		while (!tl.isNext("|") && !tl.isNext(";") && !tl.isNext("\n")
 		       && !tl.isNext(")") && !tl.isNext("}") && !tl.isNext("<EOF>")) {
 			arguments.add(parseExpression(tl));
 		}
-
-		return _makeNormalCommand(file, line, name, arguments);
+		if (operator == null)
+			return _makeNormalCommand(file, line, name, arguments);
+		else
+			return _makeVariableCommand(file, line, name, operator, arguments);
 	}
 	
 	static class Expression {
 		enum Type {
 			VARIABLE,
-			REFERENCE,
 			STRING,
 			NUMBER,
 			STATEMENT,
@@ -400,20 +430,45 @@ public class Parser {
 
 		String file;
 		int line;
+
+		String asString() {
+			switch (type) {
+			case VARIABLE:
+				return variable;
+			case STRING:
+				return "\"" + string.replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
+			case NUMBER:
+				return String.valueOf(number);
+			case SLICE: {
+				String i1 = index1 == null ? "" : index1.asString();
+				String i2 = index2 == null ? "" : index2.asString();
+				return sub.asString() + "[" + i1 + ":" + i2 + "]";
+			}
+			case BLOCK:
+				return "{...}";
+			case LIST:
+				return "(...)";
+			case STATEMENT:
+				return "!(...)";
+			case CALCULATOR:
+				return "'...'";
+			case ELEMENT:
+				return sub.asString() + "[" + index.asString() + "]";
+			case LENGTH:
+				return "#" + sub.asString();
+			case CONCAT:
+				return exprA.asString() + ".." + exprB.asString();
+			case JOIN:
+				return exprA.asString() + "&" + exprB.asString();
+			default:
+				return "<" + type + ">";
+			}
+		}
 	}
 
 	private static Expression expressionVariable(String file, int line, String t) {
 		Expression e = new Expression();
 		e.type = Expression.Type.VARIABLE;
-		e.file = file;
-		e.line = line;
-		e.variable = t;
-		return e;
-	}
-
-	private static Expression expressionReference(String file, int line, String t) {
-		Expression e = new Expression();
-		e.type = Expression.Type.REFERENCE;
 		e.file = file;
 		e.line = line;
 		e.variable = t;
@@ -561,17 +616,6 @@ public class Parser {
 			ans = expressionJoin(file, line, ans, parseExpressionPrimary(tl));
 		}
 		return ans;
-	}
-
-	private static Expression parseExpressionCommand(TokenList tl) {
-		String file = tl.seek().getFile();
-		int line = tl.seek().getLine();
-		if (tl.isNext("&")) {
-			tl.accept("&");
-			String name = tl.nextString();
-			return expressionReference(file, line, name);
-		}
-		return parseExpressionPrimary(tl);
 	}
 	
 	private static Expression parseExpressionPrimary(TokenList tl) {

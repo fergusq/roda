@@ -131,7 +131,7 @@ komento1 argumentit | komento2 argumentit | komento3 argumentit
 
 ### Komennot
 
-Komento voi olla joko funktiokutsu tai ohjausrakenne.
+Komento voi olla joko funktiokutsu, muuttujakomento tai ohjausrakenne.
 
 #### Funktiokutsu
 
@@ -144,90 +144,82 @@ putkeen. Vain kutsuttava funktio putkittuu.
 
 #### Eri arvojen "kutsuminen"
 
-##### Muuttujat
-
-Muuttujaa voi "kutsua" usealla eri tavalla.
-
-Uuden muuttujan voi luoda lipulla `-create`:
-```
-tiedosto -create "tieto.txt"
-ikä -create 73
-tytöt -create ("Annamari" "Reetta" "Vilma")
-```
-
-Muuttujalle voi asettaa uuden arvon lipulla `-set`:
-```
-ikä -set 74
-```
-
-Listaan voi lisätä arvon lipulla `-add`:
-```
-tytöt -add "Maija"
-```
-
-Listan kohtaa voi muuttaa lipulla `-put`:
-```
-tytöt -put 1 "Liisa"
-```
-
-Merkkijonon perään voi lisätä tekstiä lipulla `-append`:
-```
-nimi -create etunimi
-nimi -append " "..sukunimi
-```
-
-Lukua voi kasvattaa tai vähentää lipuilla `-inc` ja `-dec`:
-```
-ikä -inc
-voimat -dec
-```
-
-Muuttujan voi tuhota käyttämällä lippua `-undefine`.
-Normaalisti muuttujia ei kuitenkaan tarvitse tuhota erikseen.
-```
-nimi -undefine
-```
-Muuttujan tuhoaminen ei poista muuttujaa varmasti, sillä se saattaa olla määritelty jollakin toisellakin ohjelman
-tasolla.
-```
-nimi -create "Lissu"
-{
-	nimi -create "Emilia"
-	push nimi "\n" /* tulostaa Emilian */
-	nimi -undefine
-	push nimi "\n" /* tulostaa Lissun */
-}
-push nimi /* tulostaa Lissun */
-```
-Muuttujan voi tuhota kokonaan käyttäen silmukkaa ja `-defined`-lippua.
-
-Ilman argumentteja muuttuja työntää oman arvonsa ulostulovirtaansa. Näin muuttujan arvoa voi helposti putkittaa:
-```
-tarina -create "hänen nimensä oli Mark ja syntymävuotensa 2014"
-tarina | grep "[0-9]+" /* etsii syntymävuoden */
-```
-
-Jos muuttujan arvo on kuitenkin lista, työnnetään jokainen alkio yksitellen (ks. alla).
-Jos muuttujan haluaa työntää varmasti sellaisenaan, voi käyttää komentoa `push`:
-```
-push muuttuja | komento
-```
-
-Jos funktiota haluaa käsitellä muuttujana, on käytettävä operaattoria `&`. Tällöin tulkki käsittelee
-komentoa muuttujana eikä funktiokutsuna.
-
-```
-f -create { |d|; ... }
-f data
-&f -undefine
-```
-
 ##### Listat
 
 Listan "kutsuminen" työntää kaikki listan alkiot ulostulovirtaan:
 ```
 ("rivi1\n" "rivi2\n" "rivi3\n") | write tiedosto
 ```
+
+#### Muuttujat
+
+Uuden muuttujan voi luoda operaattorilla **`:=`**:
+```
+tiedosto := "tieto.txt"
+ikä := 73
+tytöt := ("Annamari" "Reetta" "Vilma")
+```
+
+Muuttujalle voi asettaa uuden arvon operaattorilla **`=`**:
+```
+ikä = 74
+tytöt[1] = "Liisa"
+```
+
+Listaan voi lisätä arvon operaattorilla **`+=`**:
+```
+tytöt += "Maija"
+```
+
+Merkkijonon perään voi lisätä tekstiä operaattorilla **`.=`**:
+```
+nimi := etunimi
+nimi .= " "..sukunimi
+```
+
+Lukua voi kasvattaa tai vähentää operaattoreilla **`++`** ja **`--`**:
+```
+ikä ++
+voimat --
+```
+
+Muuttujan voi tuhota käyttämällä komentoa `undefine`.
+Normaalisti muuttujia ei kuitenkaan tarvitse tuhota erikseen.
+```
+undefine nimi
+```
+Muuttujan tuhoaminen ei poista muuttujaa varmasti, sillä se saattaa olla määritelty jollakin toisellakin ohjelman
+tasolla.
+```
+nimi := "Lissu"
+{
+	nimi := "Emilia"
+	push nimi "\n" /* tulostaa Emilian */
+	undefine nimi
+	push nimi "\n" /* tulostaa Lissun */
+}
+push nimi /* tulostaa Lissun */
+```
+Muuttujan voi tuhota kokonaan käyttäen silmukkaa ja `?`-operaattoria, joka kertoo, onko muuttuja olemassa.
+```
+while nimi?; do
+	undefine nimi
+done
+```
+
+Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
+
+| Operaattori | Esimerkki          | Selitys                                            |
+|:-----------:| ------------------ | -------------------------------------------------- |
+| `:=`        | `nimi := "Liisa"`  | Luo uuden muuttujan nykyiseen muuttujaympäristöön. |
+| `=`         | `nimi = "Maija"`   | Ylikirjoittaa aiemmin luodun muuttujan arvon.      |
+| `?`         | `nimi?`            | Työntää ulostulovirtaan totuusarvon `true` tai`false` riippuen siitä, onko muuttuja olemassa |
+| `+=`        | `tytöt += "Nea"`   | Lisää listaan elementin.                           |
+| `.=`        | `tytöt .= ("Annabella" "Linn") | Yhdistää listaan toisen listan.        |
+| `.=`        | `nimi .= sukunimi` | Lisää tekstin merkkijonon loppuun.                 |
+| `~=`        | `nimi ~= "ae" "ä"` | Tekee annetut korvaukset merkkijonoon, toimii kuten funktio `replace`. |
+| `+=`, `-=`, `*=`, `/=` | `pisteet *= 2` | Suorittaa laskutoimituksen lukumuuttujalla. |
+| `++`, `--   | `varallisuus --`   | Kasvattaa tai vähentää lukumuuttujan arvoa.        |
 
 #### Ohjausrakenteet
 
@@ -236,7 +228,8 @@ Ohjausrakenteita ovat `if`, `while`, `for` ja `try`.
 **`if`** ja **`while`** suorittavat annetun lauseen ja olettavat sen palauttavan joko arvon `true` tai arvon `false`.
 Muut arvot tulkitaan aina samoin kuin `true`. Vain yksi arvo luetaan.
 
-Sisäänrakennetuista funktioista vain `true`, `false`, `test` (ks. alempana) ja `pull -r` palauttavat totuusarvon.
+Sisäänrakennetuista funktioista vain `true`, `false`, `test`, `random` (ks. alempana)
+ja `pull -r` palauttavat totuusarvon.
 
 ```
 if test ikä -lt 18; do
@@ -254,7 +247,7 @@ done
 **`for`** käy läpi annetun listan kaikki arvot:
 
 ```
-tytöt -create (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
+tytöt := (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
 for tyttö in tytöt; do
 	push "Hänen nimensä on "..tyttö[0].." ja hän on syntynyt vuonna "..tyttö[1].."\n"
 done
@@ -291,7 +284,7 @@ ovat sama asia.
 Merkkijonoja voi yhdistellä `..`-operaattorilla ja niiden pituuden voi saada `#`-operaattorilla.
 
 ```
-nimi -create etunimi.." "..sukunimi
+nimi := etunimi.." "..sukunimi
 push "Nimesi pituus on " #nimi "\n"
 ```
 
@@ -306,7 +299,7 @@ Kaikki listan alkiot voi yhdistää merkkijonoksi `&`-operaattorilla, jonka toin
 pistetään alkioiden väleihin.
 
 ```
-tytöt -create ("Annamari" "Reetta" "Vilma" "Susanna")
+tytöt := ("Annamari" "Reetta" "Vilma" "Susanna")
 push "Tyttöjä on " #tytöt " kpl.\n"
 push "Ensimmäinen tyttö on " tytöt[0] " ja viimeinen " tytöt[-1] ". "
 push "Välissä ovat " tytöt[1:-1]&" ja " ".\n"
@@ -315,9 +308,9 @@ push "Välissä ovat " tytöt[1:-1]&" ja " ".\n"
 Jos listaan yhdistää merkkijonon, yhdistetään se kaikkiin listan alkioihin:
 
 ```
-sukunimi -create "Kivinen"
-sisarukset -create ("Maija" "Ilmari")
-kokonimet -create sisarukset.." "..sukunimi
+sukunimi := "Kivinen"
+sisarukset := ("Maija" "Ilmari")
+kokonimet := sisarukset.." "..sukunimi
 push "Sisarusten koko nimet ovat " kokonimet&" ja " ".\n"
 ```
 
@@ -329,19 +322,17 @@ joka on muodostettu kaikista viimeisen komennon ulostulon antamista arvoista.
 Seuraava ohjelma tulostaa tiedoston rivinumeroiden kera.
 
 ```
-rivit -create !(cat tiedosto)
-i -create 1
+rivit := !(cat tiedosto)
+i := 1
 for rivi in rivit; do
 	push i " " rivi "\n"
-	i -inc
+	i ++
 done
 ```
 
 #### Nimetön funktio
 
-Nimetön funktio toimii kuten tavallinenkin funktio. Itse asiassa, jos muuttujaan asettaa nimettömän funktion arvon,
-se ei ole enää muuttuja vaan alkaa käyttäytyä kuin tavallinen funktio. Siispä esimerkiksi lippu `-set` ei enää
-toimi. Nimettömien funktioiden kanssa kannataakin olla varovainen. Syntaksi on `{ |parametrit|; koodi }`.
+Nimetön funktio toimii kuten tavallinenkin funktio. Syntaksi on `{ |parametrit|; koodi }`.
 
 Seuraavassa koodissa määritellään `filter`-funktio, joka lukee arvoja ja palauttaa osan niistä.
 
@@ -359,7 +350,7 @@ Funktiota käytetään antamalla sille nimetön funktio (tai tavallinenkin funkt
 `true`n tai `false`n.
 
 ```
-tytöt -create (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
+tytöt := (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
 tytöt | filter { |tyttö|; test tyttö[1] -gt 1995 } | while pull -r tyttö; do
 	push tyttö[0] " on vielä nuori.\n"
 done
@@ -432,6 +423,12 @@ määrittää, että avaimet annetaan merkkijonoina listojen sijaan. (TODO parem
 
 Palauttaa argumentit listana.
 
+### print
+
+>`print arvo*`
+
+Työntää annettut arvot ja rivinvaihdon ulostulovirtaan.
+
 ### pull
 
 >`pull [-r] muuttuja+`
@@ -502,6 +499,12 @@ Palauttaa nykyisen ajan millisekuntteina.
 >`true`
 
 Työntää arvon `true` ulostulovirtaan.
+
+### undefine
+
+>`undefine muuttuja+`
+
+Tuhoaa annetut muuttujat.
 
 ### wcat
 
