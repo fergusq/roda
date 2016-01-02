@@ -317,6 +317,7 @@ push "Sisarusten koko nimet ovat " kokonimet&" ja " ".\n"
 Operaattorit taulukossa:
 
 | Operaattori | Selitys               | Ottaa                                   | Palauttaa              |
+|:-----------:| --------------------- | --------------------------------------- | ---------------------- |
 | `..`        | Yhdistää merkkijonoja | 2 merkkijonoa tai listan ja merkkijonon | Merkkijonon tai listan |
 | `&`         | Yhdistää listan alkiot merkkijonoksi | Listan ja merkkijonon    | Merkkijonon            |
 | `#`         | Palauttaa arvon pituuden | Listan tai merkkijonon               | Kokonaisluvun          |
