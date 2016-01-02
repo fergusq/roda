@@ -71,7 +71,7 @@ class Builtins {
 						return;
 					}
 					boolean readMode = false;
-					for (RödaValue value : rawArgs) {
+					for (RödaValue value : args) {
 						if (value.isString() && value.text.equals("-r")) {
 							readMode = true;
 							continue;
@@ -97,7 +97,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("variables", true)), true));
 
 		S.setLocal("undefine", valueFromNativeFunction("undefine", (rawArgs, args, scope, in, out) -> {
-					for (RödaValue value : rawArgs) {
+					for (RödaValue value : args) {
 						if (!value.isReference())
 							error("invalid argument for undefine: "
 							      + "only references accepted");

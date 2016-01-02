@@ -70,10 +70,20 @@ public class RödaTest {
 	}
 
 	@Test
-	public void testReference() {
+	public void testPullingReference() {
 		assertEquals("(abba musiikki)",
 			     eval("pull_twice &var{pull a1;pull a2;var=(a1 a2)}"
 				  + "main{push\"abba\"\"musiikki\"|pull_twice v;push v}"));
+	}
+
+	@Test
+	public void testPullingReferenceInAnonymousFunction() {
+		assertEquals("17", eval("main{push 17|{|&a|;pull a}b;push b}"));
+	}
+
+	@Test
+	public void testSettingReference() {
+		assertEquals("20", eval("main{push 17|{|&a|;a:=20}b;push b}"));
 	}
 
 	@Test

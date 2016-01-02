@@ -324,8 +324,15 @@ public class Interpreter {
 			    && !(value.isFunction()
 				&& isReferenceParameter(value, i))) {
 				RödaValue rval = val.resolve(true);
-				if (rval == null) error("variable not found (via implicite reference): " + val.target);
+				if (rval.isReference()) rval = rval.resolve(true);
 				args.add(rval);
+			}
+			else if (val.isReference()
+				 && value.isFunction()
+				 && isReferenceParameter(value, i)) {
+				RödaValue rval = val.scope.resolve(val.target);
+				if (rval != null && rval.isReference()) args.add(rval);
+				else args.add(val);
 			}
 			else if (val.isList()) {
 				args.add(val.copy());
