@@ -115,7 +115,7 @@ lukee kaksi arvoa, tekee niistä listan ja asettaa sen muuttujaan.
 pull_twice &variable {
 	pull value1
 	pull value2
-	variable -set (value1 value2)
+	variable = (value1 value2)
 }
 ```
 
@@ -219,7 +219,7 @@ Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
 | `.=`        | `nimi .= sukunimi` | Lisää tekstin merkkijonon loppuun.                 |
 | `~=`        | `nimi ~= "ae" "ä"` | Tekee annetut korvaukset merkkijonoon, toimii kuten funktio `replace`. |
 | `+=`, `-=`, `*=`, `/=` | `pisteet *= 2` | Suorittaa laskutoimituksen lukumuuttujalla. |
-| `++`, `--   | `varallisuus --`   | Kasvattaa tai vähentää lukumuuttujan arvoa.        |
+| `++`, `--`  | `varallisuus --`   | Kasvattaa tai vähentää lukumuuttujan arvoa.        |
 
 #### Ohjausrakenteet
 
