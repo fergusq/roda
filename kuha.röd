@@ -56,7 +56,7 @@ käsittele_kuhaviesti ketju viesti {
 	nettikuvat := ""
 	laskuri := 0
 	for sana in kuvasanat; do
-		nettikuvat += !(hae_kuva_ja_tee_koodi sana laskuri kuvamontako)&" "
+		nettikuvat .= !(hae_kuva_ja_tee_koodi sana laskuri kuvamontako)&" "
 		laskuri ++
 	done
 
@@ -106,7 +106,7 @@ main {
 	
 	/* pääsilmukka */
 	while true; do
-		try do
+		/*try do*/
 			/* haetaan uusimmat päivitykset */
 			koodi := !(wcat tg_update..offset)&" "
 			parsittu := !(json koodi)[0]
@@ -155,6 +155,6 @@ main {
 			{} | exec "sleep" 10 | {}
 			
 			offset ++
-		done
+		/*done*/
 	done
 }
