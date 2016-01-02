@@ -1,0 +1,3 @@
+[submodule "nept"]
+	path = nept
+	url = https://github.com/fergusq/nept.git
