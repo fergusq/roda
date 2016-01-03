@@ -14,6 +14,15 @@ import java.io.FileNotFoundException;
 public final class IOUtils {
 	private IOUtils() {}
 
+	public static File getMaybeRelativeFile(File pwd, String name) {
+		if (name.startsWith("/")) { // tee tästä yhteensopiva outojen käyttöjärjestelmien kanssa
+			return new File(name);
+		}
+		else {
+			return new File(pwd, name);
+		}
+	}
+
 	public static final Iterable<String> fileIterator(File file) {
 		try {
 			BufferedReader in = new BufferedReader(new FileReader(file));

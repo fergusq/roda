@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 
 import java.util.regex.PatternSyntaxException;
 
+import java.io.File;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.FileInputStream;
@@ -73,6 +74,8 @@ public class Interpreter {
 	public RödaScope G = new RödaScope(Optional.empty());
 
 	RödaStream STDIN, STDOUT;
+
+	File currentDir = new File(System.getProperty("user.dir"));
 
 	static class SystemInStream extends RödaStream {
 		InputStreamReader ir = new InputStreamReader(System.in);
@@ -135,7 +138,7 @@ public class Interpreter {
 		STDOUT = new SystemOutStream();
 	}
 
-	{ Builtins.populate(G); /*System.out.println(G.map.keySet());*/ }
+	{ Builtins.populate(this); /*System.out.println(G.map.keySet());*/ }
 
 	static ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -230,16 +233,16 @@ public class Interpreter {
 		}
 	}
 
-	public static void loadFile(String filename, RödaScope scope) {
+	public static void loadFile(File file, RödaScope scope) {
 		try {
-			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
+			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 			String code = "";
 			String line = "";
 			while ((line = in.readLine()) != null) {
 				code += line + "\n";
 			}
 			in.close();
-			load(code, filename, scope);
+			load(code, file.getName(), scope);
 		} catch (IOException e) {
 		        error(e);
 		}

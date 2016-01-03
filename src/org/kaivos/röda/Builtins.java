@@ -51,7 +51,8 @@ class Builtins {
 
 	private Builtins() {}
 
-	static void populate(RödaScope S) {
+	static void populate(Interpreter I) {
+		RödaScope S = I.G;
 
 		/* Perusvirtaoperaatiot */
 
@@ -131,8 +132,10 @@ class Builtins {
 		S.setLocal("import", valueFromNativeFunction("import", (rawArgs, args, scope, in, out) -> {
 				        for (RödaValue value : args) {
 						checkString("import", value);
-						String file = value.str();
-						Interpreter.loadFile(file, S);
+						String filename = value.str();
+						File file = IOUtils.getMaybeRelativeFile(I.currentDir,
+											 filename);
+						I.loadFile(file, S);
 					}
 				}, Arrays.asList(new Parameter("files", false)), true));
 
@@ -453,6 +456,7 @@ class Builtins {
 					try {
 
 						ProcessBuilder b = new ProcessBuilder(params);
+						b.directory(I.currentDir);
 						Process p = b.start();
 						InputStream pout = p.getInputStream();
 						PrintWriter pin = new PrintWriter(p.getOutputStream());
@@ -493,11 +497,22 @@ class Builtins {
 
 		/* Tiedosto-operaatiot */
 
+		S.setLocal("cd", valueFromNativeFunction("cd", (rawArgs, args, scope, in, out) -> {
+					checkString("write", args.get(0));
+					String dirname = args.get(0).str();
+					File dir = IOUtils.getMaybeRelativeFile(I.currentDir, dirname);
+					if (!dir.isDirectory()) {
+						error("cd: not a directory");
+					}
+				        I.currentDir = dir;
+				}, Arrays.asList(new Parameter("cd", false)), false));
+
 		S.setLocal("write", valueFromNativeFunction("write", (rawArgs, args, scope, in, out) -> {
 					checkString("write", args.get(0));
 					String filename = args.get(0).str();
+					File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
 					try {
-						PrintWriter writer = new PrintWriter(filename);
+						PrintWriter writer = new PrintWriter(file);
 					        for (RödaValue input : in) {
 							writer.print(input.str());
 						}
@@ -513,10 +528,12 @@ class Builtins {
 							out.push(input);
 						}
 					}
-					else for (RödaValue file : args) {
-							checkString("cat", file);
-							String filename = file.str();
-							for (String line : IOUtils.fileIterator(filename)) {
+					else for (RödaValue value : args) {
+							checkString("cat", value);
+							String filename = value.str();
+							File file = IOUtils.getMaybeRelativeFile(I.currentDir,
+												 filename);
+							for (String line : IOUtils.fileIterator(file)) {
 								out.push(valueFromString(line));
 							}
 						}
