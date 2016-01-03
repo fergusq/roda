@@ -46,7 +46,7 @@ public class Parser {
 		.addEscapeCode('n', "\n")
 		.addEscapeCode('t', "\t")
 		.addCharacterEscapeCode('x', 2, 16)
-		.addCommentRule("\\\n", "")
+		.ignore("\\\n")
 		.dontIgnore('\n')
 		.appendOnEOF("<EOF>");
 

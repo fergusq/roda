@@ -48,6 +48,11 @@ public class LexerTest {
 	}
 
 	@Test
+	public void testEmptyProgramWithEscapedNewlines() {
+		assertEquals("<EOF>", lex("  \\\n \\\n"));
+	}
+
+	@Test
 	public void testOperators() {
 		assertEquals("<, ->, ), ;, .., [, %, ., (, >, ~=, }, #, =, ], {, ++, |, \n, ..., :, \", , \", &, <EOF>",
 			     lex("<->);..[%.(>~=}#=]{++|\n...:\"\"&"));
