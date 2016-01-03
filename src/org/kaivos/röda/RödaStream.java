@@ -15,6 +15,13 @@ import static org.kaivos.röda.RödaValue.*;
 
 import static org.kaivos.röda.Interpreter.error;
 
+/**
+ * RödaStream represents a pipe and can be used to transfer values from one thread
+ * to another.
+ *
+ * Futhermore, RödaStream is a collection that holds all the current and future values in a pipe.
+ * It can be used to iterate over all these values.
+ */
 public abstract class RödaStream implements Iterable<RödaValue> {
 	StreamHandler inHandler;
 	StreamHandler outHandler;
@@ -35,7 +42,10 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	final RödaValue readAll() {
 		return outHandler.handleReadAll(this::finished, this::get);
 	}
-	
+
+	/**
+	 * Returns a iterator that iterates over all the current and future values in the pipe.
+	 */
 	@Override
 	public Iterator<RödaValue> iterator() {
 		return new Iterator<RödaValue>() {
