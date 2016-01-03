@@ -36,7 +36,7 @@ public class Parser {
 		.addOperatorRule("/=")
 		.addOperatorRule("++")
 		.addPatternRule(Pattern.compile("--(?!\\p{L})"))
-		.addOperators("<>()[]{}|&.:;=#%?\n\\")
+		.addOperators("<>()[]{}|&.:;=#%?\n\\*")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
 		.addStringRule('\'', '\'', (char) 0)
@@ -46,6 +46,7 @@ public class Parser {
 		.addEscapeCode('n', "\n")
 		.addEscapeCode('t', "\t")
 		.addCharacterEscapeCode('x', 2, 16)
+		.addCommentRule("\\\n", "")
 		.dontIgnore('\n')
 		.appendOnEOF("<EOF>");
 
@@ -120,8 +121,7 @@ public class Parser {
 
 	static Parameter parseParameter(TokenList tl) {
 		boolean reference = false;
-		if (tl.isNext("&")) {
-			tl.accept("&");
+		if (tl.acceptIfNext("&")) {
 			reference = true;
 		}
 		String name = tl.nextString();
@@ -141,8 +141,7 @@ public class Parser {
 		}
 		maybeNewline(tl);
 		StreamType input, output;
-		if (tl.isNext(":")) {
-			tl.accept(":");
+		if (tl.acceptIfNext(":")) {
 			maybeNewline(tl);
 			input = parseStreamType(tl);
 			tl.accept("->");
@@ -166,16 +165,13 @@ public class Parser {
 	}
 	
 	static StreamType parseStreamType(TokenList tl) {
-		if (tl.isNext("void")) {
-			tl.accept("void");
+		if (tl.acceptIfNext("void")) {
 			return new VoidStream();
 		}
-		if (tl.isNext("byte")) {
-			tl.accept("byte");
+		if (tl.acceptIfNext("byte")) {
 			return new ByteStream();
 		}
-		if (tl.isNext("line")) {
-			tl.accept("line");
+		if (tl.acceptIfNext("line")) {
 			if (tl.isNext("(")) {
 				tl.accept(")");
 				tl.accept("\"");
@@ -185,8 +181,7 @@ public class Parser {
 			}
 			return new LineStream();
 		}
-		if (tl.isNext("value")) {
-			tl.accept("value");
+		if (tl.acceptIfNext("value")) {
 			return new ValueStream();
 		}
 
@@ -203,8 +198,7 @@ public class Parser {
 	static Statement parseStatement(TokenList tl) {
 		List<Command> commands = new ArrayList<>();
 		commands.add(parseCommand(tl));
-		while (tl.isNext("|")) {
-			tl.accept("|");
+		while (tl.acceptIfNext("|")) {
 			maybeNewline(tl);
 			commands.add(parseCommand(tl));
 		}
@@ -224,7 +218,7 @@ public class Parser {
 		Type type;
 		Expression name;
 		String operator;
-		List<Expression> arguments;
+		List<Argument> arguments;
 		Statement cond;
 		String variable;
 		Expression list;
@@ -234,8 +228,21 @@ public class Parser {
 		String file;
 		int line;
 	}
+
+	static class Argument {
+		boolean flattened;
+		Expression expr;
+	}
+
+	static Argument _makeArgument(boolean flattened, Expression expr) {
+		Argument arg = new Argument();
+		arg.flattened = flattened;
+		arg.expr = expr;
+		return arg;
+	}
 	
-	static Command _makeNormalCommand(String file, int line, Expression name, List<Expression> arguments) {
+	static Command _makeNormalCommand(String file, int line, Expression name,
+					  List<Argument> arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.NORMAL;
 		cmd.file = file;
@@ -246,7 +253,7 @@ public class Parser {
 	}
 	
 	static Command _makeVariableCommand(String file, int line, Expression name,
-					    String operator, List<Expression> arguments) {
+					    String operator, List<Argument> arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.VARIABLE;
 		cmd.file = file;
@@ -326,8 +333,7 @@ public class Parser {
 			return _makeIfOrWhileCommand(file, line, isWhile, cond, body, elseBody);
 		}
 
-		if (tl.isNext("for")) {
-			tl.accept("for");
+		if (tl.acceptIfNext("for")) {
 			String variable = tl.nextString();
 			tl.accept("in");
 			Expression list = parseExpression(tl);
@@ -343,8 +349,7 @@ public class Parser {
 			return _makeForCommand(file, line, variable, list, body);
 		}
 
-		if (tl.isNext("try")) {
-			tl.accept("try");
+		if (tl.acceptIfNext("try")) {
 			maybeNewline(tl);
 			if (tl.isNext("do")) {
 				tl.accept("do");
@@ -367,10 +372,12 @@ public class Parser {
 			operator = tl.nextString();
 		}
 		
-		List<Expression> arguments = new ArrayList<>();
+		List<Argument> arguments = new ArrayList<>();
 		while (!tl.isNext("|") && !tl.isNext(";") && !tl.isNext("\n")
 		       && !tl.isNext(")") && !tl.isNext("}") && !tl.isNext("<EOF>")) {
-			arguments.add(parseExpression(tl));
+			boolean flattened = tl.acceptIfNext("*");
+			arguments.add(_makeArgument(flattened,
+						    parseExpression(tl)));
 		}
 		if (operator == null)
 			return _makeNormalCommand(file, line, name, arguments);
@@ -599,10 +606,9 @@ public class Parser {
 	
 	private static Expression parseExpression(TokenList tl) {
 		Expression ans = parseExpressionJoin(tl);
-		while (tl.isNext("..")) {
+		while (tl.acceptIfNext("..")) {
 			String file = tl.seek().getFile();
 			int line = tl.seek().getLine();
-			tl.accept("..");
 			ans = expressionConcat(file, line, ans, parseExpressionJoin(tl));
 		}
 		return ans;
@@ -610,10 +616,9 @@ public class Parser {
 	
 	private static Expression parseExpressionJoin(TokenList tl) {
 		Expression ans = parseExpressionPrimary(tl);
-		while (tl.isNext("&")) {
+		while (tl.acceptIfNext("&")) {
 			String file = tl.seek().getFile();
 			int line = tl.seek().getLine();
-			tl.accept("&");
 			ans = expressionJoin(file, line, ans, parseExpressionPrimary(tl));
 		}
 		return ans;
@@ -623,16 +628,14 @@ public class Parser {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
 		Expression ans;
-		if (tl.isNext("'")) {
-			tl.accept("'");
+		if (tl.acceptIfNext("'")) {
 			String expr = tl.nextString();
 			tl.accept("'");
 			TokenList tlc = calculatorScanner.tokenize(expr, file, line);
 			ans = parseCalculatorExpression(tlc);
 			tlc.accept("<EOF>");
 		}
-		else if (tl.isNext("#")) {
-			tl.accept("#");
+		else if (tl.acceptIfNext("#")) {
 			Expression e = parseExpressionPrimary(tl);
 			return expressionLength(file, line, e);
 		}
@@ -665,8 +668,7 @@ public class Parser {
 			tl.accept("}");
 			ans = expressionFunction(file, line, new Function("<block>", parameters, isVarargs, input, output, body));
 		}
-		else if (tl.isNext("!")) {
-			tl.accept("!");
+		else if (tl.acceptIfNext("!")) {
 			tl.accept("(");
 			maybeNewline(tl);
 			Statement s = parseStatement(tl);
@@ -674,8 +676,7 @@ public class Parser {
 			tl.accept(")");
 			ans = expressionStatement(file, line, s);
 		}
-		else if (tl.isNext("(")) {
-			tl.accept("(");
+		else if (tl.acceptIfNext("(")) {
 			List<Expression> list = new ArrayList<>();
 			while (!tl.isNext(")")) {
 				list.add(parseExpression(tl));
@@ -683,8 +684,7 @@ public class Parser {
 			tl.accept(")");
 			ans = expressionList(file, line, list);
 		}
-		else if (tl.isNext("\"")) {
-			tl.accept("\"");
+		else if (tl.acceptIfNext("\"")) {
 			String s = tl.nextString();
 			tl.accept("\"");
 		        ans = expressionString(file, line, s);

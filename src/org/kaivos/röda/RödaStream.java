@@ -171,8 +171,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		}
 	}
 	static class VoidStream extends StreamType {
-		StreamHandler newHandler() {
-			return new StreamHandler() {
+		static final StreamHandler HANDLER = new StreamHandler() {
 				public void handlePush(Supplier<Boolean> finished,
 						       Consumer<RödaValue> put,
 						       RödaValue value) {
@@ -189,6 +188,8 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 					return null;
 				}
 			};
+		StreamHandler newHandler() {
+			return HANDLER;
 		}
 	}
 	static class ByteStream extends StreamType {

@@ -73,59 +73,62 @@ public class Interpreter {
 	
 	public RödaScope G = new RödaScope(Optional.empty());
 
-	private RödaStream STDIN, STDOUT;
+	RödaStream STDIN, STDOUT;
 
-	private void initializeIO() {
+	static class SystemInStream extends RödaStream {
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-		STDIN = new RödaStream() {
-				{
-					inHandler = new ValueStream().newHandler();
-					outHandler = new ValueStream().newHandler();
-				}
-				public RödaValue get() {
-					try {
-						String line = in.readLine();
-						if (line == null) return null;
-						else return valueFromString(line);
-					} catch (IOException e) {
-						e.printStackTrace();
-						error("io error");
-						return null;
-					}
-				}
-				public void put(RödaValue val) {
-					error("no output to input");
-				}
-				public boolean finished() {
-					return false; // TODO ehkä jotain oikeita tarkistuksia EOF:n varalta?
-				}
-				public void finish() {
-					// nop
-				}
-				public String toString(){return"STDIN";}
-			};
-		
-		STDOUT = new RödaStream() {
-				{
-					inHandler = new ValueStream().newHandler();
-					outHandler = new ValueStream().newHandler();
-				}
-				public RödaValue get() {
-					error("no input from output");
-					return null;
-				}
-				public void put(RödaValue val) {
-					System.out.print(val.str());
-				}
-				public boolean finished() {
-					return finished;
-				}
-				boolean finished = false;
-				public void finish() {
-					finished = true;
-				}
-				public String toString(){return"STDOUT";}
-			};
+		{
+			inHandler = ValueStream.HANDLER;
+			outHandler = VoidStream.HANDLER;
+		}
+		public RödaValue get() {
+			try {
+				String line = in.readLine();
+				if (line == null) return null;
+				else return valueFromString(line);
+			} catch (IOException e) {
+				e.printStackTrace();
+				error("io error");
+				return null;
+			}
+		}
+		public void put(RödaValue val) {
+			error("no output to input");
+		}
+		public boolean finished() {
+			return false; // TODO ehkä jotain oikeita tarkistuksia EOF:n varalta?
+		}
+		public void finish() {
+			// nop
+		}
+		public String toString(){return"STDIN";}
+	};
+
+	static class SystemOutStream extends RödaStream {
+		{
+			inHandler = ValueStream.HANDLER;
+			outHandler = ValueStream.HANDLER;
+		}
+		public RödaValue get() {
+			error("no input from output");
+			return null;
+		}
+		public void put(RödaValue val) {
+			System.out.print(val.str());
+		}
+		public boolean finished() {
+			return finished;
+		}
+		boolean finished = false;
+		public void finish() {
+			finished = true;
+		}
+		public String toString(){return"STDOUT";}
+	};
+	
+	private void initializeIO() {
+		STDIN = new SystemInStream();		
+		STDOUT = new SystemOutStream();
 	}
 
 	{ Builtins.populate(G); /*System.out.println(G.map.keySet());*/ }
@@ -495,8 +498,16 @@ public class Interpreter {
 						      boolean canFinish) {
 		if (cmd.type == Command.Type.NORMAL) {
 			RödaValue function = evalExpression(cmd.name, scope, in, out);
-			List<RödaValue> args = cmd.arguments.stream()
-				.map(a -> evalExpression(a, scope, in, out, true)).collect(toList());
+			List<RödaValue> args = new ArrayList<>();
+			for (Argument arg : cmd.arguments) {
+				RödaValue value = evalExpression(arg.expr, scope, in, out, true);
+				if (arg.flattened) {
+					value = value.impliciteResolve();
+					checkList("*", value);
+					args.addAll(value.list);
+				}
+				else args.add(value);
+			}
 			Runnable r = () -> {
 				exec(cmd.file, cmd.line, function, args, scope, _in, _out);
 				if (canFinish) _out.finish();
@@ -509,8 +520,16 @@ public class Interpreter {
 		}
 
 		if (cmd.type == Command.Type.VARIABLE) {
-			List<RödaValue> args = cmd.arguments.stream()
-				.map(a -> evalExpression(a, scope, in, out).impliciteResolve()).collect(toList());
+			List<RödaValue> args = new ArrayList<>();
+			for (Argument arg : cmd.arguments) {
+				RödaValue value = evalExpression(arg.expr, scope, in, out, true)
+					.impliciteResolve();
+				if (arg.flattened) {
+					checkList("*", value);
+					args.addAll(value.list);
+				}
+				else args.add(value);
+			}
 			Expression e = cmd.name;
 			if (e.type != Expression.Type.VARIABLE && e.type != Expression.Type.ELEMENT)
 				error("bad lvalue for '" + cmd.operator + "': " + e.asString());
