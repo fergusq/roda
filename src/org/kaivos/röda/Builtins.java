@@ -11,13 +11,19 @@ import java.util.function.Consumer;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.joining;
 
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.MalformedURLException;
-
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.regex.PatternSyntaxException;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
+
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.MalformedURLException;
 
 import java.io.PrintWriter;
 import java.io.IOException;
@@ -217,7 +223,7 @@ class Builtins {
 							out.push(valueFromString(text));
 						}
 					} catch (PatternSyntaxException e) {
-						error("replace: pattern syntax error: " + e.getMessage());
+						error("replace: pattern syntax exception: " + e.getMessage());
 					}
 				}, Arrays.asList(new Parameter("patterns_and_replacements", false)), true));
 
@@ -440,9 +446,11 @@ class Builtins {
 						variable.assign(next.apply(mode));
 					}
 				}, Arrays.asList(new Parameter("flags_and_variables", true)), true));
+
+		ExecutorService executor = Executors.newCachedThreadPool();
 		
 		S.setLocal("exec", valueFromNativeFunction("exec", (rawArgs, args, scope, in, out) -> {
-					List<String> params = args.stream().map(v -> v.str()).collect(toList());
+				        List<String> params = args.stream().map(v -> v.str()).collect(toList());
 					try {
 
 						ProcessBuilder b = new ProcessBuilder(params);
@@ -462,20 +470,24 @@ class Builtins {
 								}
 								pout.close();
 							} catch (IOException e) {
-								e.printStackTrace();
-								error("io error while executing '" + params.stream().collect(joining(" ")) + "'");
+								error(e);
 							}
 						};
-						new Thread(input).start();
-						Thread o = new Thread(output);
-						o.start();
-						o.join();
+						Future<?> futureIn = executor.submit(input);
+						Future<?> futureOut = executor.submit(output);
+						futureOut.get();
+						in.pause();
+						futureIn.get();
+						in.unpause();
 					} catch (IOException e) {
-						e.printStackTrace();
-						error("exec: io error while executing '" + params.stream().collect(joining(" ")) + "'");
+					        error(e);
 					} catch (InterruptedException e) {
-						e.printStackTrace();
-						error("exec: threading error while executing '" + params.stream().collect(joining(" ")) + "'");
+					        error(e);
+					} catch (ExecutionException e) {
+						if (e.getCause() instanceof RödaException) {
+							throw (RödaException) e.getCause();
+						}
+						error(e.getCause());
 					}
 				}, Arrays.asList(new Parameter("command", false), new Parameter("args", false)), true));
 
@@ -491,8 +503,7 @@ class Builtins {
 						}
 						writer.close();
 					} catch (IOException e) {
-						e.printStackTrace();
-						error("write: io error");
+						error(e);
 					}
 				}, Arrays.asList(new Parameter("file", false)), false));
 
@@ -554,11 +565,9 @@ class Builtins {
 								input.close();
 							}
 						} catch (MalformedURLException e) {
-							e.printStackTrace();
-							error("wcat: malformed url" + e.getMessage());
+							error(e);
 						} catch (IOException e) {
-							e.printStackTrace();
-							error("wcat: io error");
+							error(e);
 						}
 				}, Arrays.asList(new Parameter("urls", false)), true));
 	}

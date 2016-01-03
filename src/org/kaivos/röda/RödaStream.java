@@ -25,26 +25,75 @@ import static org.kaivos.röda.Interpreter.error;
 public abstract class RödaStream implements Iterable<RödaValue> {
 	StreamHandler inHandler;
 	StreamHandler outHandler;
+	private boolean paused = false;
 	
-	public abstract RödaValue get();
-	public abstract void put(RödaValue value);
+	protected abstract RödaValue get();
+	protected abstract void put(RödaValue value);
+
+	/**
+	 * Closes the stream permanently.
+	 */
 	public abstract void finish();
+
+	/**
+	 * Returns false if it is possible to pull values
+	 * from the stream.
+	 */
+	public boolean closed() {
+		return paused() || finished();
+	}
+
+	/**
+	 * Returns true if the stream is permanently finished.
+	 */
 	public abstract boolean finished();
 	
-	final void push(RödaValue value) {
+	/**
+	 * Closes the stream so that it can be opened again.
+	 */
+	public void pause() {
+		paused = true;
+	}
+
+	/**
+	 * Opens the stream after it has been paused.
+	 */
+	public void unpause() {
+		paused = false;
+	}
+
+	/**
+	 * Returns true if the stream is paused.
+	 */
+	public boolean paused() {
+		return paused;
+	}
+
+	/**
+	 * Pushes a new value to the stream.
+	 */
+	public final void push(RödaValue value) {
 		inHandler.handlePush(this::finished, this::put, value);
 	}
-	
-	final RödaValue pull() {
+
+	/**
+	 * Pulls a value from the stream.
+	 *
+	 * @return the value, or null if the stream is closed.
+	 */
+	public final RödaValue pull() {
 		return outHandler.handlePull(this::finished, this::get);
 	}
-	
-	final RödaValue readAll() {
+
+	/**
+	 * Returns a value that represents all current and future values in the stream.
+	 */
+	public final RödaValue readAll() {
 		return outHandler.handleReadAll(this::finished, this::get);
 	}
 
 	/**
-	 * Returns a iterator that iterates over all the current and future values in the pipe.
+	 * Returns a iterator that iterates over all the current and future values in the stream.
 	 */
 	@Override
 	public Iterator<RödaValue> iterator() {

@@ -76,19 +76,22 @@ public class Interpreter {
 	RödaStream STDIN, STDOUT;
 
 	static class SystemInStream extends RödaStream {
-		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+		InputStreamReader ir = new InputStreamReader(System.in);
+		BufferedReader in = new BufferedReader(ir);
 		{
 			inHandler = ValueStream.HANDLER;
-			outHandler = VoidStream.HANDLER;
+			outHandler = ValueStream.HANDLER;
 		}
 		public RödaValue get() {
 			try {
+				while (!in.ready()) {
+					if (paused()) return null;
+				}
 				String line = in.readLine();
 				if (line == null) return null;
 				else return valueFromString(line);
 			} catch (IOException e) {
-				e.printStackTrace();
-				error("io error");
+				error(e);
 				return null;
 			}
 		}
@@ -114,7 +117,9 @@ public class Interpreter {
 			return null;
 		}
 		public void put(RödaValue val) {
-			System.out.print(val.str());
+			if (!closed())
+				System.out.print(val.str());
+			else error("output is closed");
 		}
 		public boolean finished() {
 			return finished;
