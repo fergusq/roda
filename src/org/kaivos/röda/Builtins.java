@@ -45,6 +45,9 @@ class Builtins {
 	private Builtins() {}
 
 	static void populate(RödaScope S) {
+
+		/* Perusvirtaoperaatiot */
+
 		S.setLocal("print", valueFromNativeFunction("print", (rawArgs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("print", 1, 0);
@@ -96,6 +99,8 @@ class Builtins {
 					}
 				}, Arrays.asList(new Parameter("variables", true)), true));
 
+		/* Muuttujaoperaatiot */
+
 		S.setLocal("undefine", valueFromNativeFunction("undefine", (rawArgs, args, scope, in, out) -> {
 					for (RödaValue value : args) {
 						if (!value.isReference())
@@ -106,13 +111,61 @@ class Builtins {
 					}
 				}, Arrays.asList(new Parameter("variables", true)), true));
 
-		S.setLocal("seq", valueFromNativeFunction("seq", (rawArgs, args, scope, in, out) -> {
-					checkNumber("seq", args.get(0));
-					checkNumber("seq", args.get(1));
-					int from = args.get(0).num();
-					int to = args.get(1).num();
-					for (int i = from; i <= to; i++) out.push(valueFromInt(i));
-				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false));
+		S.setLocal("name", valueFromNativeFunction("name", (rawArgs, args, scope, in, out) -> {
+					for (RödaValue value : args) {
+						if (!value.isReference())
+							error("invalid argument for undefine: "
+							      + "only references accepted");
+
+						out.push(valueFromString(value.target));
+					}
+				}, Arrays.asList(new Parameter("variables", true)), true));
+
+		S.setLocal("import", valueFromNativeFunction("import", (rawArgs, args, scope, in, out) -> {
+				        for (RödaValue value : args) {
+						checkString("import", value);
+						String file = value.str();
+						Interpreter.loadFile(file, S);
+					}
+				}, Arrays.asList(new Parameter("files", false)), true));
+
+		/* Täydentävät virtaoperaatiot */
+
+		S.setLocal("head", valueFromNativeFunction("head", (rawArgs, args, scope, in, out) -> {
+				        if (args.size() > 1) argumentOverflow("head", 1, args.size());
+					if (args.size() == 0) {
+						out.push(in.pull());
+					}
+					else {
+						checkNumber("head", args.get(0));
+						int num = args.get(0).num();
+						for (int i = 0; i < num; i++) out.push(in.pull());
+					}
+				}, Arrays.asList(new Parameter("number", false)), true));
+
+		S.setLocal("tail", valueFromNativeFunction("tail", (rawArgs, args, scope, in, out) -> {
+				        if (args.size() > 1) argumentOverflow("tail", 1, args.size());
+
+					int num;
+
+					if (args.size() == 0) num = 1;
+					else {
+						checkNumber("tail", args.get(0));
+						num = args.get(0).num();
+					}
+					
+					List<RödaValue> values = new ArrayList<>();
+					for (RödaValue value : in) {
+						values.add(value);
+					}
+
+					for (int i = values.size()-num; i < values.size(); i++) {
+						out.push(values.get(i));
+					}
+					
+				}, Arrays.asList(new Parameter("number", false)), true));
+
+		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
 		S.setLocal("grep", valueFromNativeFunction("grep", (rawArgs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("grep", 1, 0);
@@ -167,6 +220,8 @@ class Builtins {
 						error("replace: pattern syntax error: " + e.getMessage());
 					}
 				}, Arrays.asList(new Parameter("patterns_and_replacements", false)), true));
+
+		/* Parserit */
 
 		S.setLocal("split", valueFromNativeFunction("split", (rawArgs, args, scope, in, out) -> {
 					String separator = " ";
@@ -264,64 +319,6 @@ class Builtins {
 						}
 					}
 				}, Arrays.asList(new Parameter("flags_and_code", false)), true));
-
-		S.setLocal("import", valueFromNativeFunction("import", (rawArgs, args, scope, in, out) -> {
-				        for (RödaValue value : args) {
-						checkString("import", value);
-						String file = value.str();
-						Interpreter.loadFile(file, S);
-					}
-				}, Arrays.asList(new Parameter("files", false)), true));
-		
-		S.setLocal("list", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
-				        out.push(valueFromList(args));
-				}, Arrays.asList(new Parameter("values", false)), true));
-
-		S.setLocal("true", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
-				        out.push(valueFromBoolean(true));
-				}, Arrays.asList(), false));
-
-		S.setLocal("false", valueFromNativeFunction("false", (rawArgs, args, scope, in, out) -> {
-				        out.push(valueFromBoolean(false));
-				}, Arrays.asList(), false));
-
-		S.setLocal("time", valueFromNativeFunction("time", (rawArgs, args, scope, in, out) -> {
-				        out.push(valueFromInt((int) System.currentTimeMillis()));
-				}, Arrays.asList(), false));
-
-		Random rnd = new Random();
-		
-		S.setLocal("random", valueFromNativeFunction("random", (rawArgs, args, scope, in, out) -> {
-					final int INTEGER=0,
-						FLOAT=1,
-						BOOLEAN=2;
-					java.util.function.Function<Integer, RödaValue> next = i -> {
-						switch (i) {
-						case INTEGER: return valueFromInt(rnd.nextInt());
-						case FLOAT: return valueFromString(rnd.nextDouble()+"");
-						case BOOLEAN: return valueFromBoolean(rnd.nextBoolean());
-						}
-						return null;
-					};
-					int mode = BOOLEAN;
-					if (args.size() == 1 && args.get(0).isString()) {
-						switch (args.get(0).str()) {
-						case "-integer": mode = INTEGER; break;
-						case "-boolean": mode = BOOLEAN; break;
-						case "-float": mode = FLOAT; break;
-						default: error("random: invalid flag " + args.get(0).str());
-						}
-						args.remove(0);
-					}
-					if (args.size() == 0) {
-						out.push(next.apply(mode));
-						return;
-					}
-					for (RödaValue variable : args) {
-						checkReference("random", variable);
-						variable.assign(next.apply(mode));
-					}
-				}, Arrays.asList(new Parameter("flags_and_variables", true)), true));
 		
 		S.setLocal("expr", valueFromNativeFunction("expr", (rawArgs, args, scope, in, out) -> {
 				        String expression = args.stream().map(RödaValue::str).collect(joining(" "));
@@ -382,39 +379,107 @@ class Builtins {
 						 new Parameter("value2", false)
 						 ), false));
 
-		S.setLocal("head", valueFromNativeFunction("head", (rawArgs, args, scope, in, out) -> {
-				        if (args.size() > 1) argumentOverflow("head", 1, args.size());
+		/* Konstruktorit */
+		
+		S.setLocal("list", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
+				        out.push(valueFromList(args));
+				}, Arrays.asList(new Parameter("values", false)), true));
+
+		S.setLocal("seq", valueFromNativeFunction("seq", (rawArgs, args, scope, in, out) -> {
+					checkNumber("seq", args.get(0));
+					checkNumber("seq", args.get(1));
+					int from = args.get(0).num();
+					int to = args.get(1).num();
+					for (int i = from; i <= to; i++) out.push(valueFromInt(i));
+				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false));
+
+		S.setLocal("true", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
+				        out.push(valueFromBoolean(true));
+				}, Arrays.asList(), false));
+
+		S.setLocal("false", valueFromNativeFunction("false", (rawArgs, args, scope, in, out) -> {
+				        out.push(valueFromBoolean(false));
+				}, Arrays.asList(), false));
+
+		/* Apuoperaatiot */
+
+		S.setLocal("time", valueFromNativeFunction("time", (rawArgs, args, scope, in, out) -> {
+				        out.push(valueFromInt((int) System.currentTimeMillis()));
+				}, Arrays.asList(), false));
+
+		Random rnd = new Random();
+		
+		S.setLocal("random", valueFromNativeFunction("random", (rawArgs, args, scope, in, out) -> {
+					final int INTEGER=0,
+						FLOAT=1,
+						BOOLEAN=2;
+					java.util.function.Function<Integer, RödaValue> next = i -> {
+						switch (i) {
+						case INTEGER: return valueFromInt(rnd.nextInt());
+						case FLOAT: return valueFromString(rnd.nextDouble()+"");
+						case BOOLEAN: return valueFromBoolean(rnd.nextBoolean());
+						}
+						return null;
+					};
+					int mode = BOOLEAN;
+					if (args.size() == 1 && args.get(0).isString()) {
+						switch (args.get(0).str()) {
+						case "-integer": mode = INTEGER; break;
+						case "-boolean": mode = BOOLEAN; break;
+						case "-float": mode = FLOAT; break;
+						default: error("random: invalid flag " + args.get(0).str());
+						}
+						args.remove(0);
+					}
 					if (args.size() == 0) {
-						out.push(in.pull());
+						out.push(next.apply(mode));
+						return;
 					}
-					else {
-						checkNumber("head", args.get(0));
-						int num = args.get(0).num();
-						for (int i = 0; i < num; i++) out.push(in.pull());
+					for (RödaValue variable : args) {
+						checkReference("random", variable);
+						variable.assign(next.apply(mode));
 					}
-				}, Arrays.asList(new Parameter("number", false)), true));
+				}, Arrays.asList(new Parameter("flags_and_variables", true)), true));
+		
+		S.setLocal("exec", valueFromNativeFunction("exec", (rawArgs, args, scope, in, out) -> {
+					List<String> params = args.stream().map(v -> v.str()).collect(toList());
+					try {
 
-		S.setLocal("tail", valueFromNativeFunction("tail", (rawArgs, args, scope, in, out) -> {
-				        if (args.size() > 1) argumentOverflow("tail", 1, args.size());
-
-					int num;
-
-					if (args.size() == 0) num = 1;
-					else {
-						checkNumber("tail", args.get(0));
-						num = args.get(0).num();
+						ProcessBuilder b = new ProcessBuilder(params);
+						Process p = b.start();
+						InputStream pout = p.getInputStream();
+						PrintWriter pin = new PrintWriter(p.getOutputStream());
+						Runnable input = () -> {
+							for (RödaValue value : in) {
+								pin.print(value.str());
+							}
+							pin.close();
+						};
+						Runnable output = () -> {
+							try {
+								for (String line : IOUtils.streamIterator(pout)) {
+									out.push(valueFromString(line));
+								}
+								pout.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+								error("io error while executing '" + params.stream().collect(joining(" ")) + "'");
+							}
+						};
+						new Thread(input).start();
+						Thread o = new Thread(output);
+						o.start();
+						o.join();
+					} catch (IOException e) {
+						e.printStackTrace();
+						error("exec: io error while executing '" + params.stream().collect(joining(" ")) + "'");
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+						error("exec: threading error while executing '" + params.stream().collect(joining(" ")) + "'");
 					}
-					
-					List<RödaValue> values = new ArrayList<>();
-					for (RödaValue value : in) {
-						values.add(value);
-					}
+				}, Arrays.asList(new Parameter("command", false), new Parameter("args", false)), true));
 
-					for (int i = values.size()-num; i < values.size(); i++) {
-						out.push(values.get(i));
-					}
-					
-				}, Arrays.asList(new Parameter("number", false)), true));
+		/* Tiedosto-operaatiot */
 
 		S.setLocal("write", valueFromNativeFunction("write", (rawArgs, args, scope, in, out) -> {
 					checkString("write", args.get(0));
@@ -496,43 +561,5 @@ class Builtins {
 							error("wcat: io error");
 						}
 				}, Arrays.asList(new Parameter("urls", false)), true));
-		
-		S.setLocal("exec", valueFromNativeFunction("exec", (rawArgs, args, scope, in, out) -> {
-					List<String> params = args.stream().map(v -> v.str()).collect(toList());
-					try {
-
-						ProcessBuilder b = new ProcessBuilder(params);
-						Process p = b.start();
-						InputStream pout = p.getInputStream();
-						PrintWriter pin = new PrintWriter(p.getOutputStream());
-						Runnable input = () -> {
-							for (RödaValue value : in) {
-								pin.print(value.str());
-							}
-							pin.close();
-						};
-						Runnable output = () -> {
-							try {
-								for (String line : IOUtils.streamIterator(pout)) {
-									out.push(valueFromString(line));
-								}
-								pout.close();
-							} catch (IOException e) {
-								e.printStackTrace();
-								error("io error while executing '" + params.stream().collect(joining(" ")) + "'");
-							}
-						};
-						new Thread(input).start();
-						Thread o = new Thread(output);
-						o.start();
-						o.join();
-					} catch (IOException e) {
-						e.printStackTrace();
-						error("exec: io error while executing '" + params.stream().collect(joining(" ")) + "'");
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-						error("exec: threading error while executing '" + params.stream().collect(joining(" ")) + "'");
-					}
-				}, Arrays.asList(new Parameter("command", false), new Parameter("args", false)), true));
 	}
 }
