@@ -188,16 +188,20 @@ public class Interpreter {
 	}
 	
 	public void interpret(String code, String filename) {
+		interpret(code, new ArrayList<>(), "<input>");
+	}
+	
+	public void interpret(String code, List<RödaValue> args, String filename) {
 		try {
 		        load(code, filename, G);
 			
 			RödaValue main = G.resolve("main");
 			if (main == null) return;
+			if (!main.isFunction() || main.isNativeFunction())
+				error("The variable 'main' must be a function");
 			
-			exec("<runtime>", 0, main, new ArrayList<>(), G, STDIN, STDOUT);
-		} catch (RödaException e) {
-			throw e;
-		} catch (ParsingException e) {
+			exec("<runtime>", 0, main, args, G, STDIN, STDOUT);
+		} catch (ParsingException|RödaException e) {
 			throw e;
 		} catch (Exception e) {
 		        error(e);
@@ -210,9 +214,7 @@ public class Interpreter {
 			for (Function f : program.functions) {
 				scope.setLocal(f.name, valueFromFunction(f));
 			}
-		} catch (RödaException e) {
-			throw e;
-		} catch (ParsingException e) {
+		} catch (ParsingException|RödaException e) {
 			throw e;
 		} catch (Exception e) {
 		        error(e);

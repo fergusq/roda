@@ -12,16 +12,20 @@ import java.io.FileInputStream;
 import java.util.List;
 import java.util.ArrayList;
 
+import java.util.stream.Collectors;
+
 /**
  * A simple stream language
  */
 public class Röda {
 	public static void main(String[] args) throws IOException {
-		List<String> files = new ArrayList<>();
+		String file = null;
+		List<String> argsForRöda = new ArrayList<>();
 		boolean interactive = false;
 		String prompt = "> ";
 		
 		for (int i = 0; i < args.length; i++) {
+			if (file != null) argsForRöda.add(args[i]);
 			switch (args[i]) {
 			case "-p":
 				prompt = args[++i];
@@ -43,12 +47,12 @@ public class Röda {
 				
 			} continue;
 			default:
-				files.add(args[i]);
+				file = args[i];
 				continue;
 			}
 		}
 		
-		if (files.isEmpty() ^ interactive) {
+		if (file == null ^ interactive) {
 			System.err.println("Usage: röda file | röda [-p prompt] -i");
 			System.exit(1);
 			return;
@@ -79,7 +83,7 @@ public class Röda {
 			}
 
 			return;
-		} else for (String file : files) {
+		} else {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 			String code = "";
 			String line = "";
@@ -88,8 +92,11 @@ public class Röda {
 			}
 			in.close();
 			Interpreter c = new Interpreter();
+			List<RödaValue> valueArgs = argsForRöda.stream()
+				.map(RödaValue::valueFromString)
+				.collect(Collectors.toList());
 			try {
-				c.interpret(code, file);
+				c.interpret(code, valueArgs, file);
 			} catch (ParsingException e) {
 				System.err.println("[E] " + e.getMessage());
 			} catch (Interpreter.RödaException e) {

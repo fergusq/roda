@@ -6,7 +6,7 @@ import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
 @SuiteClasses({
-        RödaTest.class,
-	LexerTest.class
+		//        RödaTest.class,
+		//	LexerTest.class
 })
 public class RödaSuite {}

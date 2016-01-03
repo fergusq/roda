@@ -4,6 +4,7 @@ import org.junit.*;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import static java.util.stream.Collectors.joining;
 
@@ -26,11 +27,15 @@ public class RödaTest {
 	}
 
 	private String eval(String code) {
-		interpreter.interpret(code);
+		interpreter.interpret(code, "<test>");
+		return getResults();
+	}
+
+	private String getResults() {
 		return results.stream().map(v -> v.str()).collect(joining(","));
 	}
 
-	/* Laskutoimitukset */
+	// Laskutoimitukset
 
 	@Test
 	public void test2Plus2Equals4() {
@@ -48,6 +53,8 @@ public class RödaTest {
 	}
 
 	/* README:n esimerkit (hieman muutettuina)*/
+
+	// Funktiot
 
 	@Test
 	public void testSimplePullPushFunction() {
@@ -69,6 +76,8 @@ public class RödaTest {
 				  + "main{give\"abba\"\"tuuli\"\"joki\"}"));
 	}
 
+	// Viittaukset
+
 	@Test
 	public void testPullingReference() {
 		assertEquals("(abba musiikki)",
@@ -85,6 +94,8 @@ public class RödaTest {
 	public void testSettingReference() {
 		assertEquals("20", eval("main{push 17|{|&a|;a:=20}b;push b}"));
 	}
+
+	// Muuttujat
 
 	@Test
 	public void testVariableFlagCreate() {
@@ -139,6 +150,8 @@ public class RödaTest {
 			     eval("main{(\"rivi1\\n\" \"rivi2\\n\" \"rivi3\\n\")}"));
 	}
 
+	// Ohjausrakenteet
+
 	@Test
 	public void testIf() {
 		assertEquals("Olet liian nuori!\n",
@@ -174,6 +187,8 @@ public class RödaTest {
 				  + "done}"));
 	}
 
+	// Merkkijono-operaatiot
+
 	@Test
 	public void testStringLength() {
 		assertEquals("14",
@@ -191,6 +206,8 @@ public class RödaTest {
 		assertEquals("Serkku S. Muikku",
 			     eval("main{nimi:=\"S.\";push \"Serkku \"..nimi..\" Muikku\"}"));
 	}
+
+	// Listaoperaatiot
 
 	@Test
 	public void testListLength() {
@@ -261,6 +278,8 @@ public class RödaTest {
 			     eval("main{push !(split -s \"-\" \"sanna-ja-teemu-jokela\")}"));
 	}
 
+	// Nimettömät funktiot
+
 	@Test
 	public void testPassingAnonymousFunction() {
 		assertEquals("Vilma on vielä nuori.",
@@ -270,5 +289,25 @@ public class RödaTest {
 				  + "tytöt|filter{|tyttö|;test tyttö[1] -gt 1996}|while pull -r tyttö;do "
 				  + "push tyttö[0]..\" on vielä nuori.\";done"
 				  + "}"));
+	}
+
+	// Argumentit
+
+	@Test
+	public void testArguments() {
+		interpreter.interpret("main a b{push b a}",
+				      Arrays.asList(RödaValue.valueFromString("Anne"),
+						    RödaValue.valueFromString("Sanna")),
+				      "<test>");
+		assertEquals("Sanna,Anne", getResults());
+	}
+
+	@Test
+	public void testArgumentList() {
+		interpreter.interpret("main a...{push a[1] a[0] #a}",
+				      Arrays.asList(RödaValue.valueFromString("Venla"),
+						    RödaValue.valueFromString("Eveliina")),
+				      "<test>");
+		assertEquals("Eveliina,Venla,2", getResults());
 	}
 }
