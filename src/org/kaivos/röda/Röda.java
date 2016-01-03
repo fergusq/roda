@@ -81,8 +81,6 @@ public class Röda {
 				}
 				System.out.print(prompt);
 			}
-
-			return;
 		} else {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 			String code = "";
@@ -107,5 +105,7 @@ public class Röda {
 				if (e.getCause() != null) e.getCause().printStackTrace();
 			}
 		}
+
+		Interpreter.executor.shutdown();
 	}
 }

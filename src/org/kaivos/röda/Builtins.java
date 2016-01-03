@@ -48,6 +48,7 @@ import static org.kaivos.röda.Interpreter.*;
 import static org.kaivos.röda.Parser.*;
 
 class Builtins {
+
 	private Builtins() {}
 
 	static void populate(RödaScope S) {
@@ -446,8 +447,6 @@ class Builtins {
 						variable.assign(next.apply(mode));
 					}
 				}, Arrays.asList(new Parameter("flags_and_variables", true)), true));
-
-		ExecutorService executor = Executors.newCachedThreadPool();
 		
 		S.setLocal("exec", valueFromNativeFunction("exec", (rawArgs, args, scope, in, out) -> {
 				        List<String> params = args.stream().map(v -> v.str()).collect(toList());
@@ -466,19 +465,20 @@ class Builtins {
 						Runnable output = () -> {
 							try {
 								for (String line : IOUtils.streamIterator(pout)) {
-									out.push(valueFromString(line));
+									out.push(valueFromString(line + "\n"));
 								}
 								pout.close();
 							} catch (IOException e) {
 								error(e);
 							}
 						};
-						Future<?> futureIn = executor.submit(input);
-						Future<?> futureOut = executor.submit(output);
+						Future<?> futureIn = Interpreter.executor.submit(input);
+						Future<?> futureOut = Interpreter.executor.submit(output);
 						futureOut.get();
 						in.pause();
 						futureIn.get();
 						in.unpause();
+						p.waitFor();
 					} catch (IOException e) {
 					        error(e);
 					} catch (InterruptedException e) {

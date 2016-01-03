@@ -39,7 +39,6 @@ import org.kaivos.nept.parser.ParsingException;
 public class Interpreter {
 	
 	/*** INTERPRETER ***/
-
 	
 	public static class RödaScope {
 		Optional<RödaScope> parent;
@@ -137,6 +136,8 @@ public class Interpreter {
 	}
 
 	{ Builtins.populate(G); /*System.out.println(G.map.keySet());*/ }
+
+	static ExecutorService executor = Executors.newCachedThreadPool();
 
 	public Interpreter() {
 		initializeIO();
@@ -415,8 +416,6 @@ public class Interpreter {
 		}
 		error("can't execute a value of type " + value.typeString());
 	}
-
-	private ExecutorService executor = Executors.newCachedThreadPool();
 	
 	private void evalStatement(Statement statement, RödaScope scope,
 				  RödaStream in, RödaStream out, boolean redirected) {
