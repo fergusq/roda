@@ -99,6 +99,12 @@ public class LexerTest {
 	public void testUnclosedStringWithEscapeCodeAtEnd() {
 		lex("\"abba\\\"");
 	}
+
+	@Test
+	public void testLuaQuote() {
+		assertEquals("[[, abb\na\"\rväli\\nabba2, ]], <EOF>",
+			     lex("[[abb\na\"\rväli\\nabba2]]"));
+	}
 	
 	@Test
 	public void testCalculatorQuote() {
