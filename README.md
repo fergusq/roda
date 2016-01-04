@@ -134,6 +134,38 @@ erityistapaukset on alempana.
 Funktion argumentteina mahdollisesti olevat funktiokutsut on kytketty isäntäfunktion virtaan, eikä
 putkeen. Vain kutsuttava funktio putkittuu.
 
+Argumentit annetaan funktiolle siinä järjestyksessä, missä ne ovat kutsussa. Jos funktion viimeisessä
+parametrissa on valitsin `...`, asetetaan kaikki yli menevät argumentit siihen listana. Lista voi olla
+myös tyhjä.
+
+```
+tulosta_perheenjäsenet sukunimi etunimet... {
+	for etunimi in etunimet; do
+		push etunimi " " sukunimi "\n"
+	done
+}
+
+main {
+	tulosta_perheenjäsenet "Luoto" "Einari" "Ville" "Jenni"
+}
+```
+
+Jos argumentin edessä on tähti `*`, oletetaan, että se on lista. Tällöin argumentin alkiot annetaan
+argumentteina funktiolle, eikä itse listaa.
+
+```
+väli := (1 10)
+seq *väli /* sama kuin seq 1 10 */
+```
+
+Tätä ominaisuutta on mahdollista käyttää yhdessä `...`-määrittimen kanssa,
+jos halutaan antaa arvot olemassa olevasta listasta.
+
+```
+sisarukset := ("Joonas" "Amelie")
+tulosta_perheenjäsenet "Mikkola" *sisarukset
+```
+
 #### Eri arvojen "kutsuminen"
 
 ##### Listat
@@ -428,6 +460,13 @@ Merkki `*` tarkoittaa "nolla tai useampi" ja `+` yksi tai useampi.
 
 Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 
+### cd
+
+>`cd hakemisto`
+
+Vaihtaa nykyistä työhakemistoa. Työhakemisto on se hakemisto, jossa tiedostonkäsittelykomennot olettavat
+tiedostojen olevan.
+
 ### false
 
 >`false`
@@ -484,6 +523,12 @@ määrittää, että avaimet annetaan merkkijonoina listojen sijaan. (TODO parem
 
 Palauttaa argumentit listana.
 
+### name
+
+>`name muuttuja+`
+
+Työntää annettujen muuttujien nimet ulostulovirtaan merkkijonoina.
+
 ### print
 
 >`print arvo*`
@@ -502,6 +547,12 @@ Työntää arvot ulostulovirtaan.
 
 Lukee muuttujaan arvon sisääntulovirrasta. Jos valitsin `-r` on käytössä, palautetaan jokaista onnistunutta
 lukua kohti ulostulovirtaan arvo `true` ja jokaista epäonnistunutta lukua kohti arvo `false`.
+
+### pwd
+
+>`pwd`
+
+Työntää nykyisen työhakemiston ulostulovirtaan.
 
 ### random
 
