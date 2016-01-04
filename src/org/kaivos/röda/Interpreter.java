@@ -91,7 +91,7 @@ public class Interpreter {
 				}
 				String line = in.readLine();
 				if (line == null) return null;
-				else return valueFromString(line);
+				else return valueFromString(line + "\n");
 			} catch (IOException e) {
 				error(e);
 				return null;

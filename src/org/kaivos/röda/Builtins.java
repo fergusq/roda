@@ -29,6 +29,8 @@ import java.io.PrintWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
 
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -156,7 +158,12 @@ class Builtins {
 					else {
 						checkNumber("head", args.get(0));
 						int num = args.get(0).num();
-						for (int i = 0; i < num; i++) out.push(in.pull());
+						for (int i = 0; i < num; i++) {
+							RödaValue input = in.pull();
+							if (input == null)
+								error("head: input stream is closed");
+							out.push(in.pull());
+						}
 					}
 				}, Arrays.asList(new Parameter("number", false)), true,
 				new ValueStream(), new ValueStream()));
@@ -176,6 +183,8 @@ class Builtins {
 					for (RödaValue value : in) {
 						values.add(value);
 					}
+					if (values.size() < num)
+						error("tail: input stream is closed");
 
 					for (int i = values.size()-num; i < values.size(); i++) {
 						out.push(values.get(i));
@@ -193,7 +202,10 @@ class Builtins {
 					
 					// basic mode
 					if (!onlyMatching) {
-						for (RödaValue input : in) {
+						while (true) {
+							RödaValue input = in.pull();
+							if (input == null) break;
+							
 							String text = input.str();
 							for (RödaValue value : args) {
 								checkString("grep", value);
@@ -207,7 +219,10 @@ class Builtins {
 					// only matching mode
 					if (onlyMatching) {
 						args.remove(0);
-						for (RödaValue input : in) {
+						while (true) {
+							RödaValue input = in.pull();
+							if (input == null) break;
+						        
 							String text = input.str();
 							for (RödaValue value : args) {
 								checkString("grep", value);
@@ -225,7 +240,10 @@ class Builtins {
 		S.setLocal("replace", valueFromNativeFunction("replace", (rawArgs, args, scope, in, out) -> {
 					if (args.size() % 2 != 0) error("invalid arguments for replace: even number required (got " + args.size() + ")");
 					try {
-						for (RödaValue input : in) {
+						while (true) {
+							RödaValue input = in.pull();
+							if (input == null) break;
+							
 							String text = input.str();
 							for (int i = 0; i < args.size(); i+=2) {
 								checkString("replace", args.get(i));
@@ -335,7 +353,8 @@ class Builtins {
 						handler.accept(code);
 					}
 					else {
-						for (RödaValue value : in) {
+						RödaValue value;
+						while ((value = in.pull()) != null) {
 							String code = value.str();
 							handler.accept(code);
 						}
@@ -477,17 +496,23 @@ class Builtins {
 						InputStream pout = p.getInputStream();
 						PrintWriter pin = new PrintWriter(p.getOutputStream());
 						Runnable input = () -> {
-							for (RödaValue value : in) {
+							while (true) {
+								RödaValue value = in.pull();
+								if (value == null) break;
 								pin.print(value.str());
+								pin.flush();
 							}
 							pin.close();
 						};
 						Runnable output = () -> {
+							BufferedReader reader = new BufferedReader(new InputStreamReader(pout));
 							try {
-								for (String line : IOUtils.streamIterator(pout)) {
-									out.push(valueFromString(line + "\n"));
+							        while (true) {
+								        int chr = reader.read();
+									if (chr == -1) break;
+									out.push(valueFromString(String.valueOf((char) chr)));
 								}
-								pout.close();
+								reader.close();
 							} catch (IOException e) {
 								error(e);
 							}
@@ -597,7 +622,7 @@ class Builtins {
 								Files.copy(input, new File(outputFile).toPath(), StandardCopyOption.REPLACE_EXISTING);
 							}
 							else {
-								for (String line : IOUtils.streamIterator(input)) {
+								for (String line : IOUtils.streamLineIterator(input)) {
 									out.push(valueFromString(line));
 								}
 							}

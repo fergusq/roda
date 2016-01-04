@@ -26,7 +26,7 @@ public final class IOUtils {
 	public static final Iterable<String> fileIterator(File file) {
 		try {
 			BufferedReader in = new BufferedReader(new FileReader(file));
-			return readerIterator(in);
+			return lineIterator(in);
 		} catch (FileNotFoundException e) {
 			System.err.println("FATAL ERROR: file not found " + e.getMessage());
 			System.exit(1);
@@ -37,7 +37,7 @@ public final class IOUtils {
 	public static final Iterable<String> fileIterator(String file) {
 		try {
 			BufferedReader in = new BufferedReader(new FileReader(file));
-			return readerIterator(in);
+			return lineIterator(in);
 		} catch (FileNotFoundException e) {
 			System.err.println("FATAL ERROR: file not found " + e.getMessage());
 			System.exit(1);
@@ -45,12 +45,17 @@ public final class IOUtils {
 		}
 	}
 
-	public static final Iterable<String> streamIterator(InputStream stream) {
+	public static final Iterable<String> streamLineIterator(InputStream stream) {
 		BufferedReader in = new BufferedReader(new InputStreamReader(stream));
-		return readerIterator(in);
+		return lineIterator(in);
 	}
 
-	public static final Iterable<String> readerIterator(BufferedReader r) {
+	public static final Iterable<Character> streamCharacterIterator(InputStream stream) {
+		BufferedReader in = new BufferedReader(new InputStreamReader(stream));
+		return characterIterator(in);
+	}
+
+	public static final Iterable<String> lineIterator(BufferedReader r) {
 		return () -> new Iterator<String>() {
 				String buffer;
 				{
@@ -74,6 +79,36 @@ public final class IOUtils {
 				
 				@Override public String next() {
 					String tmp = buffer;
+					updateBuffer();
+					return tmp;
+				}
+		};
+	}
+
+	public static final Iterable<Character> characterIterator(BufferedReader r) {
+		return () -> new Iterator<Character>() {
+				int buffer;
+				{
+					updateBuffer();
+				}
+				
+				private void updateBuffer() {
+					try {
+						buffer = r.read();
+						if (buffer == -1) r.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+						System.err.println("FATAL ERROR: io error");
+						System.exit(1); // todo virheenkäsittely
+					}
+				}
+
+				@Override public boolean hasNext() {
+					return buffer != -1;
+				}
+				
+				@Override public Character next() {
+					char tmp = (char) buffer;
 					updateBuffer();
 					return tmp;
 				}
