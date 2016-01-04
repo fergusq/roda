@@ -107,8 +107,13 @@ public class LexerTest {
 
 	@Test
 	public void testLuaQuote() {
-		assertEquals("[[, abb\na\"\rväli\\nabba2, ]], <EOF>",
-			     lex("[[abb\na\"\rväli\\nabba2]]"));
+		assertEquals("[[, abb\na\"\rväli\\nab\\\nba2, ]], <EOF>",
+			     lex("[[abb\na\"\rväli\\nab\\\nba2]]"));
+	}
+
+	@Test(expected=ParsingException.class)
+	public void testUnclosedLuaQuote() {
+	        lex("[[abb\na\"\rväli\\nab\\\nba2");
 	}
 	
 	@Test

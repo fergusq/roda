@@ -331,6 +331,36 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 			return HANDLER;
 		}
 	}
+	// TODO mieti virrat uudestaan siten, että tämä toimii kunnolla
+	// Ongelmat:
+	// - Käytössä vain joko sisään- tai ulostulokäsittelijänä,
+	//   vaikka loogisesti sen pitäisi olla molemmat
+	// - Nykyinen virtajärjestelmä ei salli yhtäaikaisia
+	//   sisään- ja ulostulokäsittelijöitä
+	static class SingleValueStream extends StreamType {
+		StreamHandler newHandler() {
+			return new StreamHandler() {
+				boolean full = false;
+				public void handlePush(Supplier<Boolean> finished,
+						       Consumer<RödaValue> put,
+						       RödaValue value) {
+					if (full) {
+						error("stream is full");
+					}
+					put.accept(value);
+					full = true;
+				}
+				public RödaValue handlePull(Supplier<Boolean> finished,
+							    Supplier<RödaValue> get) {
+					return get.get();
+				}
+				public RödaValue handleReadAll(Supplier<Boolean> finished,
+							       Supplier<RödaValue> get) {
+				        return get.get();
+				}
+			};
+		}
+	}
 
 	static class RödaStreamImpl extends RödaStream {
 		BlockingQueue<RödaValue> queue = new LinkedBlockingQueue<>();

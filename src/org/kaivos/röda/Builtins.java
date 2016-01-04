@@ -44,6 +44,7 @@ import org.kaivos.röda.JSON.JSONMap;
 
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.RödaValue.*;
+import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Interpreter.*;
 import static org.kaivos.röda.Parser.*;
 
@@ -65,7 +66,8 @@ class Builtins {
 						out.push(value);
 					}
 					out.push(valueFromString("\n"));
-				}, Arrays.asList(new Parameter("values", false)), true));
+				}, Arrays.asList(new Parameter("values", false)), true,
+				new VoidStream(), new ValueStream()));
 		S.setLocal("push", valueFromNativeFunction("push", (rawArgs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("push", 1, 0);
@@ -74,7 +76,8 @@ class Builtins {
 					for (RödaValue value : args) {
 						out.push(value);
 					}
-				}, Arrays.asList(new Parameter("values", false)), true));
+				}, Arrays.asList(new Parameter("values", false)), true,
+				new VoidStream(), new ValueStream()));
 
 		S.setLocal("pull", valueFromNativeFunction("pull", (rawArgs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
@@ -105,7 +108,8 @@ class Builtins {
 						//System.err.println("="+pulled);
 						if (readMode) out.push(valueFromBoolean(true));
 					}
-				}, Arrays.asList(new Parameter("variables", true)), true));
+				}, Arrays.asList(new Parameter("variables", true)), true,
+				new ValueStream(), new BooleanStream()));
 
 		/* Muuttujaoperaatiot */
 
@@ -117,7 +121,8 @@ class Builtins {
 
 						value.assign(null);
 					}
-				}, Arrays.asList(new Parameter("variables", true)), true));
+				}, Arrays.asList(new Parameter("variables", true)), true,
+				new VoidStream(), new VoidStream()));
 
 		S.setLocal("name", valueFromNativeFunction("name", (rawArgs, args, scope, in, out) -> {
 					for (RödaValue value : args) {
@@ -127,7 +132,8 @@ class Builtins {
 
 						out.push(valueFromString(value.target));
 					}
-				}, Arrays.asList(new Parameter("variables", true)), true));
+				}, Arrays.asList(new Parameter("variables", true)), true,
+				new VoidStream(), new ValueStream()));
 
 		S.setLocal("import", valueFromNativeFunction("import", (rawArgs, args, scope, in, out) -> {
 				        for (RödaValue value : args) {
@@ -137,7 +143,8 @@ class Builtins {
 											 filename);
 						I.loadFile(file, S);
 					}
-				}, Arrays.asList(new Parameter("files", false)), true));
+				}, Arrays.asList(new Parameter("files", false)), true,
+				new VoidStream(), new VoidStream()));
 
 		/* Täydentävät virtaoperaatiot */
 
@@ -151,7 +158,8 @@ class Builtins {
 						int num = args.get(0).num();
 						for (int i = 0; i < num; i++) out.push(in.pull());
 					}
-				}, Arrays.asList(new Parameter("number", false)), true));
+				}, Arrays.asList(new Parameter("number", false)), true,
+				new ValueStream(), new ValueStream()));
 
 		S.setLocal("tail", valueFromNativeFunction("tail", (rawArgs, args, scope, in, out) -> {
 				        if (args.size() > 1) argumentOverflow("tail", 1, args.size());
@@ -173,7 +181,8 @@ class Builtins {
 						out.push(values.get(i));
 					}
 					
-				}, Arrays.asList(new Parameter("number", false)), true));
+				}, Arrays.asList(new Parameter("number", false)), true,
+				new ValueStream(), new ValueStream()));
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
@@ -210,7 +219,8 @@ class Builtins {
 							}
 						}
 					}
-				}, Arrays.asList(new Parameter("patterns", false)), true));
+				}, Arrays.asList(new Parameter("patterns", false)), true,
+				new ValueStream(), new ValueStream()));
 
 		S.setLocal("replace", valueFromNativeFunction("replace", (rawArgs, args, scope, in, out) -> {
 					if (args.size() % 2 != 0) error("invalid arguments for replace: even number required (got " + args.size() + ")");
@@ -229,7 +239,8 @@ class Builtins {
 					} catch (PatternSyntaxException e) {
 						error("replace: pattern syntax exception: " + e.getMessage());
 					}
-				}, Arrays.asList(new Parameter("patterns_and_replacements", false)), true));
+				}, Arrays.asList(new Parameter("patterns_and_replacements", false)), true,
+				new ValueStream(), new ValueStream()));
 
 		/* Parserit */
 
@@ -249,7 +260,8 @@ class Builtins {
 							out.push(valueFromString(s));
 						}
 					}
-				}, Arrays.asList(new Parameter("flags_and_strings", false)), true));
+				}, Arrays.asList(new Parameter("flags_and_strings", false)), true,
+				new VoidStream(), new ValueStream()));
 
 		S.setLocal("json", valueFromNativeFunction("json", (rawArgs, args, scope, in, out) -> {
 					boolean _stringOutput = false;
@@ -328,12 +340,12 @@ class Builtins {
 							handler.accept(code);
 						}
 					}
-				}, Arrays.asList(new Parameter("flags_and_code", false)), true));
+				}, Arrays.asList(new Parameter("flags_and_code", false)), true, new ValueStream(), new SingleValueStream()));
 		
 		S.setLocal("expr", valueFromNativeFunction("expr", (rawArgs, args, scope, in, out) -> {
 				        String expression = args.stream().map(RödaValue::str).collect(joining(" "));
 					out.push(valueFromString(String.valueOf(Calculator.eval(expression))));
-				}, Arrays.asList(new Parameter("expressions", false)), true));
+				}, Arrays.asList(new Parameter("expressions", false)), true, new VoidStream(), new SingleValueStream()));
 
 		S.setLocal("test", valueFromNativeFunction("test", (rawArgs, args, scope, in, out) -> {
 					checkString("test", args.get(1));
@@ -387,13 +399,15 @@ class Builtins {
 						 new Parameter("value1", false),
 						 new Parameter("operator", false),
 						 new Parameter("value2", false)
-						 ), false));
+						 ), false,
+			new VoidStream(), new SingleValueStream()));
 
 		/* Konstruktorit */
 		
 		S.setLocal("list", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
 				        out.push(valueFromList(args));
-				}, Arrays.asList(new Parameter("values", false)), true));
+				}, Arrays.asList(new Parameter("values", false)), true,
+				new VoidStream(), new SingleValueStream()));
 
 		S.setLocal("seq", valueFromNativeFunction("seq", (rawArgs, args, scope, in, out) -> {
 					checkNumber("seq", args.get(0));
@@ -401,21 +415,22 @@ class Builtins {
 					int from = args.get(0).num();
 					int to = args.get(1).num();
 					for (int i = from; i <= to; i++) out.push(valueFromInt(i));
-				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false));
+				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false,
+				new VoidStream(), new ValueStream()));
 
 		S.setLocal("true", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
 				        out.push(valueFromBoolean(true));
-				}, Arrays.asList(), false));
+				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
 
 		S.setLocal("false", valueFromNativeFunction("false", (rawArgs, args, scope, in, out) -> {
 				        out.push(valueFromBoolean(false));
-				}, Arrays.asList(), false));
+				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
 
 		/* Apuoperaatiot */
 
 		S.setLocal("time", valueFromNativeFunction("time", (rawArgs, args, scope, in, out) -> {
 				        out.push(valueFromInt((int) System.currentTimeMillis()));
-				}, Arrays.asList(), false));
+				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
 
 		Random rnd = new Random();
 		
@@ -449,7 +464,8 @@ class Builtins {
 						checkReference("random", variable);
 						variable.assign(next.apply(mode));
 					}
-				}, Arrays.asList(new Parameter("flags_and_variables", true)), true));
+				}, Arrays.asList(new Parameter("flags_and_variables", true)), true,
+				new VoidStream(), new SingleValueStream()));
 		
 		S.setLocal("exec", valueFromNativeFunction("exec", (rawArgs, args, scope, in, out) -> {
 				        List<String> params = args.stream().map(v -> v.str()).collect(toList());
@@ -493,19 +509,31 @@ class Builtins {
 						}
 						error(e.getCause());
 					}
-				}, Arrays.asList(new Parameter("command", false), new Parameter("args", false)), true));
+				}, Arrays.asList(new Parameter("command", false), new Parameter("args", false)), true,
+				new ValueStream(), new ValueStream()));
 
 		/* Tiedosto-operaatiot */
 
 		S.setLocal("cd", valueFromNativeFunction("cd", (rawArgs, args, scope, in, out) -> {
-					checkString("write", args.get(0));
+					checkArgs("cd", 1, args.size());
+					checkString("cd", args.get(0));
 					String dirname = args.get(0).str();
 					File dir = IOUtils.getMaybeRelativeFile(I.currentDir, dirname);
 					if (!dir.isDirectory()) {
 						error("cd: not a directory");
 					}
 				        I.currentDir = dir;
-				}, Arrays.asList(new Parameter("cd", false)), false));
+				}, Arrays.asList(new Parameter("path", false)), false,
+				new VoidStream(), new VoidStream()));
+
+		S.setLocal("pwd", valueFromNativeFunction("pwd", (rawArgs, args, scope, in, out) -> {
+					try {
+						out.push(valueFromString(I.currentDir.getCanonicalPath()));
+					} catch (IOException e) {
+						error(e);
+					}
+				}, Arrays.asList(), false,
+				new VoidStream(), new ValueStream()));
 
 		S.setLocal("write", valueFromNativeFunction("write", (rawArgs, args, scope, in, out) -> {
 					checkString("write", args.get(0));
@@ -520,72 +548,67 @@ class Builtins {
 					} catch (IOException e) {
 						error(e);
 					}
-				}, Arrays.asList(new Parameter("file", false)), false));
+				}, Arrays.asList(new Parameter("file", false)), false,
+				new ValueStream(), new VoidStream()));
 
 		S.setLocal("cat", valueFromNativeFunction("cat", (rawArgs, args, scope, in, out) -> {
-					if (args.size() == 0) {
-					        for (RödaValue input : in) {
-							out.push(input);
+					if (args.size() < 1) argumentUnderflow("wcat", 1, args.size());
+					for (RödaValue value : args) {
+						checkString("cat", value);
+						String filename = value.str();
+						File file = IOUtils.getMaybeRelativeFile(I.currentDir,
+											 filename);
+						for (String line : IOUtils.fileIterator(file)) {
+							out.push(valueFromString(line));
 						}
 					}
-					else for (RödaValue value : args) {
-							checkString("cat", value);
-							String filename = value.str();
-							File file = IOUtils.getMaybeRelativeFile(I.currentDir,
-												 filename);
-							for (String line : IOUtils.fileIterator(file)) {
-								out.push(valueFromString(line));
-							}
-						}
-				}, Arrays.asList(new Parameter("files", false)), true));
+				}, Arrays.asList(new Parameter("files", false)), true,
+				new VoidStream(), new ValueStream()));
 
 		S.setLocal("wcat", valueFromNativeFunction("wcat", (rawArgs, args, scope, in, out) -> {
-					if (args.size() == 0) {
-						for (RödaValue input : in) {
-							out.push(input);
-						}
-					}
-					else try {
-							String useragent = "";
-							String outputFile = "";
-							for (int i = 0; i < args.size(); i++) {
-								RödaValue _arg = args.get(i);
-								checkString("wcat", _arg);
-								String arg = _arg.str();
-
-								if (arg.equals("-U")) {
-									RödaValue _ua = args.get(++i);
-									checkString("wcat", _ua);
-									useragent = _ua.str();
-									continue;
-								}
-								if (arg.equals("-O")) {
-									RödaValue _of = args.get(++i);
-									checkString("wcat", _of);
-									outputFile = _of.str();
-									continue;
-								}
-								URL url = new URL(arg);
-								URLConnection c = url.openConnection();
-								if (!useragent.isEmpty())
-									c.setRequestProperty("User-Agent" , useragent);
-								c.connect();
-								InputStream input = c.getInputStream();
-								if (!outputFile.isEmpty()) {
-									Files.copy(input, new File(outputFile).toPath(), StandardCopyOption.REPLACE_EXISTING);
-								}
-								else {
-									for (String line : IOUtils.streamIterator(input)) {
-										out.push(valueFromString(line));
-									}
-								}
-								input.close();
+					if (args.size() < 1) argumentUnderflow("wcat", 1, args.size());
+					try {
+						String useragent = "";
+						String outputFile = "";
+						for (int i = 0; i < args.size(); i++) {
+							RödaValue _arg = args.get(i);
+							checkString("wcat", _arg);
+							String arg = _arg.str();
+							
+							if (arg.equals("-U")) {
+								RödaValue _ua = args.get(++i);
+								checkString("wcat", _ua);
+								useragent = _ua.str();
+								continue;
 							}
-						} catch (MalformedURLException e) {
-							error(e);
-						} catch (IOException e) {
-							error(e);
+							if (arg.equals("-O")) {
+								RödaValue _of = args.get(++i);
+								checkString("wcat", _of);
+								outputFile = _of.str();
+								continue;
+							}
+							URL url = new URL(arg);
+							URLConnection c = url.openConnection();
+							if (!useragent.isEmpty())
+								c.setRequestProperty("User-Agent" , useragent);
+							c.connect();
+							InputStream input = c.getInputStream();
+							if (!outputFile.isEmpty()) {
+								Files.copy(input, new File(outputFile).toPath(), StandardCopyOption.REPLACE_EXISTING);
+							}
+							else {
+								for (String line : IOUtils.streamIterator(input)) {
+									out.push(valueFromString(line));
+								}
+							}
+							input.close();
 						}
-				}, Arrays.asList(new Parameter("urls", false)), true));
+					} catch (MalformedURLException e) {
+						error(e);
+					} catch (IOException e) {
+						error(e);
+					}
+				}, Arrays.asList(new Parameter("urls", false)), true,
+				new VoidStream(), new ValueStream()));
 	}
 }

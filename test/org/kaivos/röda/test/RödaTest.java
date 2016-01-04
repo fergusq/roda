@@ -35,6 +35,18 @@ public class RödaTest {
 		return results.stream().map(v -> v.str()).collect(joining(","));
 	}
 
+	// Merkkijonoliteraali
+
+	@Test
+	public void testNormalLiteral() {
+		assertEquals("abba", eval("main{push\"abba\"}"));
+	}
+
+	@Test
+	public void testLuaLiteral() {
+		assertEquals("emma", eval("main{push[[emma]]}"));
+	}
+	
 	// Laskutoimitukset
 
 	@Test

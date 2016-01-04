@@ -7,6 +7,8 @@ import java.util.Arrays;
 import static java.util.stream.Collectors.joining;
 
 import org.kaivos.röda.RödaStream;
+import static org.kaivos.röda.RödaStream.StreamType;
+import static org.kaivos.röda.RödaStream.ValueStream;
 import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Parser.Function;
@@ -215,6 +217,8 @@ public class RödaValue {
 		NativeFunctionBody body;
 		boolean isVarargs;
 		List<Parameter> parameters;
+		StreamType input;
+		StreamType output;
 	}
 	
 	static interface NativeFunctionBody {
@@ -269,7 +273,15 @@ public class RödaValue {
 		return val;
 	}
 
-	public static RödaValue valueFromNativeFunction(String name, NativeFunctionBody body, List<Parameter> parameters, boolean isVarargs) {
+	public static RödaValue valueFromNativeFunction(String name, NativeFunctionBody body,
+							List<Parameter> parameters, boolean isVarargs) {
+		return valueFromNativeFunction(name, body, parameters, isVarargs,
+					       new ValueStream(), new ValueStream());
+	}
+
+	public static RödaValue valueFromNativeFunction(String name, NativeFunctionBody body,
+							List<Parameter> parameters, boolean isVarargs,
+							StreamType input, StreamType output) {
 		RödaValue val = new RödaValue();
 		val.type = RödaValue.Type.NATIVE_FUNCTION;
 		NativeFunction function = new NativeFunction();
@@ -277,6 +289,8 @@ public class RödaValue {
 		function.body = body;
 		function.isVarargs = isVarargs;
 		function.parameters = parameters;
+		function.input = input;
+		function.output = output;
 		val.nfunction = function;
 		return val;
 	}

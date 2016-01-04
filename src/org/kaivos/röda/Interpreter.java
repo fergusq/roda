@@ -428,15 +428,13 @@ public class Interpreter {
 		for (Command command : statement.commands) {
 			boolean last = i == statement.commands.size()-1;
 			RödaStream _out = last ? out : new RödaStreamImpl();
-			Pair<Runnable, StreamType> tr = evalCommand(command, scope,
-								  in, out,
-								  _in, _out,
-								  !last || redirected);
+			Trair<Runnable, StreamType, StreamType> tr = evalCommand(command, scope,
+										 in, out,
+										 _in, _out,
+										 !last || redirected);
 			runnables[i] = tr.first();
-			if (i != 0) {
-				_in.outHandler = tr.second().newHandler();
-				_in.inHandler = new ValueStream().newHandler();
-			}
+		        _out.inHandler = tr.third().newHandler();
+		        _in.outHandler = tr.second().newHandler();
 			_in = _out;
 			i++;
 		}
@@ -498,11 +496,11 @@ public class Interpreter {
 		}
 	}
 	
-	public Pair<Runnable, StreamType> evalCommand(Command cmd,
-						      RödaScope scope,
-						      RödaStream in, RödaStream out,
-						      RödaStream _in, RödaStream _out,
-						      boolean canFinish) {
+	public Trair<Runnable, StreamType, StreamType> evalCommand(Command cmd,
+								   RödaScope scope,
+								   RödaStream in, RödaStream out,
+								   RödaStream _in, RödaStream _out,
+								   boolean canFinish) {
 		if (cmd.type == Command.Type.NORMAL) {
 			RödaValue function = evalExpression(cmd.name, scope, in, out);
 			List<RödaValue> args = new ArrayList<>();
@@ -519,11 +517,18 @@ public class Interpreter {
 				exec(cmd.file, cmd.line, function, args, scope, _in, _out);
 				if (canFinish) _out.finish();
 			};
-			StreamType ins;
+			StreamType ins, outs;
 			if (function.isFunction() && !function.isNativeFunction()) {
 				ins = function.function.input;
-			} else ins = new ValueStream();
-			return new Pair<>(r, ins);
+				outs = function.function.output;
+			} else if (function.isNativeFunction()) {
+				ins = function.nfunction.input;
+				outs = function.nfunction.output;
+			} else {
+				ins = new ValueStream();
+				outs = new ValueStream();
+			}
+			return new Trair<>(r, ins, outs);
 		}
 
 		if (cmd.type == Command.Type.VARIABLE) {
@@ -691,7 +696,7 @@ public class Interpreter {
 				r.run();
 				callStack.get().pop();
 			};
-			return new Pair<>(finalR, new ValueStream());
+			return new Trair<>(finalR, new ValueStream(), new ValueStream());
 		}
 		
 		if (cmd.type == Command.Type.WHILE || cmd.type == Command.Type.IF) {
@@ -715,7 +720,7 @@ public class Interpreter {
 				}
 				if (canFinish) _out.finish();
 			};
-			return new Pair<>(r, new ValueStream());
+			return new Trair<>(r, new ValueStream(), new ValueStream());
 		}
 
 		if (cmd.type == Command.Type.FOR) {
@@ -731,7 +736,7 @@ public class Interpreter {
 				}
 				if (canFinish) _out.finish();
 			};
-			return new Pair<>(r, new ValueStream());
+			return new Trair<>(r, new ValueStream(), new ValueStream());
 		}
 
 		if (cmd.type == Command.Type.TRY_DO) {
@@ -744,7 +749,7 @@ public class Interpreter {
 				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
 				if (canFinish) _out.finish();
 			};
-			return new Pair<>(r, new ValueStream());
+			return new Trair<>(r, new ValueStream(), new ValueStream());
 		}
 
 		if (cmd.type == Command.Type.TRY) {
@@ -754,7 +759,7 @@ public class Interpreter {
 				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
 				if (canFinish) _out.finish();
 			};
-			return new Pair<>(r, new ValueStream());
+			return new Trair<>(r, new ValueStream(), new ValueStream());
 		}
 
 
@@ -850,7 +855,10 @@ public class Interpreter {
 		if (exp.type == Expression.Type.STATEMENT) {
 			RödaStream _out = makeStream(new ValueStream(), new ValueStream());
 			evalStatement(exp.statement, scope, in, _out, true);
-			return _out.readAll();
+			RödaValue val = _out.readAll();
+			if (val == null)
+				error("empty stream");
+			return val;
 		}
 		if (exp.type == Expression.Type.VARIABLE) {
 			if (variablesAreReferences) {
