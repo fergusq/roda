@@ -689,6 +689,11 @@ public class Parser {
 			tl.accept("\"");
 		        ans = expressionString(file, line, s);
 		}
+		else if (tl.acceptIfNext("[[")) {
+			String s = tl.nextString();
+			tl.accept("]]");
+		        ans = expressionString(file, line, s);
+		}
 		else if (tl.seekString().matches("[0-9]+")) {
 			ans = expressionInt(file, line, Integer.parseInt(tl.nextString()));
 		}
