@@ -106,6 +106,6 @@ public class Röda {
 			}
 		}
 
-		Interpreter.executor.shutdown();
+		Interpreter.shutdown();
 	}
 }

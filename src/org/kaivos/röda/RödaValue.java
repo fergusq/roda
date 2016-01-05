@@ -3,6 +3,9 @@ package org.kaivos.röda;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
 
 import static java.util.stream.Collectors.joining;
 
@@ -13,6 +16,8 @@ import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Parser.Function;
 import static org.kaivos.röda.Parser.Parameter;
+import static org.kaivos.röda.Parser.Record;
+import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaValue {
 	private enum Type {
@@ -22,19 +27,20 @@ public class RödaValue {
 		NUMBER,
 		BOOLEAN,
 		REFERENCE,
-		LIST
+		LIST,
+		RECORD_INSTANCE
 	}
 	
 	private Type type;
 	
 	// STRING
-	String text;
+	private String text;
 
 	// INT
-	int number;
+	private int number;
 
 	// BOOLEAN
-	boolean bool;
+	private boolean bool;
 	
 	// FUNCTION
 	Function function;
@@ -47,7 +53,15 @@ public class RödaValue {
 	RödaScope scope;
 	
 	// LIST
-	List<RödaValue> list;
+	private List<RödaValue> list;
+
+	// RECORD_INSTANCE
+	private Record record;
+	private Map<String, RödaValue> fields;
+	private Map<String, Datatype> fieldTypes;
+
+	// LIST & RECORD_INSTANCE
+	private List<Datatype> typearguments = new ArrayList<>();
 	
 	private RödaValue() {} // käytä apufunktioita
 	
@@ -63,8 +77,16 @@ public class RödaValue {
 		val.scope = scope;
 		if (list != null) {
 			val.list = new ArrayList<>(list.size());
-			for (RödaValue item : list) val.list.add(item);
+			for (RödaValue item : list) val.list.add(item.copy());
 		} else val.list = null;
+		val.record = record;
+		if (fields != null) {
+			val.fields = new HashMap<>();
+			for (Map.Entry<String, RödaValue> item : fields.entrySet())
+				val.fields.put(item.getKey(), item.getValue().copy());
+		} else val.fields = null;
+		val.fieldTypes = fieldTypes;
+		val.typearguments = typearguments;
 		return val;
 	}
 	
@@ -79,6 +101,9 @@ public class RödaValue {
 		}
 		if (type == Type.LIST) {
 			return "(" + list.stream().map(RödaValue::str).collect(joining(" ")) + ")";
+		}
+		if (type == Type.RECORD_INSTANCE) {
+			return "<a " + typeString() + " instance>";
 		}
 		error("unknown type " + type);
 		return null;
@@ -101,6 +126,77 @@ public class RödaValue {
 		}
 		error("can't convert '" + str() + "' to a number");
 		return -1;
+	}
+
+	public List<RödaValue> list() {
+		if (!isList()) error("can't cast a " + typeString() + " to a list");
+		return Collections.unmodifiableList(list);
+	}
+
+	public RödaValue get(int index) {
+		if (!isList()) error("a " + typeString() + " doesn't have elements");
+		if (index < 0) index = list.size()+index;
+		if (list.size() <= index) error("array index out of bounds: index " + index + ", size " + list.size());
+		return list.get(index);
+	}
+
+	public void set(int index, RödaValue value) {
+		if (!isList()) error("a " + typeString() + " doesn't have elements");
+		if (!typearguments.isEmpty()
+		    && !value.is(typearguments.get(0)))
+			error("can't add a " + typeString() + " to a " + typeString());
+		if (index < 0) index = list.size()+index;
+		if (list.size() <= index)
+			error("array index out of bounds: index " + index
+			      + ", size " + list.size());
+		list.set(index, value);
+	}
+
+	public int length() {
+		if (!isList() && !isString()) error("a " + typeString() + " doesn't have length");
+		if (isList()) return list.size();
+		else return text.length();
+	}
+
+	public RödaValue slice(int start, int end) {
+		if (!isList()) error("a " + typeString() + " doesn't have elements");
+		if (start < 0) start = list.size()+start;
+		if (end < 0) end = list.size()+end;
+		if (end == 0 && start > 0) end = list.size();
+		
+		return valueFromList(list.subList(start, end));
+	}
+
+	public RödaValue join(String separator) {
+		if (!isList()) error("can't join a " + typeString());
+		String text = "";
+		int i = 0; for (RödaValue val : list) {
+			if (i++ != 0) text += separator;
+			text += val.str();
+		}
+		return valueFromString(text);
+	}
+
+	public void add(RödaValue value) {
+		if (!isList()) error("can't add values to a " + typeString());
+		if (!typearguments.isEmpty()
+		    && !value.is(typearguments.get(0)))
+			error("can't add a " + typeString() + " to a " + typeString());
+		this.list.add(value);
+	}
+
+	public void setField(String field, RödaValue value) {
+		if (!isRecordInstance()) error("can't edit a " + typeString());
+		if (fieldTypes.get(field) == null) error("a " + typeString() + " doesn't have field '" + field + "'");
+		if (!value.is(fieldTypes.get(field))) error("can't put a " + value.typeString()
+							    + " in a " + fieldTypes.get(field) + " field");
+		this.fields.put(field, value);
+	}
+
+	public RödaValue getField(String field) {
+		if (!isRecordInstance()) error("can't edit a " + typeString());
+		if (fieldTypes.get(field) == null) error("a " + typeString() + " doesn't have field '" + field + "'");
+		return fields.get(field);
 	}
 	
 	public RödaValue resolve(boolean implicite) {
@@ -133,7 +229,36 @@ public class RödaValue {
 		}
 		error("can't assign a " + type);
 	}
-	
+
+	public boolean is(Datatype type) {
+		if (typearguments != null && !typearguments.equals(type.subtypes))
+			return false;
+
+		if (this.type == Type.RECORD_INSTANCE)
+			return record.name.equals(type.name);
+
+	        switch (this.type) {
+		case STRING:
+			return type.name.equals("string");
+		case NUMBER:
+			return type.name.equals("number");
+		case BOOLEAN:
+			return type.name.equals("boolean");
+		case FUNCTION:
+			return type.name.equals("function");
+		case NATIVE_FUNCTION:
+			return type.name.equals("function");
+		case LIST:
+			return type.name.equals("list");
+		case REFERENCE:
+			// tätä ei oikeasti pitäisi koskaan tapahtua
+			return false;
+		default:
+			// eikä tätä
+			return false;
+		}
+	}
+
 	boolean weakEq(RödaValue value) {
 		return str().equals(value.str());
 	}
@@ -161,11 +286,18 @@ public class RödaValue {
 			return function == value.function;
 		case NATIVE_FUNCTION:
 			return nfunction == value.nfunction;
-		case LIST:
+		case LIST: {
 			boolean ans = true;
 			for (int i = 0; i < list.size(); i++)
 				ans &= list.get(i).strongEq(value.list.get(i));
 			return ans;
+		}
+		case RECORD_INSTANCE: {
+			boolean ans = true;
+			for (Map.Entry<String, RödaValue> entry : fields.entrySet())
+				ans &= entry.getValue().strongEq(value.fields.get(entry.getKey()));
+			return ans;
+		}	
 		case REFERENCE:
 			// tätä ei oikeasti pitäisi koskaan tapahtua
 			return false;
@@ -187,6 +319,10 @@ public class RödaValue {
 		return type == Type.LIST;
 	}
 
+	public boolean isRecordInstance() {
+		return type == Type.RECORD_INSTANCE;
+	}
+
 	public boolean isNumber() {
 		return type == Type.STRING || type == Type.NUMBER;
 	}
@@ -204,6 +340,22 @@ public class RödaValue {
 	}
 
 	public String typeString() {
+		if (type == Type.RECORD_INSTANCE) {
+			if (typearguments.isEmpty()) {
+				return record.name;
+			}
+			else {
+				return record.name + "<" + typearguments.stream()
+					.map(Datatype::toString)
+					.collect(joining(", ")) + ">";
+			}
+		}
+		if (type == Type.LIST
+		    && !typearguments.isEmpty()) {
+			return "list<" + typearguments.stream()
+				.map(Datatype::toString)
+				.collect(joining(", ")) + ">";
+		}
 		return type.toString();
 	}
 	

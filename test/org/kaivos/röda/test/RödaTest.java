@@ -23,7 +23,13 @@ public class RödaTest {
 		results = new ArrayList<>();
 		RödaStream in = makeStream(v -> {}, () -> null, () -> {}, () -> true);
 		RödaStream out = makeStream(v -> results.add(v), () -> null, () -> {}, () -> true);
+		if (interpreter != null) cleanup();
 		interpreter = new Interpreter(in, out);
+	}
+
+	@After
+	public void cleanup() {
+		interpreter = null;
 	}
 
 	private String eval(String code) {
@@ -282,6 +288,20 @@ public class RödaTest {
 	public void testListConcat() {
 		assertEquals("([1] [2] [3])",
 			     eval("main{push \"[\"..(1 2 3)..\"]\"}"));
+	}
+
+	// Upotetut komennot
+
+	@Test
+	public void testStatementListExpression() {
+		assertEquals("(a d e)",
+			     eval("t{push\"a\"\"d\"\"e\"}main{push !(t)}"));
+	}
+
+	@Test
+	public void testStatementSingleExpression() {
+		assertEquals("Lilja",
+			     eval("t{push\"Lilja\"}main{push ![t]}"));
 	}
 
 	@Test

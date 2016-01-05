@@ -356,7 +356,15 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 				}
 				public RödaValue handleReadAll(Supplier<Boolean> finished,
 							       Supplier<RödaValue> get) {
-				        return get.get();
+				        List<RödaValue> list = new ArrayList<RödaValue>();
+					while (true) {
+						RödaValue val = get.get();
+						if (val == null) break;
+						list.add(val);
+					}
+					if (list.size() > 1) error("stream is full");
+					if (list.size() < 1) error("stream is closed");
+					return list.get(0);
 				}
 			};
 		}

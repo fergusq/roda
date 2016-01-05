@@ -88,7 +88,7 @@ class Builtins {
 					}
 					boolean readMode = false;
 					for (RödaValue value : args) {
-						if (value.isString() && value.text.equals("-r")) {
+						if (value.isString() && value.str().equals("-r")) {
 							readMode = true;
 							continue;
 						}

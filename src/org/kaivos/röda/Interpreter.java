@@ -142,6 +142,10 @@ public class Interpreter {
 
 	static ExecutorService executor = Executors.newCachedThreadPool();
 
+	public static void shutdown() {
+		executor.shutdown();
+	}
+	
 	public Interpreter() {
 		initializeIO();
 	}
@@ -375,7 +379,7 @@ public class Interpreter {
 		
 		//System.err.println("exec " + value + "("+args+") " + in + " -> " + out);
 		if (value.isList()) {
-			for (RödaValue item : value.list)
+			for (RödaValue item : value.list())
 				out.push(item);
 			return;
 		}
@@ -400,7 +404,7 @@ public class Interpreter {
 				RödaValue argslist = valueFromList(new ArrayList<>());
 				if (args.size() >= parameters.size()) {
 					for (int k = parameters.size()-1; k < args.size(); k++) {
-						argslist.list.add(args.get(k));
+						argslist.add(args.get(k));
 					}
 				}
 				newScope.setLocal(parameters.get(parameters.size()-1).name, argslist);
@@ -509,7 +513,7 @@ public class Interpreter {
 				if (arg.flattened) {
 					value = value.impliciteResolve();
 					checkList("*", value);
-					args.addAll(value.list);
+					args.addAll(value.list());
 				}
 				else args.add(value);
 			}
@@ -538,12 +542,14 @@ public class Interpreter {
 					.impliciteResolve();
 				if (arg.flattened) {
 					checkList("*", value);
-					args.addAll(value.list);
+					args.addAll(value.list());
 				}
 				else args.add(value);
 			}
 			Expression e = cmd.name;
-			if (e.type != Expression.Type.VARIABLE && e.type != Expression.Type.ELEMENT)
+			if (e.type != Expression.Type.VARIABLE
+			    && e.type != Expression.Type.ELEMENT
+			    && e.type != Expression.Type.FIELD)
 				error("bad lvalue for '" + cmd.operator + "': " + e.asString());
 			Consumer<RödaValue> assign, assignLocal;
 			if (e.type == Expression.Type.VARIABLE) {
@@ -560,16 +566,19 @@ public class Interpreter {
 					value.assignLocal(v);
 				};
 			}
-		        else {
+		        else if (e.type == Expression.Type.ELEMENT) {
 				assign = v -> {
 					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
 					int index = evalExpression(e.index, scope, in, out)
 					.impliciteResolve().num();
-					if (index < 0) index = list.list.size()+index;
-					if (list.list.size() <= index)
-						error("array index out of bounds: index " + index
-						      + ", size " + list.list.size());
-					list.list.set(index, v);
+					list.set(index, v);
+				};
+				assignLocal = assign;
+			}
+		        else {
+				assign = v -> {
+					RödaValue record = evalExpression(e.sub, scope, in, out).impliciteResolve();
+					record.setField(e.field, v);
 				};
 				assignLocal = assign;
 			}
@@ -607,7 +616,7 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkListOrNumber("+=", v);
 					if (v.isList()) {
-						v.list.add(args.get(0));
+						v.add(args.get(0));
 					}
 					else {
 						checkNumber("+=", args.get(0));
@@ -646,8 +655,8 @@ public class Interpreter {
 					if (v.isList()) {
 						checkList(".=", args.get(0));
 						ArrayList<RödaValue> newList = new ArrayList<>();
-						newList.addAll(v.list);
-						newList.addAll(args.get(0).list);
+						newList.addAll(v.list());
+						newList.addAll(args.get(0).list());
 						assign.accept(valueFromList(newList));
 					}
 					else {
@@ -728,7 +737,7 @@ public class Interpreter {
 			checkList("for", list);
 			Runnable r = () -> {
 				RödaScope newScope = new RödaScope(scope);
-				for (RödaValue val : list.list) {
+				for (RödaValue val : list.list()) {
 					newScope.setLocal(cmd.variable, val);
 					for (Statement s : cmd.body) {
 						evalStatement(s, newScope, _in, _out, false);
@@ -800,20 +809,12 @@ public class Interpreter {
 			RödaValue list = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 			
 			if (exp.type == Expression.Type.LENGTH) {
-				if (list.isString()) {
-					return valueFromInt(list.str().length());
-				}
-				if (!list.isList()) error("a " + list.typeString() + " doesn't have a length!");
-				return valueFromInt(list.list.size());
+				return valueFromInt(list.length());
 			}
-
-			if (!list.isList()) error("a " + list.typeString() + " doesn't have elements!");
 			
 			if (exp.type == Expression.Type.ELEMENT) {
 				int index = evalExpression(exp.index, scope, in, out).impliciteResolve().num();
-				if (index < 0) index = list.list.size()+index;
-				if (list.list.size() <= index) error("array index out of bounds: index " + index + ", size " + list.list.size());
-				return list.list.get(index);
+				return list.get(index);
 			}
 
 			if (exp.type == Expression.Type.SLICE) {
@@ -827,14 +828,14 @@ public class Interpreter {
 				if (exp.index2 != null)
 					end = evalExpression(exp.index2, scope, in, out)
 						.impliciteResolve().num();
-				else end = list.list.size();
+				else end = list.length();
 				
-			        if (start < 0) start = list.list.size()+start;
-				if (end < 0) end = list.list.size()+end;
-				if (end == 0 && start > 0) end = list.list.size();
-
-				return valueFromList(list.list.subList(start, end));
+			        return list.slice(start, end);
 			}
+		}
+		if (exp.type == Expression.Type.FIELD) {
+			return evalExpression(exp.sub, scope, in, out).impliciteResolve()
+				.getField(exp.field);
 		}
 		if (exp.type == Expression.Type.CONCAT) {
 			RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
@@ -844,16 +845,18 @@ public class Interpreter {
 		if (exp.type == Expression.Type.JOIN) {
 			RödaValue list = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			String separator = evalExpression(exp.exprB, scope, in, out).impliciteResolve().str();
-			if (!list.isList()) error("can't join a " + list.typeString());
-			String text = "";
-			int i = 0; for (RödaValue val : list.list) {
-				if (i++ != 0) text += separator;
-				text += val.str();
-			}
-			return valueFromString(text);
+			return list.join(separator);
 		}
-		if (exp.type == Expression.Type.STATEMENT) {
+		if (exp.type == Expression.Type.STATEMENT_LIST) {
 			RödaStream _out = makeStream(new ValueStream(), new ValueStream());
+			evalStatement(exp.statement, scope, in, _out, true);
+			RödaValue val = _out.readAll();
+			if (val == null)
+				error("empty stream");
+			return val;
+		}
+		if (exp.type == Expression.Type.STATEMENT_SINGLE) {
+			RödaStream _out = makeStream(new ValueStream(), new SingleValueStream());
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
 			if (val == null)
@@ -946,16 +949,25 @@ public class Interpreter {
 	}
 
 	private RödaValue concat(RödaValue val1, RödaValue val2) {
+		if (val1.isList() && val2.isList()) {
+			List<RödaValue> newList = new ArrayList<>();
+			for (RödaValue valA : val1.list()) {
+				for (RödaValue valB : val2.list()) {
+					newList.add(concat(valA, valB));
+				}
+			}
+			return valueFromList(newList);
+		}
 		if (val1.isList()) {
 			List<RödaValue> newList = new ArrayList<>();
-			for (RödaValue val : val1.list) {
+			for (RödaValue val : val1.list()) {
 				newList.add(concat(val, val2));
 			}
 			return valueFromList(newList);
 		}
 		if (val2.isList()) {
 			List<RödaValue> newList = new ArrayList<>();
-			for (RödaValue val : val2.list) {
+			for (RödaValue val : val2.list()) {
 				newList.add(concat(val1, val));
 			}
 			return valueFromList(newList);
