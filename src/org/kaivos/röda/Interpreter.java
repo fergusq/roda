@@ -52,13 +52,13 @@ public class Interpreter {
 			this(Optional.of(parent));
 		}
 
-		synchronized RödaValue resolve(String name) {
+		public synchronized RödaValue resolve(String name) {
 			if (map.get(name) != null) return map.get(name);
 			if (parent.isPresent()) return parent.get().resolve(name);
 			return null;
 		}
 
-		synchronized void set(String name, RödaValue value) {
+		public synchronized void set(String name, RödaValue value) {
 			if (parent.isPresent() && parent.get().resolve(name) != null)
 				parent.get().set(name, value);
 			else {
@@ -66,7 +66,7 @@ public class Interpreter {
 			}
 		}
 
-		synchronized void setLocal(String name, RödaValue value) {
+		public synchronized void setLocal(String name, RödaValue value) {
 		        map.put(name, value);
 		}
 	}
@@ -181,13 +181,13 @@ public class Interpreter {
 		}
 	}
 	
-	static void error(String message) {
+	public static void error(String message) {
 		RödaException e = new RödaException(message, new ArrayDeque<>(callStack.get()));
 		callStack.get().clear();
 		throw e;
 	}
 
-	static void error(Throwable cause) {
+	public static void error(Throwable cause) {
 		RödaException e = new RödaException(cause, new ArrayDeque<>(callStack.get()));
 		callStack.get().clear();
 		throw e;
@@ -268,8 +268,9 @@ public class Interpreter {
 	private boolean isReferenceParameter(RödaValue function, int i) {
 		assert function.isFunction();
 		boolean isNative = function.isNativeFunction();
-		List<Parameter> parameters = isNative ? function.nfunction.parameters : function.function.parameters;
-		boolean isVarargs = isNative ? function.nfunction.isVarargs : function.function.isVarargs;
+		List<Parameter> parameters = isNative ? function.nfunction().parameters
+			: function.function().parameters;
+		boolean isVarargs = isNative ? function.nfunction().isVarargs : function.function().isVarargs;
 		if (isVarargs && i >= parameters.size()-1) return parameters.get(parameters.size()-1).reference;
 		else if (i >= parameters.size()) return false; // tästä tulee virhe myöhemmin
 		else return parameters.get(i).reference;
@@ -348,7 +349,7 @@ public class Interpreter {
 			else if (val.isReference()
 				 && value.isFunction()
 				 && isReferenceParameter(value, i)) {
-				RödaValue rval = val.scope.resolve(val.target);
+				RödaValue rval = val.unsafeResolve();
 				if (rval != null && rval.isReference()) args.add(rval);
 				else args.add(val);
 			}
@@ -384,17 +385,17 @@ public class Interpreter {
 			return;
 		}
 		if (value.isFunction() && !value.isNativeFunction()) {
-			boolean isVarargs = value.function.isVarargs;
-			List<Parameter> parameters = value.function.parameters;
-			String name = value.function.name;
-			if (!value.function.isVarargs) {
+			boolean isVarargs = value.function().isVarargs;
+			List<Parameter> parameters = value.function().parameters;
+			String name = value.function().name;
+			if (!isVarargs) {
 				checkArgs(name, parameters.size(), args.size());
 			} else {
 				if (args.size() < parameters.size()-1)
 					argumentUnderflow(name, parameters.size()-1, args.size());
 			}
 			// joko nimettömän funktion paikallinen scope tai tämä scope
-			RödaScope newScope = new RödaScope(value.scope == null ? scope : value.scope);
+			RödaScope newScope = new RödaScope(value.localScope() == null ? scope : value.localScope());
 			int j = 0;
 			for (Parameter p : parameters) {
 				if (isVarargs && j == parameters.size()-1) break;
@@ -409,16 +410,16 @@ public class Interpreter {
 				}
 				newScope.setLocal(parameters.get(parameters.size()-1).name, argslist);
 			}
-			for (Statement s : value.function.body) {
+			for (Statement s : value.function().body) {
 				evalStatement(s, newScope, in, out, false);
 			}
 			return;
 		}
 		if (value.isNativeFunction()) {
-			if (!value.nfunction.isVarargs) {
-				checkArgs(value.nfunction.name, value.nfunction.parameters.size(), args.size());
+			if (!value.nfunction().isVarargs) {
+				checkArgs(value.nfunction().name, value.nfunction().parameters.size(), args.size());
 			}
-			value.nfunction.body.exec(rawArgs, args, scope, in, out);
+			value.nfunction().body.exec(rawArgs, args, scope, in, out);
 			return;
 		}
 		error("can't execute a value of type " + value.typeString());
@@ -523,11 +524,11 @@ public class Interpreter {
 			};
 			StreamType ins, outs;
 			if (function.isFunction() && !function.isNativeFunction()) {
-				ins = function.function.input;
-				outs = function.function.output;
+				ins = function.function().input;
+				outs = function.function().output;
 			} else if (function.isNativeFunction()) {
-				ins = function.nfunction.input;
-				outs = function.nfunction.output;
+				ins = function.nfunction().input;
+				outs = function.nfunction().output;
 			} else {
 				ins = new ValueStream();
 				outs = new ValueStream();
@@ -569,8 +570,8 @@ public class Interpreter {
 		        else if (e.type == Expression.Type.ELEMENT) {
 				assign = v -> {
 					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
-					int index = evalExpression(e.index, scope, in, out)
-					.impliciteResolve().num();
+					RödaValue index = evalExpression(e.index, scope, in, out)
+					.impliciteResolve();
 					list.set(index, v);
 				};
 				assignLocal = assign;
@@ -809,26 +810,26 @@ public class Interpreter {
 			RödaValue list = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 			
 			if (exp.type == Expression.Type.LENGTH) {
-				return valueFromInt(list.length());
+				return list.length();
 			}
 			
 			if (exp.type == Expression.Type.ELEMENT) {
-				int index = evalExpression(exp.index, scope, in, out).impliciteResolve().num();
+				RödaValue index = evalExpression(exp.index, scope, in, out).impliciteResolve();
 				return list.get(index);
 			}
 
 			if (exp.type == Expression.Type.SLICE) {
-				int start, end;
+				RödaValue start, end;
 
 				if (exp.index1 != null)
 					start = evalExpression(exp.index1, scope, in, out)
-						.impliciteResolve().num();
-				else start = 0;
+						.impliciteResolve();
+				else start = null;
 
 				if (exp.index2 != null)
 					end = evalExpression(exp.index2, scope, in, out)
-						.impliciteResolve().num();
-				else end = list.length();
+						.impliciteResolve();
+				else end = null;
 				
 			        return list.slice(start, end);
 			}
@@ -844,7 +845,7 @@ public class Interpreter {
 		}
 		if (exp.type == Expression.Type.JOIN) {
 			RödaValue list = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
-			String separator = evalExpression(exp.exprB, scope, in, out).impliciteResolve().str();
+			RödaValue separator = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			return list.join(separator);
 		}
 		if (exp.type == Expression.Type.STATEMENT_LIST) {

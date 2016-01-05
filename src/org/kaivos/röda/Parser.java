@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Collections;
 
 import java.util.regex.Pattern;
 
@@ -134,7 +135,7 @@ public class Parser {
 	// Ongelmat:
 	// - RödaValue sisältää kaikki tyypit - HUONO
 	// - Datatype vs. RödaValue.Type - ei monia luokkia samaan asiaan
-	static class Datatype {
+	public static class Datatype {
 		String name;
 		List<Datatype> subtypes;
 
@@ -142,6 +143,11 @@ public class Parser {
 			 List<Datatype> subtypes) {
 			this.name = name;
 			this.subtypes = subtypes;
+		}
+
+		Datatype(String name) {
+			this.name = name;
+			this.subtypes = Collections.emptyList();
 		}
 
 		@Override
@@ -217,7 +223,7 @@ public class Parser {
 		return new Program(functions, records);
 	}
 
-	static class Record {
+	public static class Record {
 		static class Field {
 			String name;
 			Datatype type;
@@ -229,10 +235,10 @@ public class Parser {
 			}
 		}
 		
-		String name;
-		List<String> typeparams;
-		Datatype superType;
-		List<Field> fields;
+		public String name;
+		public List<String> typeparams;
+		public Datatype superType;
+		public List<Field> fields;
 
 		private Record(String name,
 		       List<String> typeparams,
@@ -285,13 +291,13 @@ public class Parser {
 		return new Record(name, typeparams, superType, fields);
 	}
 
-	static class Function {
-		String name;
-		List<Parameter> parameters;
-		boolean isVarargs;
-		StreamType input;
-		StreamType output;
-		List<Statement> body;
+	public static class Function {
+		public String name;
+		public List<Parameter> parameters;
+		public boolean isVarargs;
+		public StreamType input;
+		public StreamType output;
+		public List<Statement> body;
 
 		Function(String name,
 			 List<Parameter> parameters,
@@ -309,7 +315,7 @@ public class Parser {
 		}
 	}
 
-	static class Parameter {
+	public static class Parameter {
 		String name;
 		boolean reference;
 	        Parameter(String name, boolean reference) {

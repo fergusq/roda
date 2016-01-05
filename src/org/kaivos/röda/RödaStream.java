@@ -152,7 +152,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		return stream;
 	}
 
-	static abstract class StreamType {
+	public static abstract class StreamType {
 		abstract StreamHandler newHandler();
 	}
 	private interface StreamHandler {
@@ -160,7 +160,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		RödaValue handlePull(Supplier<Boolean> finished, Supplier<RödaValue> get);
 		RödaValue handleReadAll(Supplier<Boolean> finished, Supplier<RödaValue> get);
 	}
-	static class LineStream extends StreamType {
+	public static class LineStream extends StreamType {
 		String sep;
 		LineStream() { sep="\n"; }
 		LineStream(String sep) { this.sep=sep; }
@@ -219,7 +219,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 			};
 		}
 	}
-	static class VoidStream extends StreamType {
+	public static class VoidStream extends StreamType {
 		static final StreamHandler HANDLER = new StreamHandler() {
 				public void handlePush(Supplier<Boolean> finished,
 						       Consumer<RödaValue> put,
@@ -241,7 +241,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 			return HANDLER;
 		}
 	}
-	static class ByteStream extends StreamType {
+	public static class ByteStream extends StreamType {
 		StreamHandler newHandler() {
 			return new StreamHandler() {
 				List<Character> queue = new ArrayList<>();
@@ -278,7 +278,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 			};
 		}
 	}
-	static class BooleanStream extends StreamType {
+	public static class BooleanStream extends StreamType {
 		StreamHandler newHandler() {
 			return new StreamHandler() {
 				public void handlePush(Supplier<Boolean> finished,
@@ -304,7 +304,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 			};
 		}
 	}
-	static class ValueStream extends StreamType {
+	public static class ValueStream extends StreamType {
 		static final StreamHandler HANDLER = new StreamHandler() {
 				public void handlePush(Supplier<Boolean> finished,
 						       Consumer<RödaValue> put,
@@ -337,7 +337,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	//   vaikka loogisesti sen pitäisi olla molemmat
 	// - Nykyinen virtajärjestelmä ei salli yhtäaikaisia
 	//   sisään- ja ulostulokäsittelijöitä
-	static class SingleValueStream extends StreamType {
+	public static class SingleValueStream extends StreamType {
 		StreamHandler newHandler() {
 			return new StreamHandler() {
 				boolean full = false;

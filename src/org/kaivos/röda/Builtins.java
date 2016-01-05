@@ -132,7 +132,7 @@ class Builtins {
 							error("invalid argument for undefine: "
 							      + "only references accepted");
 
-						out.push(valueFromString(value.target));
+						out.push(valueFromString(value.target()));
 					}
 				}, Arrays.asList(new Parameter("variables", true)), true,
 				new VoidStream(), new ValueStream()));
