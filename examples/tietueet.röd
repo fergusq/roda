@@ -1,0 +1,40 @@
+record Taulu<T> {
+	rivit : list
+	lisää_rivi : function
+	laskuri : number
+}
+
+function taulu t {
+	t.rivit = ()
+	t.laskuri = 0
+	t.lisää_rivi = { |rivi|
+		rivi.id = t.laskuri
+		t.laskuri ++
+		t.rivit += rivi
+	}
+	push t
+}
+
+record Rivi {
+	id : number
+}
+
+record Asiakas : Rivi {
+	nimi : string
+	osoite : string
+}
+
+function asiakas nimi osoite {
+	a := new Asiakas
+	a.nimi = nimi
+	a.osoite = osoite
+	push a
+}
+
+main {
+	asiakkaat := ![taulu new Taulu<Asiakas>]
+	asiakkaat.lisää_rivi ![asiakas "Teppo" "Mäenpääntie 2"]
+	for asiakas in asiakkaat.rivit; do
+		print asiakas.nimi " " asiakas.osoite
+	done
+}

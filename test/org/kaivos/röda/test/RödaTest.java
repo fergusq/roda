@@ -70,6 +70,19 @@ public class RödaTest {
 		assertEquals("13", eval("main{a:=6;b:=1;b=2;push'1+a*b';}"));
 	}
 
+	// Tietueet
+
+	@Test
+	public void testCreatingAndAccessingRecordInstance() {
+		assertEquals("7,4", eval("record R{a:number;b:number}main{r:=new R;r.a=4;r.b=7;push r.b r.a}"));
+	}
+
+	@Test
+	public void testAccessingInheritedRecordFields() {
+		assertEquals("9,5", eval("record R{a:number}record S:R{b:number};"
+					 + "main{r:=new S;r.a=5;r.b=9;push r.b r.a}"));
+	}
+
 	/* README:n esimerkit (hieman muutettuina)*/
 
 	// Funktiot
