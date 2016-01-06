@@ -5,6 +5,7 @@ import java.util.Random;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import java.util.function.Consumer;
 
@@ -45,6 +46,7 @@ import org.kaivos.röda.JSON.JSONList;
 import org.kaivos.röda.JSON.JSONMap;
 
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.type.*;
 import static org.kaivos.röda.RödaValue.*;
 import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Interpreter.*;
@@ -92,23 +94,15 @@ class Builtins {
 							readMode = true;
 							continue;
 						}
-						else if (!value.isReference())
-							error("invalid argument for pull: only references accepted");
-						
-						//System.err.print(value.target);
-						if (in.finished()) {
-							//System.err.println("->false");
-							if (readMode) out.push(valueFromBoolean(false));
-							continue;
-						}
-						RödaValue pulled = in.pull();
+						checkReference("pull", value);
+					        
+					        RödaValue pulled = in.pull();
 						if (pulled == null) {
 							if (readMode) out.push(valueFromBoolean(false));
 							continue;
 						}
 						value.assign(pulled);
-						//System.err.println("="+pulled);
-						if (readMode) out.push(valueFromBoolean(true));
+					        if (readMode) out.push(valueFromBoolean(true));
 					}
 				}, Arrays.asList(new Parameter("variables", true)), true,
 				new ValueStream(), new BooleanStream()));
@@ -117,9 +111,7 @@ class Builtins {
 
 		S.setLocal("undefine", valueFromNativeFunction("undefine", (rawArgs, args, scope, in, out) -> {
 					for (RödaValue value : args) {
-						if (!value.isReference())
-							error("invalid argument for undefine: "
-							      + "only references accepted");
+						checkReference("undefine", value);
 
 						value.assign(null);
 					}
@@ -590,6 +582,8 @@ class Builtins {
 				}, Arrays.asList(new Parameter("files", false)), true,
 				new VoidStream(), new ValueStream()));
 
+		/* Verkko-operaatiot */
+
 		S.setLocal("wcat", valueFromNativeFunction("wcat", (rawArgs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("wcat", 1, args.size());
 					try {
@@ -634,6 +628,118 @@ class Builtins {
 						error(e);
 					}
 				}, Arrays.asList(new Parameter("urls", false)), true,
+				new VoidStream(), new ValueStream()));
+
+		// Säikeet
+
+		Record threadRecord = new Record("thread",
+						 Collections.emptyList(),
+						 null,
+						 Arrays.asList(new Record.Field("start", new Datatype("function")),
+							       new Record.Field("pull", new Datatype("function")),
+							       new Record.Field("push", new Datatype("function"))),
+						 false);
+		I.records.put("thread", threadRecord);
+
+		S.setLocal("thread", valueFromNativeFunction("thread", (rawArgs, args, scope, in, out) -> {
+				        checkArgs("thread", 1, args.size());
+				        RödaValue function = args.get(0);
+					checkFunction("thread", function);
+
+					RödaScope newScope =
+						!function.isNativeFunction()
+						&& function.localScope() != null
+						? new RödaScope(function.localScope())
+						: new RödaScope(I.G);
+					RödaStream _in = RödaStream.makeStream();
+					RödaStream _out = RödaStream.makeStream();
+					
+					class P { boolean started = false; }
+					P p = new P();
+
+					Runnable task = () -> {
+						I.exec("<thread>", 0, function,
+						       Collections.emptyList(), newScope, _in, _out);
+						_out.finish();
+					};
+
+					RödaValue threadObject = RödaRecordInstance.of(threadRecord,
+										       Collections.emptyList(),
+										       I.records);
+					threadObject.setField("start",
+							      RödaNativeFunction
+							      .of("thread.start",
+								  (ra, a, s, i, o) -> {
+									  checkArgs("thread.start", 0, a.size());
+									  if (p.started)
+										  error("thread has already "
+											+ "been executed");
+									  p.started = true;
+									  I.executor.execute(task);
+								  }, Collections.emptyList(), false,
+								  new VoidStream(), new VoidStream()));
+					threadObject.setField("pull",
+							      RödaNativeFunction
+							      .of("thread.pull",
+								  (ra, a, s, i, o) -> {
+									  if (a.size() == 0) {
+										  while (true) {
+											  RödaValue v = _out.pull();
+											  if (v == null) break;
+											  o.push(v);
+										  }
+									  }
+									  else {
+										  boolean readMode = false;
+										  for (RödaValue v : a) {
+											  if (v.isString()
+											      && v.str()
+											      .equals("-r")) {
+												  readMode = true;
+												  continue;
+											  }
+											  checkReference("thread"
+													 + ".pull",
+													 v);
+											  RödaValue pulled
+												  = _out.pull();
+											  if (pulled == null) {
+												  if (readMode) {
+													  o.push(RödaBoolean.of(false));
+												  }
+												  continue;
+											  }
+											  out.push(pulled);
+											  if (readMode) {
+												  o.push(RödaBoolean.of(true));
+											  }
+										  }
+									  }
+								  }, Arrays.asList(new Parameter("variables",
+												 true)), true,
+										   new VoidStream(),
+										   new ValueStream()));
+					threadObject.setField("push",
+							      RödaNativeFunction
+							      .of("thread.push",
+								  (ra, a, s, i, o) -> {
+									  if (a.size() == 0) {
+										  while (true) {
+											  RödaValue v = i.pull();
+											  if (v == null) break;
+											  _in.push(v);
+										  }
+									  }
+									  else {
+										  for (RödaValue v : a) {
+											  _in.push(v);
+										  }
+									  }
+								  }, Arrays.asList(new Parameter("values",
+												 false)), true,
+								  new ValueStream(), new VoidStream()));
+					out.push(threadObject);
+				}, Arrays.asList(new Parameter("runnable", false)), false,
 				new VoidStream(), new ValueStream()));
 	}
 }

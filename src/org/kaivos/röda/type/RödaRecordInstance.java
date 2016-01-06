@@ -40,7 +40,7 @@ public class RödaRecordInstance extends RödaValue {
 	}
 
 	@Override public String str() {
-		return "<a " + typeString() + " instance>";
+		return "<" + typeString() + " instance " + hashCode() + ">";
 	}
 
 	@Override public void setField(String field, RödaValue value) {

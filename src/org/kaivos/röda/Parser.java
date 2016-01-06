@@ -230,8 +230,8 @@ public class Parser {
 			public final String name;
 			public final Datatype type;
 
-			private Field(String name,
-				      Datatype type) {
+			Field(String name,
+			      Datatype type) {
 				this.name = name;
 				this.type = type;
 			}
@@ -243,11 +243,11 @@ public class Parser {
 		public final List<Field> fields;
 		public final boolean isValueType;
 
-		private Record(String name,
-			       List<String> typeparams,
-			       Datatype superType,
-			       List<Field> fields,
-			       boolean isValueType) {
+		Record(String name,
+		       List<String> typeparams,
+		       Datatype superType,
+		       List<Field> fields,
+		       boolean isValueType) {
 			this.name = name;
 			this.typeparams = Collections.unmodifiableList(typeparams);
 			this.fields = Collections.unmodifiableList(fields);

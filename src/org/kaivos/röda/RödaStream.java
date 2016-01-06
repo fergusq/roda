@@ -122,6 +122,13 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		return stream;
 	}
 
+	public static RödaStream makeStream() {
+		RödaStream stream = new RödaStreamImpl();
+		stream.inHandler = ValueStream.HANDLER;
+		stream.outHandler = ValueStream.HANDLER;
+		return stream;
+	}
+
 	public static RödaStream makeStream(Consumer<RödaValue> put, Supplier<RödaValue> get, Runnable finish, Supplier<Boolean> finished) {
 		RödaStream stream = new RödaStream() {
 				@Override

@@ -322,6 +322,13 @@ public class Interpreter {
 			      + "': number expected (got " + arg.typeString() + ")");
 		}
 	}
+
+	static void checkFunction(String function, RödaValue arg) {
+	        if (!arg.isFunction()) {
+			error("illegal argument for '" + function
+			      + "': function expected (got " + arg.typeString() + ")");
+		}
+	}
 	
 	static void checkArgs(String function, int required, int got) {
 		if (got > required) argumentOverflow(function, required, got);
@@ -338,9 +345,9 @@ public class Interpreter {
 		      + "': at least " + required + " required (got " + got + ")");
 	}
 
-	private void exec(String file, int line,
-			  RödaValue value, List<RödaValue> rawArgs, RödaScope scope,
-			  RödaStream in, RödaStream out) {
+	void exec(String file, int line,
+		  RödaValue value, List<RödaValue> rawArgs, RödaScope scope,
+		  RödaStream in, RödaStream out) {
 		List<RödaValue> args = new ArrayList<>();
 		int i = 0;
 		for (RödaValue val : rawArgs) {
