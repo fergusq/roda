@@ -78,7 +78,7 @@ Röda käyttää C-tyylisiä `/* ... */`-kommentteja.
 
 ### Funktiot
 
-Röda-ohjelma on joukko funktioita:
+Röda-ohjelma on joukko määritelmiä, usein funktioita:
 ```
 funktio1 parametrit {
 
@@ -108,6 +108,41 @@ pull_twice &variable {
 	pull value1
 	pull value2
 	variable = (value1 value2)
+}
+```
+
+### Tietueet
+
+Ohjelman ylätasolla voi funktioiden lisäksi esiintyä tietueita, jotka ovat tapa säilöä useita arvoja yhteen
+olioon. Tietueet ovat vahvasti tyypitettyjä ja siksi turvallisempia kuin listat ja tulevaisuudessa toteutettavat
+hajautuskartat.
+
+Tietue koostuu nimestä ja joukosta kenttiä:
+
+```
+record Perhe {
+	nimi : string
+	osoite : string
+	jäsenet : list
+}
+```
+
+Kun tietue luodaan, sen kentät ovat oletuksena määrittelemättömiä. Niihin on asetettava arvo ennen, kuin niitä
+voi kunnolla käyttää.
+
+```
+perhe := new Perhe
+perhe.nimi = "Harakka"
+perhe.osoite = "Lumipolku 41 A 7"
+perhe.jäsenet = ("Miete" "Joona" "Linn")
+```
+
+Tietueilla voi olla tyyppiparametreja, joiden avulla tietyn kentän tyypin voi päättää oliota luodessa:
+
+```
+record LinkattuLista<T> {
+	arvo : T
+	linkki : LinkattuLista<T>
 }
 ```
 
@@ -150,7 +185,7 @@ main {
 }
 ```
 
-Jos argumentin edessä on tähti `*`, oletetaan, että se on lista. Tällöin argumentin alkiot annetaan
+Jos argumentin edessä on tähti `*`, oletetaan, että se on lista. Tällöin listan alkiot annetaan
 argumentteina funktiolle, eikä itse listaa.
 
 ```
@@ -371,6 +406,13 @@ for rivi in rivit; do
 	push i " " rivi "\n"
 	i ++
 done
+```
+
+Jos on varmaa, että funktio antaa vain yhden arvon, voidaan käyttää hakasulkeita. Tällöin arvoksi
+tulee listan ainoa arvo. Tämä heittää virheen, jos funktio palauttaa useampia arvoja (tai ei yhtään).
+
+```
+A := ![expr "PI*"r"**2"]
 ```
 
 #### Nimetön funktio
