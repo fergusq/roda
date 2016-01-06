@@ -69,6 +69,7 @@ public class Parser {
 		case "_line":
 		case "_value":
 		case "void":
+		case "reference":
 		case "list":
 		case "string":
 		case "number":
@@ -93,6 +94,7 @@ public class Parser {
 		case "_line":
 		case "_value":
 		case "void":
+		case "reference":
 			return false;
 		default:
 			return true;
@@ -136,16 +138,16 @@ public class Parser {
 	// - RödaValue sisältää kaikki tyypit - HUONO
 	// - Datatype vs. RödaValue.Type - ei monia luokkia samaan asiaan
 	public static class Datatype {
-		String name;
-		List<Datatype> subtypes;
+		public final String name;
+		public final List<Datatype> subtypes;
 
-		Datatype(String name,
-			 List<Datatype> subtypes) {
+		public Datatype(String name,
+				List<Datatype> subtypes) {
 			this.name = name;
-			this.subtypes = subtypes;
+			this.subtypes = Collections.unmodifiableList(subtypes);
 		}
 
-		Datatype(String name) {
+		public Datatype(String name) {
 			this.name = name;
 			this.subtypes = Collections.emptyList();
 		}
@@ -224,9 +226,9 @@ public class Parser {
 	}
 
 	public static class Record {
-		static class Field {
-			String name;
-			Datatype type;
+		public static class Field {
+			public final String name;
+			public final Datatype type;
 
 			private Field(String name,
 				      Datatype type) {
@@ -235,23 +237,29 @@ public class Parser {
 			}
 		}
 		
-		public String name;
-		public List<String> typeparams;
-		public Datatype superType;
-		public List<Field> fields;
+		public final String name;
+		public final List<String> typeparams;
+		public final Datatype superType;
+		public final List<Field> fields;
+		public final boolean isValueType;
 
 		private Record(String name,
-		       List<String> typeparams,
-		       Datatype superType,
-		       List<Field> fields) {
+			       List<String> typeparams,
+			       Datatype superType,
+			       List<Field> fields,
+			       boolean isValueType) {
 			this.name = name;
-			this.typeparams = typeparams;
-			this.fields = fields;
+			this.typeparams = Collections.unmodifiableList(typeparams);
+			this.fields = Collections.unmodifiableList(fields);
+			this.superType = superType;
+			this.isValueType = isValueType;
 		}
 	}
 
 	static Record parseRecord(TokenList tl) {
 		tl.accept("record");
+
+		boolean isValueType = tl.acceptIfNext("value");
 
 		String name = identifier(tl);
 
@@ -288,7 +296,7 @@ public class Parser {
 		maybeNewline(tl);
 		tl.accept("}");
 
-		return new Record(name, typeparams, superType, fields);
+		return new Record(name, typeparams, superType, fields, isValueType);
 	}
 
 	public static class Function {
@@ -610,7 +618,8 @@ public class Parser {
 			SLICE,
 			CONCAT,
 			JOIN,
-			CALCULATOR
+			CALCULATOR,
+			NEW
 		}
 		enum CType {
 			MUL,
@@ -648,6 +657,7 @@ public class Parser {
 		List<Expression> list;
 		Expression sub, index, index1, index2, exprA, exprB;
 		String field;
+		Datatype datatype;
 
 		String file;
 		int line;
@@ -685,6 +695,8 @@ public class Parser {
 				return exprA.asString() + ".." + exprB.asString();
 			case JOIN:
 				return exprA.asString() + "&" + exprB.asString();
+			case NEW:
+				return "new " + datatype.toString();
 			default:
 				return "<" + type + ">";
 			}
@@ -839,6 +851,15 @@ public class Parser {
 		e.sub = sub;
 		return e;
 	}
+
+	private static Expression expressionNew(String file, int line, Datatype datatype) {
+		Expression e = new Expression();
+		e.type = Expression.Type.NEW;
+		e.file = file;
+		e.line = line;
+		e.datatype = datatype;
+		return e;
+	}
 	
 	private static Expression parseExpression(TokenList tl) {
 		Expression ans = parseExpressionJoin(tl);
@@ -870,6 +891,10 @@ public class Parser {
 			TokenList tlc = calculatorScanner.tokenize(expr, file, line);
 			ans = parseCalculatorExpression(tlc);
 			tlc.accept("<EOF>");
+		}
+		else if (tl.acceptIfNext("new")) {
+			Datatype type = parseType(tl);
+			return expressionNew(file, line, type);
 		}
 		else if (tl.acceptIfNext("#")) {
 			Expression e = parseExpressionPrimary(tl);

@@ -143,7 +143,7 @@ class Builtins {
 						String filename = value.str();
 						File file = IOUtils.getMaybeRelativeFile(I.currentDir,
 											 filename);
-						I.loadFile(file, S);
+						I.loadFile(file);
 					}
 				}, Arrays.asList(new Parameter("files", false)), true,
 				new VoidStream(), new VoidStream()));

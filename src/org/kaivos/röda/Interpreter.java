@@ -31,6 +31,7 @@ import java.io.IOException;
 
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.RödaValue.*;
+import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.RödaStream;
 import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Parser.*;
@@ -72,6 +73,7 @@ public class Interpreter {
 	}
 	
 	public RödaScope G = new RödaScope(Optional.empty());
+	Map<String, Record> records = new HashMap<>();
 
 	RödaStream STDIN, STDOUT;
 
@@ -209,7 +211,7 @@ public class Interpreter {
 	
 	public void interpret(String code, List<RödaValue> args, String filename) {
 		try {
-		        load(code, filename, G);
+		        load(code, filename);
 			
 			RödaValue main = G.resolve("main");
 			if (main == null) return;
@@ -224,11 +226,14 @@ public class Interpreter {
 		}
 	}
 
-	public static void load(String code, String filename, RödaScope scope) {
+	public void load(String code, String filename) {
 		try {
 			Program program = parse(t.tokenize(code, filename));
 			for (Function f : program.functions) {
-				scope.setLocal(f.name, valueFromFunction(f));
+				G.setLocal(f.name, valueFromFunction(f));
+			}
+			for (Record r : program.records) {
+				records.put(r.name, r);
 			}
 		} catch (ParsingException|RödaException e) {
 			throw e;
@@ -237,7 +242,7 @@ public class Interpreter {
 		}
 	}
 
-	public static void loadFile(File file, RödaScope scope) {
+	public void loadFile(File file) {
 		try {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 			String code = "";
@@ -246,7 +251,7 @@ public class Interpreter {
 				code += line + "\n";
 			}
 			in.close();
-			load(code, file.getName(), scope);
+			load(code, file.getName());
 		} catch (IOException e) {
 		        error(e);
 		}
@@ -804,6 +809,12 @@ public class Interpreter {
 										.impliciteResolve()
 										)
 									   .collect(toList()));
+		if (exp.type == Expression.Type.NEW) {
+			Record r = records.get(exp.datatype.name);
+			if (r == null)
+				error("record class '" + r.name + "' not found");
+			return RödaRecordInstance.of(r, exp.datatype.subtypes, records);
+		}
 		if (exp.type == Expression.Type.LENGTH
 		    || exp.type == Expression.Type.ELEMENT
 		    || exp.type == Expression.Type.SLICE) {
