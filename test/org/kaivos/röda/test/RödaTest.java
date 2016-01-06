@@ -335,6 +335,11 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testArgumentsFlatten() {
+		assertEquals("Anu,Riina", eval("f a b{push b a}main{A:=(\"Riina\" \"Anu\");f*A}"));
+	}
+
+	@Test
 	public void testArgumentList() {
 		interpreter.interpret("main a...{push a[1] a[0] #a}",
 				      Arrays.asList(RödaValue.valueFromString("Venla"),
