@@ -40,7 +40,7 @@ public class Parser {
 		.addOperatorRule("/=")
 		.addOperatorRule("++")
 		.addPatternRule(Pattern.compile("--(?!\\p{L})"))
-		.addOperators("<>()[]{}|&.,:;=#%?\n\\*")
+		.addOperators("<>()[]{}|&.,:;=#%!?\n\\*")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
 		.addStringRule('\'', '\'', (char) 0)
