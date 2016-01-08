@@ -635,6 +635,7 @@ public class Parser {
 			BLSHIFT,
 			EQ,
 			NEQ,
+			MATCHES,
 			LT,
 			GT,
 			LE,
@@ -1013,6 +1014,7 @@ public class Parser {
 		.addOperatorRule("||")
 		.addOperatorRule("^^")
 		.addOperatorRule("!=")
+		.addOperatorRule("=~")
 		.addOperatorRule("<=")
 		.addOperatorRule(">=")
 		.addOperatorRule("<<")
@@ -1041,6 +1043,7 @@ public class Parser {
 		library.add("^^", op(Expression.CType.XOR));
 		library.increaseLevel();
 		library.add("=", op(Expression.CType.EQ));
+		library.add("=~", op(Expression.CType.MATCHES));
 		library.add("!=", op(Expression.CType.NEQ));
 		library.increaseLevel();
 		library.add("<", op(Expression.CType.LT));

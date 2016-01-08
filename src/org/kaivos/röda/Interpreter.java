@@ -873,6 +873,10 @@ public class Interpreter {
 					return valueFromBoolean(val1.halfEq(val2));
 				case NEQ:
 					return valueFromBoolean(!val1.halfEq(val2));
+				case MATCHES:
+					if (!val1.isString()) error("tried to MATCH a " + val1.typeString());
+					if (!val2.isString()) error("tried to MATCH a " + val2.typeString());
+					return valueFromBoolean(val1.str().matches(val2.str()));
 				}
 				if (!val1.isNumber()) error("tried to " + exp.ctype + " a " + val1.typeString());
 				if (!val2.isNumber()) error("tried to " + exp.ctype + " a " + val2.typeString());
