@@ -10,6 +10,10 @@ import java.util.function.Supplier;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import java.io.BufferedReader;
+import java.io.PrintWriter;
+import java.io.IOException;
+
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.RödaValue.*;
 
@@ -420,5 +424,82 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		private static int streamCounter;
 		
 		int id; { id = streamCounter++; }
-	}	
+	}
+
+	public static class ISLineStream extends RödaStream {
+		private BufferedReader in;
+		private boolean finished = false;
+		public ISLineStream(BufferedReader in) {
+			this.in = in;
+		}
+		{
+			inHandler = ValueStream.HANDLER;
+			outHandler = ValueStream.HANDLER;
+		}
+		public RödaValue get() {
+			if (finished) return null;
+			try {
+				while (!in.ready()) {
+					if (paused()) return null;
+				}
+				String line = in.readLine();
+				if (line == null) return null;
+				else return valueFromString(line + "\n");
+			} catch (IOException e) {
+				error(e);
+				return null;
+			}
+		}
+		public void put(RödaValue val) {
+			error("no output to input");
+		}
+		public boolean finished() {
+			try {
+				return finished || !in.ready();
+			} catch (IOException e) {
+				return false; // Pitäisikö olla virheidenkäsittely?
+			}
+		}
+		public void finish() {
+			finished = true;
+			try {
+				in.close();
+			} catch (IOException e) {
+				error(e);
+			}
+		}
+	}
+
+	public static class OSStream extends RödaStream {
+		private PrintWriter out;
+		public OSStream(PrintWriter out) {
+			this.out = out;
+		}
+		{
+			inHandler = ValueStream.HANDLER;
+			outHandler = ValueStream.HANDLER;
+		}
+		public RödaValue get() {
+			error("no input from output");
+			return null;
+		}
+		public void put(RödaValue val) {
+			if (!closed()) {
+				String str = val.str();
+				out.print(str);
+				if (str.indexOf('\n') != -1)
+					out.flush();
+			}
+			else error("stream is closed");
+		}
+		public boolean finished() {
+			return finished;
+		}
+		boolean finished = false;
+		public void finish() {
+			finished = true;
+			out.flush();
+			out.close();
+		}
+	};
 }

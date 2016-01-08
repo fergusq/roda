@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.FileInputStream;
+import java.io.PrintWriter;
 import java.io.IOException;
 
 import org.kaivos.röda.RödaValue;
@@ -78,66 +79,13 @@ public class Interpreter {
 	RödaStream STDIN, STDOUT;
 
 	File currentDir = new File(System.getProperty("user.dir"));
-
-	static class SystemInStream extends RödaStream {
-		InputStreamReader ir = new InputStreamReader(System.in);
-		BufferedReader in = new BufferedReader(ir);
-		{
-			inHandler = ValueStream.HANDLER;
-			outHandler = ValueStream.HANDLER;
-		}
-		public RödaValue get() {
-			try {
-				while (!in.ready()) {
-					if (paused()) return null;
-				}
-				String line = in.readLine();
-				if (line == null) return null;
-				else return valueFromString(line + "\n");
-			} catch (IOException e) {
-				error(e);
-				return null;
-			}
-		}
-		public void put(RödaValue val) {
-			error("no output to input");
-		}
-		public boolean finished() {
-			return false; // TODO ehkä jotain oikeita tarkistuksia EOF:n varalta?
-		}
-		public void finish() {
-			// nop
-		}
-		public String toString(){return"STDIN";}
-	};
-
-	static class SystemOutStream extends RödaStream {
-		{
-			inHandler = ValueStream.HANDLER;
-			outHandler = ValueStream.HANDLER;
-		}
-		public RödaValue get() {
-			error("no input from output");
-			return null;
-		}
-		public void put(RödaValue val) {
-			if (!closed())
-				System.out.print(val.str());
-			else error("output is closed");
-		}
-		public boolean finished() {
-			return finished;
-		}
-		boolean finished = false;
-		public void finish() {
-			finished = true;
-		}
-		public String toString(){return"STDOUT";}
-	};
 	
 	private void initializeIO() {
-		STDIN = new SystemInStream();		
-		STDOUT = new SystemOutStream();
+		InputStreamReader ir = new InputStreamReader(System.in);
+		BufferedReader in = new BufferedReader(ir);
+		PrintWriter out = new PrintWriter(System.out);
+		STDIN = new ISLineStream(in);
+		STDOUT = new OSStream(out);
 	}
 
 	{ Builtins.populate(this); /*System.out.println(G.map.keySet());*/ }

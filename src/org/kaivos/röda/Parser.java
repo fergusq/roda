@@ -48,6 +48,7 @@ public class Parser {
 		.addStringRule('"','"','\\')
 		.addEscapeCode('\\', "\\")
 		.addEscapeCode('n', "\n")
+		.addEscapeCode('r', "\r")
 		.addEscapeCode('t', "\t")
 		.addCharacterEscapeCode('x', 2, 16)
 		.ignore("\\\n")

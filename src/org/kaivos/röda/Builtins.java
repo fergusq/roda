@@ -36,6 +36,9 @@ import java.io.BufferedReader;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
+import java.net.ServerSocket;
+import java.net.Socket;
+
 import org.kaivos.röda.Calculator;
 import org.kaivos.röda.IOUtils;
 import org.kaivos.röda.JSON;
@@ -630,6 +633,108 @@ class Builtins {
 				}, Arrays.asList(new Parameter("urls", false)), true,
 				new VoidStream(), new ValueStream()));
 
+		Record serverRecord = new Record("server",
+						 Collections.emptyList(),
+						 null,
+						 Arrays.asList(new Record.Field("accept", new Datatype("function")),
+							       new Record.Field("close", new Datatype("function"))),
+						 false);
+		I.records.put("server", serverRecord);
+
+		Record socketRecord = new Record("socket",
+						 Collections.emptyList(),
+						 null,
+						 Arrays.asList(new Record.Field("push", new Datatype("function")),
+							       new Record.Field("pull", new Datatype("function")),
+							       new Record.Field("close", new Datatype("function"))),
+						 false);
+		I.records.put("socket", socketRecord);
+
+		S.setLocal("server", valueFromNativeFunction("server", (rawArgs, args, scope, in, out) -> {
+					checkArgs("server", 1, args.size());
+					checkNumber("server", args.get(0));
+					int port = args.get(0).num();
+
+					try {
+
+						ServerSocket server = new ServerSocket(port);
+						
+						RödaValue serverObject = RödaRecordInstance
+							.of(serverRecord,
+							    Collections.emptyList(),
+							    I.records);
+						serverObject
+							.setField("accept",
+								  RödaNativeFunction
+								  .of("server.accept",
+								      (ra, a, s, i, o) -> {
+									      checkArgs("server.accept",
+											0, a.size());
+									      Socket socket;
+									      BufferedReader br;
+									      PrintWriter pw;
+									      try {
+										      socket = server.accept();
+										      InputStreamReader isr
+											      = new InputStreamReader(socket.getInputStream());
+										      br = new BufferedReader(isr);
+										      pw = new PrintWriter(socket.getOutputStream());
+									      } catch (IOException e) {
+										      error(e);
+										      return;
+									      }
+									      RödaStream _in = new ISLineStream(br);
+									      RödaStream _out = new OSStream(pw);
+									      RödaValue socketObject =
+										      RödaRecordInstance
+										      .of(socketRecord,
+											  Collections.emptyList(),
+											  I.records);
+									      socketObject
+										      .setField("push",
+												genericPush("socket.push", _out));
+									      socketObject
+										      .setField("pull",
+												genericPull("socket.pull", _in));
+									      socketObject
+										      .setField("close",
+												RödaNativeFunction
+												.of("socket.close",
+												    (r,A,z,j,u) -> {
+													    checkArgs("socket.close", 0, A.size());
+													    try {
+														    _out.finish();
+														    socket.close();
+													    } catch (IOException e) {
+														    error(e);
+													    }
+												    },
+												    Collections
+												    .emptyList(),
+												    false,
+												    new VoidStream(),
+												    new VoidStream()
+												    )
+												);
+									      o.push(socketObject);
+									  }, Collections.emptyList(), false,
+								  new VoidStream(), new ValueStream()));
+						serverObject
+							.setField("close",
+							      RödaNativeFunction
+							      .of("server.close",
+								  (ra, a, s, i, o) -> {
+									  checkArgs("server.close", 0, a.size());
+									  
+								  }, Collections.emptyList(), false,
+								  new VoidStream(), new VoidStream()));
+						out.push(serverObject);
+					} catch (IOException e) {
+						error(e);
+					}
+				}, Arrays.asList(new Parameter("port", false)), false,
+				new VoidStream(), new ValueStream()));
+
 		// Säikeet
 
 		Record threadRecord = new Record("thread",
@@ -678,68 +783,69 @@ class Builtins {
 									  I.executor.execute(task);
 								  }, Collections.emptyList(), false,
 								  new VoidStream(), new VoidStream()));
-					threadObject.setField("pull",
-							      RödaNativeFunction
-							      .of("thread.pull",
-								  (ra, a, s, i, o) -> {
-									  if (a.size() == 0) {
-										  while (true) {
-											  RödaValue v = _out.pull();
-											  if (v == null) break;
-											  o.push(v);
-										  }
-									  }
-									  else {
-										  boolean readMode = false;
-										  for (RödaValue v : a) {
-											  if (v.isString()
-											      && v.str()
-											      .equals("-r")) {
-												  readMode = true;
-												  continue;
-											  }
-											  checkReference("thread"
-													 + ".pull",
-													 v);
-											  RödaValue pulled
-												  = _out.pull();
-											  if (pulled == null) {
-												  if (readMode) {
-													  o.push(RödaBoolean.of(false));
-												  }
-												  continue;
-											  }
-											  out.push(pulled);
-											  if (readMode) {
-												  o.push(RödaBoolean.of(true));
-											  }
-										  }
-									  }
-								  }, Arrays.asList(new Parameter("variables",
-												 true)), true,
-										   new VoidStream(),
-										   new ValueStream()));
-					threadObject.setField("push",
-							      RödaNativeFunction
-							      .of("thread.push",
-								  (ra, a, s, i, o) -> {
-									  if (a.size() == 0) {
-										  while (true) {
-											  RödaValue v = i.pull();
-											  if (v == null) break;
-											  _in.push(v);
-										  }
-									  }
-									  else {
-										  for (RödaValue v : a) {
-											  _in.push(v);
-										  }
-									  }
-								  }, Arrays.asList(new Parameter("values",
-												 false)), true,
-								  new ValueStream(), new VoidStream()));
+					threadObject.setField("pull",genericPull("thread.pull", _out));
+					threadObject.setField("push",genericPush("thread.push", _in));
 					out.push(threadObject);
 				}, Arrays.asList(new Parameter("runnable", false)), false,
 				new VoidStream(), new ValueStream()));
+	}
+
+	private static RödaValue genericPush(String name, RödaStream _out) {
+		return RödaNativeFunction
+			.of(name,
+			    (ra, a, s, i, o) -> {
+				    if (a.size() == 0) {
+					    while (true) {
+						    RödaValue v = i.pull();
+						    if (v == null) break;
+						    _out.push(v);
+					    }
+				    }
+				    else {
+					    for (RödaValue v : a) {
+						    _out.push(v);
+					    }
+				    }
+			    }, Arrays.asList(new Parameter("values", false)), true,
+			    new ValueStream(), new VoidStream());
+	}
+
+	private static RödaValue genericPull(String name, RödaStream _in) {
+		return RödaNativeFunction
+			.of(name,
+			    (ra, a, s, i, o) -> {
+				    if (a.size() == 0) {
+					    while (true) {
+						    RödaValue v = _in.pull();
+						    if (v == null) break;
+						    o.push(v);
+					    }
+				    }
+				    else {
+					    boolean readMode = false;
+					    for (RödaValue v : a) {
+						    if (v.isString()
+							&& v.str().equals("-r")) {
+							    readMode = true;
+							    continue;
+						    }
+						    checkReference(name, v);
+						    RödaValue pulled
+							    = _in.pull();
+						    if (pulled == null) {
+							    if (readMode) {
+								    o.push(RödaBoolean.of(false));
+							    }
+							    continue;
+						    }
+						    v.assign(pulled);
+						    if (readMode) {
+							    o.push(RödaBoolean.of(true));
+						    }
+					    }
+				    }
+			    }, Arrays.asList(new Parameter("variables", true)), true,
+			    new VoidStream(),
+			    new ValueStream());
 	}
 }
