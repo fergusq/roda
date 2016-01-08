@@ -1023,6 +1023,13 @@ public class Parser {
 		.addOperators("#()[:].=+-*/<>&|^~!\n")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
+		.addStringRule("[[", "]]", (char) 0)
+		.addStringRule('"','"','\\')
+		.addEscapeCode('\\', "\\")
+		.addEscapeCode('n', "\n")
+		.addEscapeCode('r', "\r")
+		.addEscapeCode('t', "\t")
+		.addCharacterEscapeCode('x', 2, 16)
 		.dontIgnore('\n')
 		.appendOnEOF("<EOF>");
 	
@@ -1101,6 +1108,16 @@ public class Parser {
 			Expression e = parseCalculatorExpression(tl);
 			tl.accept(")");
 			ans = e;
+		}
+		else if (tl.acceptIfNext("\"")) {
+			String s = tl.nextString();
+			tl.accept("\"");
+		        ans = expressionString(file, line, s);
+		}
+		else if (tl.acceptIfNext("[[")) {
+			String s = tl.nextString();
+			tl.accept("]]");
+		        ans = expressionString(file, line, s);
 		}
 		else if (tl.seekString().matches("[0-9]+")) {
 			ans = expressionInt(file, line, Integer.parseInt(tl.nextString()));
