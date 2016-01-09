@@ -373,24 +373,44 @@ kokonimet := sisarukset.." "..sukunimi
 push "Sisarusten koko nimet ovat " kokonimet&" ja " ".\n"
 ```
 
-Operaattorit taulukossa:
+#### Kartat
+
+Uuden kartan voi luoda samaan tapaan kuten tietueolion:
+
+```
+iät := new map
+iät["Maija"] = 13
+iät["Ilmari"] = 19
+```
+
+`?`-operaattorilla voi tarkastaa, onko kartassa tietty alkio:
+
+```
+if push '!iät["Maija"]?'; do
+	push "Maijan ikää ei löydy!\n"
+done
+```
+
+Operaattorit taulukossa (tunniste tarkoittaa joko lukua tai merkkijonoa riippuen siitä, onko kyseessä lista
+vai kartta):
 
 | Operaattori | Selitys               | Ottaa                                   | Palauttaa              |
 |:-----------:| --------------------- | --------------------------------------- | ---------------------- |
 | `..`        | Yhdistää merkkijonoja | 2 merkkijonoa tai listan ja merkkijonon | Merkkijonon tai listan |
 | `&`         | Yhdistää listan alkiot merkkijonoksi | Listan ja merkkijonon    | Merkkijonon            |
-| `#`         | Palauttaa arvon pituuden | Listan tai merkkijonon               | Kokonaisluvun          |
-| `[]`        | Palauttaa listan alkion  | Listan ja kokonaisluvun              | Alkion                 |
-| `[:]`       | Palauttaa listan osalistan | Listan ja nollasta kahteen kokonaisluku | Listan            |
+| `#`         | Palauttaa arvon pituuden | Listan, kartan tai merkkijonon       | Kokonaisluvun          |
+| `[]`        | Palauttaa listan alkion  | Listan tai kartan ja tunnisteen      | Alkion                 |
+| `[:]`       | Palauttaa listan osalistan | Listan tai merkkijonon ja nollasta kahteen kokonaislukua | Listan tai merkkijonon |
+| `[]?`       | Kertoo, onko alkio olemassa | Listan tai kartan ja tunnisteen   | Totuusarvon            |
 
 Laskujärjestys:
 
-| Sija | Operaattorit |
-|:----:| ------------ |
-| 1.   | `[]`, `[:]`  |
-| 2.   | `#`          |
-| 3.   | `&`          |
-| 4.   | `..`         |
+| Sija | Operaattorit       |
+|:----:| ------------------ |
+| 1.   | `[]`, `[:]`, `[]?` |
+| 2.   | `#`                |
+| 3.   | `&`                |
+| 4.   | `..`               |
 
 #### Komento
 
@@ -451,7 +471,8 @@ p := 'i/2+7'
 k := '(p-10)*2'
 ```
 
-Aritmetiikkatilassa voi käyttää tavallisia sulkeita. Lisäksi seuraavat operaattorit ovat käytössä:
+Aritmetiikkatilassa voi käyttää tavallisia sulkeita ja ylempänä esiteltyjä operaattoreita.
+Lisäksi seuraavat operaattorit ovat käytössä:
 
 | Operaattori | Selitys                     | Ottaa             | Palauttaa     |
 |:-----------:| --------------------------- | ----------------- | ------------- |
@@ -482,7 +503,7 @@ Laskujärjestys:
 
 | Sija | Operaattorit                                               |
 |:----:| ---------------------------------------------------------- |
-| 1.   | `[]`, `[:]`                                                |
+| 1.   | `[]`, `[:]`, `[]?`                                         |
 | 2.   | Unäärinen `-`, unäärinen `~`, unäärinen `!`, unäärinen `#` |
 | 3.   | `*`, `/`                                                   |
 | 4.   | `+`, binäärinen `-`                                        |
@@ -616,6 +637,29 @@ korvaukset järjestyksessä. Käyttää sisäisesti Javan `String.replaceAll`-me
 
 Palauttaa kokonaisluvut välillä `[alku, loppu]`.
 
+### server
+
+>`server portti`
+
+Käynnistää uuden palvelimen annetussa portissa. Palauttaa palvelinta kuvaavan tietueen:
+
+```
+record server {
+	accept : function
+	close : function
+}
+```
+
+Funktio `accept` odottaa, kunnes palvelimeen otetaan yhteyttä ja palauttaa yhteyttä kuvaavan `socket`-tietueen.
+`close` sammuttaa palvelimen.
+
+```
+record socket {
+	push : function
+	pull : function
+}
+```
+
 ### split
 
 >`split [-s regex] merkkijono`
@@ -641,6 +685,22 @@ mutta vaatii muuten tyypeiltä yhtenevyyttä.
 >`tail [määrä]`
 
 Lukee kaikki arvot sisääntulovirrasta ja palauttaa viimeisen arvon (tai viimeiset argumenttina annettu määrä arvoa).
+
+### thread
+
+>`thread funktio`
+
+Palauttaa tietueen, joka kuvaa funktiosta muodostettua säiettä:
+
+```
+record thread {
+	start : function
+	push : function
+	pull : function
+}
+```
+
+Function `start` käynnistää säikeen. Funktiot `push` ja `pull` on kytketty säiefunktion sisään- ja ulostulovirtoihin.
 
 ### time
 
