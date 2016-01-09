@@ -113,11 +113,10 @@ pull_twice &variable {
 
 ### Tietueet
 
-Ohjelman ylätasolla voi funktioiden lisäksi esiintyä tietueita, jotka ovat tapa säilöä useita arvoja yhteen
-olioon. Tietueet ovat vahvasti tyypitettyjä ja siksi turvallisempia kuin listat ja tulevaisuudessa toteutettavat
-hajautuskartat.
+Ohjelman ylätasolla voi funktioiden lisäksi esiintyä tietueitamäärityksiä. Tietueet ovat tapa säilöä useita arvoja yhteen
+olioon. Ne ovat vahvasti tyypitettyjä ja siksi turvallisempia kuin listat ja hajautuskartat.
 
-Tietue koostuu nimestä ja joukosta kenttiä:
+Tietuemääritys koostuu nimestä ja joukosta kenttiä:
 
 ```
 record Perhe {
@@ -135,6 +134,18 @@ perhe := new Perhe
 perhe.nimi = "Harakka"
 perhe.osoite = "Lumipolku 41 A 7"
 perhe.jäsenet = ("Miete" "Joona" "Linn")
+```
+
+Jos haluaa, osalle kentistä voi antaa oletusarvoja. Oletusarvolausekkeet suoritetaan uudestaan aina, kun uusi
+tietue luodaan. Niiden sisään- ja ulostulovirrat ovat kiinni ja niiden näkyvyysalue on sama kuin sillä funktiolla,
+joka luo tietueolion.
+
+```
+record Perhe {
+	nimi : string
+	osoite : string
+	jäsenet : list = ()
+}
 ```
 
 Tietueilla voi olla tyyppiparametreja, joiden avulla tietyn kentän tyypin voi päättää oliota luodessa:
@@ -168,6 +179,9 @@ erityistapaukset on alempana.
 
 Funktion argumentteina mahdollisesti olevat funktiokutsut on kytketty isäntäfunktion virtaan, eikä
 putkeen. Vain kutsuttava funktio putkittuu.
+
+Kutsuttava funktio saa näkyvyysalueekseen sen näkyvyysalueen, jossa se on määritelty. Jos funktio
+on kuitenkin määritelty ylätasolla, sen näkyvyysalue on sama kuin kutsuvalla funktiolla.
 
 Argumentit annetaan funktiolle siinä järjestyksessä, missä ne ovat kutsussa. Jos funktion viimeisessä
 parametrissa on valitsin `...`, asetetaan kaikki yli menevät argumentit siihen listana. Lista voi olla
@@ -282,7 +296,7 @@ Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
 
 #### Ohjausrakenteet
 
-Ohjausrakenteita ovat `if`, `while`, `for` ja `try`.
+Ohjausrakenteita ovat `if`, `while`, `for`, `try` ja `return`.
 
 **`if`** ja **`while`** suorittavat annetun lauseen ja olettavat sen palauttavan joko arvon `true` tai arvon `false`.
 Muut arvot tulkitaan aina samoin kuin `true`. Vain yksi arvo luetaan.
