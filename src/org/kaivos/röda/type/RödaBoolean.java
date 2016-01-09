@@ -7,7 +7,7 @@ public class RödaBoolean extends RödaValue {
 	private boolean bool;
 
 	private RödaBoolean(boolean bool) {
-		assumeIdentity("bool");
+		assumeIdentity("boolean");
 		this.bool = bool;
 	}
 
