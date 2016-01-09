@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 
 import java.util.function.Consumer;
 
@@ -29,9 +30,12 @@ import java.net.MalformedURLException;
 import java.io.PrintWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
+
+import java.nio.charset.StandardCharsets;
 
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -644,8 +648,8 @@ class Builtins {
 		Record socketRecord = new Record("socket",
 						 Collections.emptyList(),
 						 null,
-						 Arrays.asList(new Record.Field("push", new Datatype("function")),
-							       new Record.Field("pull", new Datatype("function")),
+						 Arrays.asList(new Record.Field("write", new Datatype("function")),
+							       new Record.Field("read", new Datatype("function")),
 							       new Record.Field("close", new Datatype("function"))),
 						 false);
 		I.records.put("socket", socketRecord);
@@ -671,31 +675,27 @@ class Builtins {
 									      checkArgs("server.accept",
 											0, a.size());
 									      Socket socket;
-									      BufferedReader br;
-									      PrintWriter pw;
+									      InputStream _in;
+									      OutputStream _out;
 									      try {
 										      socket = server.accept();
-										      InputStreamReader isr
-											      = new InputStreamReader(socket.getInputStream());
-										      br = new BufferedReader(isr);
-										      pw = new PrintWriter(socket.getOutputStream());
+										      _in = socket.getInputStream();
+										      _out = socket.getOutputStream();
 									      } catch (IOException e) {
 										      error(e);
 										      return;
 									      }
-									      RödaStream _in = new ISLineStream(br);
-									      RödaStream _out = new OSStream(pw);
 									      RödaValue socketObject =
 										      RödaRecordInstance
 										      .of(socketRecord,
 											  Collections.emptyList(),
 											  I.records);
 									      socketObject
-										      .setField("push",
-												genericPush("socket.push", _out));
+										      .setField("read",
+												genericRead("socket.read", _in));
 									      socketObject
-										      .setField("pull",
-												genericPull("socket.pull", _in));
+										      .setField("write",
+												genericWrite("socket.write", _out));
 									      socketObject
 										      .setField("close",
 												RödaNativeFunction
@@ -703,7 +703,8 @@ class Builtins {
 												    (r,A,z,j,u) -> {
 													    checkArgs("socket.close", 0, A.size());
 													    try {
-														    _out.finish();
+														    _out.close();
+														    _in.close();
 														    socket.close();
 													    } catch (IOException e) {
 														    error(e);
@@ -763,8 +764,16 @@ class Builtins {
 					P p = new P();
 
 					Runnable task = () -> {
-						I.exec("<thread>", 0, function,
-						       Collections.emptyList(), newScope, _in, _out);
+						try {
+							I.exec("<thread>", 0, function,
+							       Collections.emptyList(), newScope, _in, _out);
+						} catch (RödaException e) {
+							System.err.println("[E] " + e.getMessage());
+							for (String step : e.getStack()) {
+								System.err.println(step);
+							}
+							if (e.getCause() != null) e.getCause().printStackTrace();
+						}
 						_out.finish();
 					};
 
@@ -843,6 +852,88 @@ class Builtins {
 							    o.push(RödaBoolean.of(true));
 						    }
 					    }
+				    }
+			    }, Arrays.asList(new Parameter("variables", true)), true,
+			    new VoidStream(),
+			    new ValueStream());
+	}
+
+	private static RödaValue genericWrite(String name, OutputStream _out) {
+		return RödaNativeFunction
+			.of(name,
+			    (ra, args, scope, in, out) -> {
+				    try {
+					    if (args.size() == 0) {
+						    while (true) {
+							    RödaValue v = in.pull();
+							    if (v == null) break;
+							    _out.write(v.str().getBytes(StandardCharsets.UTF_8));
+						    }
+					    }
+					    else {
+						    for (RödaValue v : args) {
+							    _out.write(v.str().getBytes(StandardCharsets.UTF_8));
+						    }
+					    }
+				    } catch (IOException e) {
+					    error(e);
+				    }
+			    }, Arrays.asList(new Parameter("values", false)), true,
+			    new ValueStream(), new VoidStream());
+	}
+
+	private static RödaValue genericRead(String name, InputStream _in) {
+		return RödaNativeFunction
+			.of(name,
+			    (ra, args, scope, in, out) -> {
+				    try {
+					    if (args.size() == 0) {
+						    while (true) {
+							    int i = _in.read();
+							    if (i == -1) break;
+							    out.push(RödaNumber.of(i));
+						    }
+					    }
+					    else {
+						    boolean byteMode = false;
+						    Iterator<RödaValue> it = args.iterator();
+						    while (it.hasNext()) {
+							    RödaValue v = it.next();
+							    checkString(name, v);
+							    String option = v.str();
+							    RödaValue value;
+							    switch (option) {
+							    case "-b": {
+								    RödaValue sizeVal = it.next().impliciteResolve();
+								    checkNumber(name, sizeVal);
+								    int size = sizeVal.num();
+								    byte[] data = new byte[size];
+								    _in.read(data);
+								    value = RödaString.of(new String(data, StandardCharsets.UTF_8));
+							    } break;
+							    case "-l": {
+								    List<Byte> bytes = new ArrayList<>(256);
+								    int i;
+								    do {
+									    i = _in.read();
+									    if (i == -1) break;
+									    bytes.add((byte) i);
+								    } while (i != '\n');
+								    byte[] byteArr = new byte[bytes.size()];
+								    for (int j = 0; j < bytes.size(); j++) byteArr[j] = bytes.get(j);
+								    value = RödaString.of(new String(byteArr, StandardCharsets.UTF_8));
+							    } break;
+							    default:
+								    error(name + ": unknown option '" + option + "'");
+								    value = null;
+							    }
+							    RödaValue refVal = it.next();
+							    checkReference(name, refVal);
+							    refVal.assign(value);
+						    }
+					    }
+				    } catch (IOException e) {
+					    error(e);
 				    }
 			    }, Arrays.asList(new Parameter("variables", true)), true,
 			    new VoidStream(),
