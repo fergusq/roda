@@ -336,6 +336,9 @@ public class Interpreter {
 		execWithoutErrorHandling(value, rawArgs, args, scope, in, out);
 		callStack.get().pop();
 	}
+
+	@SuppressWarnings("serial")
+	private static class ReturnException extends RuntimeException {  }
 	
 	public void execWithoutErrorHandling(RödaValue value, List<RödaValue> rawArgs, List<RödaValue> args,
 					     RödaScope scope, RödaStream in, RödaStream out) {
@@ -373,7 +376,11 @@ public class Interpreter {
 				newScope.setLocal(parameters.get(parameters.size()-1).name, argslist);
 			}
 			for (Statement s : value.function().body) {
-				evalStatement(s, newScope, in, out, false);
+				try {
+					evalStatement(s, newScope, in, out, false);
+				} catch (ReturnException e) {
+					break;
+				}
 			}
 			return;
 		}
@@ -423,6 +430,9 @@ public class Interpreter {
 				if (e.getCause() instanceof RödaException) {
 					throw (RödaException) e.getCause();
 				}
+				if (e.getCause() instanceof ReturnException) {
+					error("cannot pipe a return command");
+				}
 				error(e.getCause());
 			}
 		}
@@ -462,6 +472,23 @@ public class Interpreter {
 			return v;
 		}
 	}
+
+	private List<RödaValue> flattenArguments(List<Argument> arguments,
+						 RödaScope scope,
+						 RödaStream in, RödaStream out,
+						 boolean canResolve) {
+		List<RödaValue> args = new ArrayList<>();
+		for (Argument arg : arguments) {
+			RödaValue value = evalExpression(arg.expr, scope, in, out, true);
+			if (canResolve || arg.flattened) value = value.impliciteResolve();
+			if (arg.flattened) {
+				checkList("*", value);
+				args.addAll(value.list());
+			}
+			else args.add(value);
+		}
+		return args;
+	}
 	
 	public Trair<Runnable, StreamType, StreamType> evalCommand(Command cmd,
 								   RödaScope scope,
@@ -470,16 +497,7 @@ public class Interpreter {
 								   boolean canFinish) {
 		if (cmd.type == Command.Type.NORMAL) {
 			RödaValue function = evalExpression(cmd.name, scope, in, out);
-			List<RödaValue> args = new ArrayList<>();
-			for (Argument arg : cmd.arguments) {
-				RödaValue value = evalExpression(arg.expr, scope, in, out, true);
-				if (arg.flattened) {
-					value = value.impliciteResolve();
-					checkList("*", value);
-					args.addAll(value.list());
-				}
-				else args.add(value);
-			}
+			List<RödaValue> args = flattenArguments(cmd.arguments, scope, in, out, false);
 			Runnable r = () -> {
 				exec(cmd.file, cmd.line, function, args, new RödaScope(scope), _in, _out);
 				if (canFinish) _out.finish();
@@ -499,16 +517,7 @@ public class Interpreter {
 		}
 
 		if (cmd.type == Command.Type.VARIABLE) {
-			List<RödaValue> args = new ArrayList<>();
-			for (Argument arg : cmd.arguments) {
-				RödaValue value = evalExpression(arg.expr, scope, in, out, true)
-					.impliciteResolve();
-				if (arg.flattened) {
-					checkList("*", value);
-					args.addAll(value.list());
-				}
-				else args.add(value);
-			}
+			List<RödaValue> args = flattenArguments(cmd.arguments, scope, in, out, true);
 			Expression e = cmd.name;
 			if (e.type != Expression.Type.VARIABLE
 			    && e.type != Expression.Type.ELEMENT
@@ -718,6 +727,9 @@ public class Interpreter {
 					for (Statement s : cmd.body) {
 						evalStatement(s, newScope, _in, _out, false);
 					}
+				} catch (ReturnException e) {
+					if (canFinish) _out.finish();
+					throw e;
 				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
 				if (canFinish) _out.finish();
 			};
@@ -725,15 +737,29 @@ public class Interpreter {
 		}
 
 		if (cmd.type == Command.Type.TRY) {
+			Trair<Runnable, StreamType, StreamType> trair
+				= evalCommand(cmd.cmd, scope, in, out, _in, _out, false);
 			Runnable r = () -> {
 				try {
-				        evalCommand(cmd.cmd, scope, in, out, _in, _out, false);
+					trair.first().run();
+				} catch (ReturnException e) {
+					if (canFinish) _out.finish();
+					throw e;
 				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
 				if (canFinish) _out.finish();
 			};
-			return new Trair<>(r, new ValueStream(), new ValueStream());
+			return new Trair<>(r, trair.second(), trair.third());
 		}
 
+		if (cmd.type == Command.Type.RETURN) {
+			List<RödaValue> args = flattenArguments(cmd.arguments, scope, in, out, false);
+			Runnable r = () -> {
+				for (RödaValue arg : args) out.push(arg);
+				if (canFinish) _out.finish();
+				throw new ReturnException();
+			};
+			return new Trair<>(r, new ValueStream(), new ValueStream());
+		}
 
 		error("unknown command");
 		return null;

@@ -457,7 +457,8 @@ public class Parser {
 			FOR,
 			TRY,
 			TRY_DO,
-			VARIABLE
+			VARIABLE,
+			RETURN
 		}
 		Type type;
 		Expression name;
@@ -550,6 +551,15 @@ public class Parser {
 		return cmd;
 	}
 	
+	static Command _makeReturnCommand(String file, int line, List<Argument> arguments) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.RETURN;
+		cmd.file = file;
+		cmd.line = line;
+		cmd.arguments = arguments;
+		return cmd;
+	}
+	
 	static Command parseCommand(TokenList tl) {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
@@ -610,22 +620,32 @@ public class Parser {
 			}
 		}
 
+		if (tl.acceptIfNext("return")) {
+			List<Argument> arguments = parseArguments(tl);
+			return _makeReturnCommand(file, line, arguments);
+		}
+
 		Expression name = parseExpression(tl);
 		String operator = null;
 		if (tl.isNext(":=", "=", "++", "--", "+=", "-=", "*=", "/=", ".=", "~=", "?")) {
 			operator = tl.nextString();
 		}
 		
+		List<Argument> arguments = parseArguments(tl);
+		if (operator == null)
+			return _makeNormalCommand(file, line, name, arguments);
+		else
+			return _makeVariableCommand(file, line, name, operator, arguments);
+	}
+
+	private static List<Argument> parseArguments(TokenList tl) {
 		List<Argument> arguments = new ArrayList<>();
 		while (!tl.isNext("|", ";", "\n", ")", "]", "}", "<EOF>")) {
 			boolean flattened = tl.acceptIfNext("*");
 			arguments.add(_makeArgument(flattened,
 						    parseExpression(tl)));
 		}
-		if (operator == null)
-			return _makeNormalCommand(file, line, name, arguments);
-		else
-			return _makeVariableCommand(file, line, name, operator, arguments);
+		return arguments;
 	}
 	
 	static class Expression {

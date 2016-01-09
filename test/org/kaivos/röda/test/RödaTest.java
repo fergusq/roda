@@ -218,6 +218,30 @@ public class RödaTest {
 				  + "done}"));
 	}
 
+	@Test
+	public void testTrivialReturn() {
+		assertEquals("a",
+			     eval("main{push\"a\";return;push\"b\"}"));
+	}
+
+	@Test
+	public void testNestedReturn() {
+		assertEquals("b,d",
+			     eval("main{push\"b\";if true;do push\"d\";if true;do try return;done;done;push\"a\"}"));
+	}
+
+	@Test
+	public void testReturnInTry() {
+		assertEquals("b",
+			     eval("main{push\"b\";try return;push\"a\"}"));
+	}
+
+	@Test
+	public void testReturnInIf() {
+		assertEquals("b",
+			     eval("main{push\"b\";if true;do return;done;push\"a\"}"));
+	}
+
 	// Merkkijono-operaatiot
 
 	@Test
