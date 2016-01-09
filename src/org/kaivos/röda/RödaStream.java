@@ -126,6 +126,13 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		return stream;
 	}
 
+	public static RödaStream makeStream(StreamHandler in, StreamHandler out) {
+		RödaStream stream = new RödaStreamImpl();
+		stream.inHandler = in;
+		stream.outHandler = out;
+		return stream;
+	}
+
 	public static RödaStream makeStream() {
 		RödaStream stream = new RödaStreamImpl();
 		stream.inHandler = ValueStream.HANDLER;
@@ -231,6 +238,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		}
 	}
 	public static class VoidStream extends StreamType {
+
 		static final StreamHandler HANDLER = new StreamHandler() {
 				public void handlePush(Supplier<Boolean> finished,
 						       Consumer<RödaValue> put,
@@ -251,6 +259,8 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		StreamHandler newHandler() {
 			return HANDLER;
 		}
+
+		public static final RödaStream STREAM = makeStream(HANDLER, HANDLER);
 	}
 	public static class ByteStream extends StreamType {
 		StreamHandler newHandler() {
@@ -388,9 +398,9 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		@Override
 		public RödaValue get() {
 			//System.err.println("<PULL " + this + ">");
-			while (queue.isEmpty() && !finished);
+			while (queue.isEmpty() && !closed());
 		
-			if (finished()) return null;
+			if (closed()) return null;
 			try {
 				return queue.take();
 			} catch (InterruptedException e) {
@@ -412,6 +422,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		
 		@Override
 		public void finish() {
+			//System.err.println("<FINISH " + this + ">");
 			finished = true;
 		}
 		
@@ -421,7 +432,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		}
 		
 		/* pitää kirjaa virroista debug-viestejä varten */
-		private static int streamCounter;
+		private static int streamCounter = 0;
 		
 		int id; { id = streamCounter++; }
 	}
