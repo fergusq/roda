@@ -48,6 +48,11 @@ public abstract class RödaValue {
 		return null;
 	}
 
+	public Map<String, RödaValue> map() {
+		error("can't cast a " + typeString() + " to a list");
+		return null;
+	}
+
 	public Function function() {
 		error("can't convert '" + str() + "' to a function");
 		return null;
@@ -65,6 +70,11 @@ public abstract class RödaValue {
 
 	public void set(RödaValue index, RödaValue value) {
 		if (!isList()) error("a " + typeString() + " doesn't have elements");
+	}
+
+	public RödaValue contains(RödaValue index) {
+		error("a " + typeString() + " doesn't have elements");
+		return null;
 	}
 
 	public RödaValue length() {
@@ -176,6 +186,10 @@ public abstract class RödaValue {
 	}
 	
 	public boolean isList() {
+		return false;
+	}
+	
+	public boolean isMap() {
 		return false;
 	}
 

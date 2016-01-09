@@ -50,6 +50,12 @@ public class RödaList extends RödaValue {
 		list.set(index, value);
 	}
 
+	@Override public RödaValue contains(RödaValue indexVal) {
+		int index = indexVal.num();
+		if (index < 0) index = list.size()+index;
+		return RödaBoolean.of(index < list.size());
+	}
+
 	@Override public RödaValue length() {
 		return RödaNumber.of(list.size());
 	}
@@ -100,5 +106,9 @@ public class RödaList extends RödaValue {
 
 	public static RödaList of(RödaValue... elements) {
 		return new RödaList(new ArrayList<>(Arrays.asList(elements)));
+	}
+
+	public static RödaList empty() {
+		return new RödaList(new ArrayList<>());
 	}
 }

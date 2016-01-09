@@ -33,6 +33,8 @@ import java.io.IOException;
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.RödaValue.*;
 import org.kaivos.röda.type.RödaRecordInstance;
+import org.kaivos.röda.type.RödaList;
+import org.kaivos.röda.type.RödaMap;
 import org.kaivos.röda.RödaStream;
 import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Parser.*;
@@ -765,6 +767,12 @@ public class Interpreter {
 										)
 									   .collect(toList()));
 		if (exp.type == Expression.Type.NEW) {
+			switch (exp.datatype.name) { // TODO tyyppiparametrit listoille ja kartoille
+			case "list":
+				return RödaList.empty();
+			case "map":
+				return RödaMap.empty();
+			}
 			Record r = records.get(exp.datatype.name);
 			if (r == null)
 				error("record class '" + r.name + "' not found");
@@ -772,7 +780,8 @@ public class Interpreter {
 		}
 		if (exp.type == Expression.Type.LENGTH
 		    || exp.type == Expression.Type.ELEMENT
-		    || exp.type == Expression.Type.SLICE) {
+		    || exp.type == Expression.Type.SLICE
+		    || exp.type == Expression.Type.CONTAINS) {
 			RödaValue list = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 			
 			if (exp.type == Expression.Type.LENGTH) {
@@ -798,6 +807,11 @@ public class Interpreter {
 				else end = null;
 				
 			        return list.slice(start, end);
+			}
+			
+			if (exp.type == Expression.Type.CONTAINS) {
+				RödaValue index = evalExpression(exp.index, scope, in, out).impliciteResolve();
+				return list.contains(index);
 			}
 		}
 		if (exp.type == Expression.Type.FIELD) {

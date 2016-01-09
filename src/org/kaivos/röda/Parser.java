@@ -72,6 +72,7 @@ public class Parser {
 		case "void":
 		case "reference":
 		case "list":
+		case "map":
 		case "string":
 		case "number":
 		case "boolean":
@@ -615,6 +616,7 @@ public class Parser {
 			LIST,
 			LENGTH,
 			ELEMENT,
+			CONTAINS,
 			FIELD,
 			SLICE,
 			CONCAT,
@@ -780,6 +782,16 @@ public class Parser {
 	private static Expression expressionElement(String file, int line, Expression list, Expression index) {
 		Expression e = new Expression();
 		e.type = Expression.Type.ELEMENT;
+		e.file = file;
+		e.line = line;
+		e.sub = list;
+		e.index = index;
+		return e;
+	}
+
+	private static Expression expressionContains(String file, int line, Expression list, Expression index) {
+		Expression e = new Expression();
+		e.type = Expression.Type.CONTAINS;
 		e.file = file;
 		e.line = line;
 		e.sub = list;
@@ -997,8 +1009,15 @@ public class Parser {
 					Expression e2 = tl.isNext("]") ? null : parseExpression(tl);
 					ans = expressionSlice(file, line, ans, e1, e2);
 				}
-				else ans = expressionElement(file, line, ans, e1);
-				tl.accept("]");
+				else {
+					tl.accept("]");
+					if (tl.acceptIfNext("?")) {
+						ans = expressionContains(file, line, ans, e1);
+					}
+					else {
+						ans = expressionElement(file, line, ans, e1);
+					}
+				}
 			}
 			else if (tl.acceptIfNext(".")) {
 				String field = identifier(tl);
