@@ -342,7 +342,7 @@ done
 **`return`** työntää sille annetut argumentit ulostulovirtaan ja lopettaa nykyisen funktion suorittamisen.
 
 ```
-hae_syntymävuodella vuosi {
+hae_syntymävuodella_yksi_tyttö vuosi {
 	for tyttö in tytöt; do
 		if tyttö[1] -eq vuosi; do
 			return tyttö
@@ -681,10 +681,13 @@ Funktio `accept` odottaa, kunnes palvelimeen otetaan yhteyttä ja palauttaa yhte
 
 ```
 record socket {
-	push : function
-	pull : function
+	write : function
+	read : function
+	close : function
 }
 ```
+
+(TODO selitä, miten socketin metodeja käytetään)
 
 ### split
 
