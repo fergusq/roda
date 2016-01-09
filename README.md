@@ -247,7 +247,7 @@ Normaalisti muuttujia ei kuitenkaan tarvitse tuhota erikseen.
 ```
 undefine nimi
 ```
-Muuttujan tuhoaminen ei poista muuttujaa varmasti, sillä se saattaa olla määritelty jollakin toisellakin ohjelman
+Muuttujan tuhoaminen ei poista muuttujaa varmasti, sillä se saattaa olla määritelty jollakin toisella ohjelman
 tasolla.
 ```
 nimi := "Lissu"
@@ -323,6 +323,18 @@ while true; do
 		käsittele viestit
 	done
 done
+```
+
+**`return`** työntää sille annetut argumentit ulostulovirtaan ja lopettaa nykyisen funktion suorittamisen.
+
+```
+hae_syntymävuodella vuosi {
+	for tyttö in tytöt; do
+		if tyttö[1] -eq vuosi; do
+			return tyttö
+		done
+	done
+}
 ```
 
 ### Lausekkeet
@@ -700,7 +712,7 @@ record thread {
 }
 ```
 
-Function `start` käynnistää säikeen. Funktiot `push` ja `pull` on kytketty säiefunktion sisään- ja ulostulovirtoihin.
+Funktio `start` käynnistää säikeen. Funktiot `push` ja `pull` on kytketty säiefunktion sisään- ja ulostulovirtoihin.
 
 ### time
 
