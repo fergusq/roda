@@ -5,6 +5,7 @@ import java.util.Random;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -33,7 +34,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.File;
 import java.io.InputStreamReader;
-import java.io.BufferedReader;
 
 import java.nio.charset.StandardCharsets;
 
@@ -486,11 +486,24 @@ class Builtins {
 				new VoidStream(), new SingleValueStream()));
 		
 		S.setLocal("exec", valueFromNativeFunction("exec", (rawArgs, args, scope, in, out) -> {
+					HashMap<String, String> envVars = new HashMap<>();
+					while (args.size() > 0 && args.get(0).isString()
+					       && args.get(0).str().equals("-E")) {
+						args.remove(0);
+						if (args.size() < 3) argumentUnderflow("exec", 4, args.size()+1);
+						checkString("exec", args.get(0));
+						checkString("exec", args.get(0));
+						envVars.put(args.get(0).str(), args.get(1).str());
+						args.remove(0);
+						args.remove(0);
+					}
+					if (args.size() < 1) argumentUnderflow("exec", 1, args.size());
 				        List<String> params = args.stream().map(v -> v.str()).collect(toList());
 					try {
 
 						ProcessBuilder b = new ProcessBuilder(params);
 						b.directory(I.currentDir);
+						b.environment().putAll(envVars);
 						Process p = b.start();
 						InputStream pout = p.getInputStream();
 						PrintWriter pin = new PrintWriter(p.getOutputStream());
@@ -533,7 +546,7 @@ class Builtins {
 						}
 						error(e.getCause());
 					}
-				}, Arrays.asList(new Parameter("command", false), new Parameter("args", false)), true,
+				}, Arrays.asList(new Parameter("flags_command_and_args", false)), true,
 				new ValueStream(), new ValueStream()));
 
 		/* Tiedosto-operaatiot */
