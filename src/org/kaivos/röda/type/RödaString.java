@@ -32,6 +32,15 @@ public class RödaString extends RödaValue {
 		return RödaNumber.of(text.length());
 	}
 
+	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal) {
+		int start = startVal == null ? 0 : startVal.num();
+		int end = endVal == null ? text.length() : endVal.num();
+		if (start < 0) start = text.length()+start;
+		if (end < 0) end = text.length()+end;
+		if (end == 0 && start > 0) end = text.length();
+		return of(text.substring(start, end));
+	}
+
 	@Override public String typeString() {
 		return "string";
 	}
