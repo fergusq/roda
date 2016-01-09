@@ -231,11 +231,19 @@ public class Parser {
 		public static class Field {
 			public final String name;
 			public final Datatype type;
+			final Expression defaultValue;
 
 			Field(String name,
 			      Datatype type) {
+				this(name, type, null);
+			}
+
+			Field(String name,
+			      Datatype type,
+			      Expression defaultValue) {
 				this.name = name;
 				this.type = type;
+				this.defaultValue = defaultValue;
 			}
 		}
 		
@@ -288,10 +296,25 @@ public class Parser {
 		tl.accept("{");
 		maybeNewline(tl);
 		while (!tl.isNext("}")) {
-			String fieldName = identifier(tl);
-			tl.accept(":");
-			Datatype type = parseType(tl);
-			fields.add(new Record.Field(fieldName, type));
+			if (tl.isNext("function")) {
+				String file = tl.seek().getFile();
+				int line = tl.seek().getLine();
+				Function method = parseFunction(tl);
+				String fieldName = method.name;
+				Datatype type = new Datatype("function");
+				Expression defaultValue = expressionFunction(file, line, method);
+				fields.add(new Record.Field(fieldName, type, defaultValue));
+			}
+			else {
+				String fieldName = identifier(tl);
+				tl.accept(":");
+				Datatype type = parseType(tl);
+				Expression defaultValue = null;
+				if (tl.acceptIfNext("=")) {
+					defaultValue = parseExpression(tl);
+				}
+				fields.add(new Record.Field(fieldName, type, defaultValue));
+			}
 			if (!tl.isNext("}"))
 				newline(tl);
 		}

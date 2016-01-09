@@ -161,7 +161,7 @@ public class Interpreter {
 	
 	public void interpret(String code, List<RödaValue> args, String filename) {
 		try {
-		        load(code, filename);
+		        load(code, filename, G);
 			
 			RödaValue main = G.resolve("main");
 			if (main == null) return;
@@ -176,11 +176,11 @@ public class Interpreter {
 		}
 	}
 
-	public void load(String code, String filename) {
+	public void load(String code, String filename, RödaScope scope) {
 		try {
 			Program program = parse(t.tokenize(code, filename));
 			for (Function f : program.functions) {
-				G.setLocal(f.name, valueFromFunction(f));
+				scope.setLocal(f.name, valueFromFunction(f));
 			}
 			for (Record r : program.records) {
 				records.put(r.name, r);
@@ -192,7 +192,7 @@ public class Interpreter {
 		}
 	}
 
-	public void loadFile(File file) {
+	public void loadFile(File file, RödaScope scope) {
 		try {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 			String code = "";
@@ -201,7 +201,7 @@ public class Interpreter {
 				code += line + "\n";
 			}
 			in.close();
-			load(code, file.getName());
+			load(code, file.getName(), scope);
 		} catch (IOException e) {
 		        error(e);
 		}
@@ -357,7 +357,7 @@ public class Interpreter {
 					argumentUnderflow(name, parameters.size()-1, args.size());
 			}
 			// joko nimettömän funktion paikallinen scope tai tämä scope
-			RödaScope newScope = new RödaScope(value.localScope() == null ? scope : value.localScope());
+			RödaScope newScope = value.localScope() == null ? scope : new RödaScope(value.localScope());
 			int j = 0;
 			for (Parameter p : parameters) {
 				if (isVarargs && j == parameters.size()-1) break;
@@ -481,7 +481,7 @@ public class Interpreter {
 				else args.add(value);
 			}
 			Runnable r = () -> {
-				exec(cmd.file, cmd.line, function, args, scope, _in, _out);
+				exec(cmd.file, cmd.line, function, args, new RödaScope(scope), _in, _out);
 				if (canFinish) _out.finish();
 			};
 			StreamType ins, outs;
@@ -776,7 +776,13 @@ public class Interpreter {
 			Record r = records.get(exp.datatype.name);
 			if (r == null)
 				error("record class '" + r.name + "' not found");
-			return RödaRecordInstance.of(r, exp.datatype.subtypes, records);
+			RödaValue value = RödaRecordInstance.of(r, exp.datatype.subtypes, records);
+			for (Record.Field f : r.fields) {
+				if (f.defaultValue != null) {
+					value.setField(f.name, evalExpression(f.defaultValue, new RödaScope(scope), VoidStream.STREAM, VoidStream.STREAM, false));
+				}
+			}
+			return value;
 		}
 		if (exp.type == Expression.Type.LENGTH
 		    || exp.type == Expression.Type.ELEMENT
@@ -829,7 +835,7 @@ public class Interpreter {
 			return list.join(separator);
 		}
 		if (exp.type == Expression.Type.STATEMENT_LIST) {
-			RödaStream _out = makeStream(new ValueStream(), new ValueStream());
+			RödaStream _out = makeStream(ValueStream.HANDLER, ValueStream.HANDLER);
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
 			if (val == null)

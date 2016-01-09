@@ -142,7 +142,7 @@ class Builtins {
 						String filename = value.str();
 						File file = IOUtils.getMaybeRelativeFile(I.currentDir,
 											 filename);
-						I.loadFile(file);
+						I.loadFile(file, scope);
 					}
 				}, Arrays.asList(new Parameter("files", false)), true,
 				new VoidStream(), new VoidStream()));
@@ -504,7 +504,7 @@ class Builtins {
 							pin.close();
 						};
 						Runnable output = () -> {
-							BufferedReader reader = new BufferedReader(new InputStreamReader(pout));
+							InputStreamReader reader = new InputStreamReader(pout);
 							try {
 							        while (true) {
 								        int chr = reader.read();
@@ -765,7 +765,7 @@ class Builtins {
 
 					Runnable task = () -> {
 						try {
-							I.exec("<thread>", 0, function,
+							I.exec("<thread.start>", 0, function,
 							       Collections.emptyList(), newScope, _in, _out);
 						} catch (RödaException e) {
 							System.err.println("[E] " + e.getMessage());
