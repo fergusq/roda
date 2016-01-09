@@ -303,6 +303,25 @@ public class RödaTest {
 			     eval("main{push \"[\"..(1 2 3)..\"]\"}"));
 	}
 
+	// Karttaoperaatiot
+
+	@Test
+	public void testMapLength() {
+		assertEquals("3",
+			     eval("main{a:=new map;a[\"Reetta\"]=19;a[\"Vilma\"]=23;a[\"Susanna\"]=14;push #a}"));
+	}
+
+	@Test
+	public void testMapContains() {
+		assertEquals("true",
+			     eval("main{a:=new map;a[\"Reetta\"]=19;a[\"Vilma\"]=23;a[\"Susanna\"]=14;"
+				  + "push a[\"Vilma\"]?}"));
+		init();
+		assertEquals("false",
+			     eval("main{a:=new map;a[\"Reetta\"]=19;a[\"Vilma\"]=23;a[\"Susanna\"]=14;"
+				  + "push a[\"Annamari\"]?}"));
+	}
+
 	// Upotetut komennot
 
 	@Test
