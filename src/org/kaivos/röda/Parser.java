@@ -1007,6 +1007,7 @@ public class Parser {
 				if (tl.isNext(":")) {
 					tl.accept(":");
 					Expression e2 = tl.isNext("]") ? null : parseExpression(tl);
+					tl.accept("]");
 					ans = expressionSlice(file, line, ans, e1, e2);
 				}
 				else {
