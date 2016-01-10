@@ -703,6 +703,11 @@ record socket {
 	write : function
 	read : function
 	close : function
+	
+	ip : string
+	hostname : string
+	port : number
+	localport : number
 }
 ```
 

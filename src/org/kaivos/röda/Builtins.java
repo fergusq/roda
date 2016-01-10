@@ -714,7 +714,11 @@ class Builtins {
 						 null,
 						 Arrays.asList(new Record.Field("write", new Datatype("function")),
 							       new Record.Field("read", new Datatype("function")),
-							       new Record.Field("close", new Datatype("function"))),
+							       new Record.Field("close", new Datatype("function")),
+							       new Record.Field("ip", new Datatype("string")),
+							       new Record.Field("hostname", new Datatype("string")),
+							       new Record.Field("port", new Datatype("number")),
+							       new Record.Field("localport", new Datatype("number"))),
 						 false);
 		I.records.put("socket", socketRecord);
 
@@ -781,6 +785,32 @@ class Builtins {
 												    new VoidStream()
 												    )
 												);
+									      socketObject
+										      .setField("ip",
+												RödaString
+												.of(socket
+												    .getInetAddress()
+												    .getHostAddress()
+												    ));
+									      socketObject
+										      .setField("hostname",
+												RödaString
+												.of(socket
+												    .getInetAddress()
+												    .getCanonicalHostName()
+												    ));
+									      socketObject
+										      .setField("port",
+												RödaNumber
+												.of(socket
+												    .getPort()
+												    ));
+									      socketObject
+										      .setField("localport",
+												RödaNumber
+												.of(socket
+												    .getLocalPort()
+												    ));
 									      o.push(socketObject);
 									  }, Collections.emptyList(), false,
 								  new VoidStream(), new ValueStream()));
