@@ -360,8 +360,8 @@ public class Interpreter {
 				if (args.size() < parameters.size()-1)
 					argumentUnderflow(name, parameters.size()-1, args.size());
 			}
-			// joko nimettömän funktion paikallinen scope tai tämä scope
-			RödaScope newScope = value.localScope() == null ? scope : new RödaScope(value.localScope());
+			// joko nimettömän funktion paikallinen scope tai ylätason scope
+			RödaScope newScope = value.localScope() == null ? new RödaScope(G) : new RödaScope(value.localScope());
 			int j = 0;
 			for (Parameter p : parameters) {
 				if (isVarargs && j == parameters.size()-1) break;
@@ -500,7 +500,7 @@ public class Interpreter {
 			RödaValue function = evalExpression(cmd.name, scope, in, out);
 			List<RödaValue> args = flattenArguments(cmd.arguments, scope, in, out, false);
 			Runnable r = () -> {
-				exec(cmd.file, cmd.line, function, args, new RödaScope(scope), _in, _out);
+				exec(cmd.file, cmd.line, function, args, scope, _in, _out);
 				if (canFinish) _out.finish();
 			};
 			StreamType ins, outs;
@@ -804,9 +804,11 @@ public class Interpreter {
 			if (r == null)
 				error("record class '" + r.name + "' not found");
 			RödaValue value = RödaRecordInstance.of(r, exp.datatype.subtypes, records);
+			RödaScope recordScope = new RödaScope(G);
+			recordScope.setLocal("self", value);
 			for (Record.Field f : r.fields) {
 				if (f.defaultValue != null) {
-					value.setField(f.name, evalExpression(f.defaultValue, new RödaScope(scope), VoidStream.STREAM, VoidStream.STREAM, false));
+					value.setField(f.name, evalExpression(f.defaultValue, recordScope, VoidStream.STREAM, VoidStream.STREAM, false));
 				}
 			}
 			return value;
