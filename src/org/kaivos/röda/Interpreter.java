@@ -794,11 +794,21 @@ public class Interpreter {
 										)
 									   .collect(toList()));
 		if (exp.type == Expression.Type.NEW) {
-			switch (exp.datatype.name) { // TODO tyyppiparametrit listoille ja kartoille
+			switch (exp.datatype.name) {
 			case "list":
-				return RödaList.empty();
+				if (exp.datatype.subtypes.size() == 0)
+					return RödaList.empty();
+				else if (exp.datatype.subtypes.size() == 1)
+					return RödaList.empty(exp.datatype.subtypes.get(0));
+				error("wrong number of typearguments to list");
+				return null;
 			case "map":
-				return RödaMap.empty();
+				if (exp.datatype.subtypes.size() == 0)
+					return RödaMap.empty();
+				else if (exp.datatype.subtypes.size() == 1)
+					return RödaMap.empty(exp.datatype.subtypes.get(0));
+				error("wrong number of typearguments to map");
+				return null;
 			}
 			Record r = records.get(exp.datatype.name);
 			if (r == null)

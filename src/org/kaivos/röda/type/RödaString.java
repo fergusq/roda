@@ -41,10 +41,6 @@ public class RödaString extends RödaValue {
 		return of(text.substring(start, end));
 	}
 
-	@Override public String typeString() {
-		return "string";
-	}
-
 	@Override public boolean isString() {
 		return true;
 	}

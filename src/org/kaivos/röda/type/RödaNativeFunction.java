@@ -28,8 +28,8 @@ public class RödaNativeFunction extends RödaValue {
 	private NativeFunction function;
 
 	private RödaNativeFunction(NativeFunction function) {
-		assumeIdentity("function");
 		assumeIdentity("nfunction");
+		assumeIdentity("function");
 		this.function = function;
 	}
 
@@ -43,10 +43,6 @@ public class RödaNativeFunction extends RödaValue {
 
 	@Override public String str() {
 		return "<nfunction '"+function.name+"'>";
-	}
-
-	@Override public String typeString() {
-		return "nfunction";
 	}
 
 	@Override public boolean isFunction() {

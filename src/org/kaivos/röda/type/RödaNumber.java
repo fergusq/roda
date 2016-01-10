@@ -23,10 +23,6 @@ public class RödaNumber extends RödaValue {
 	        return number;
 	}
 
-	@Override public String typeString() {
-		return "number";
-	}
-
 	@Override public boolean isString() {
 		return true;
 	}

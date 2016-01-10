@@ -37,10 +37,6 @@ public class RödaFunction extends RödaValue {
 		return localScope;
 	}
 
-	@Override public String typeString() {
-		return "function";
-	}
-
 	@Override public boolean isFunction() {
 		return true;
 	}

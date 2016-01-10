@@ -180,16 +180,11 @@ public class Parser {
 	static Datatype parseType(TokenList tl) {
 		String name = typename(tl);
 		List<Datatype> subtypes = new ArrayList<>();
-		if (name.equals("list")
+	        if (!name.equals("function")
+		    && !name.equals("string")
+		    && !name.equals("boolean")
+		    && !name.equals("number")
 		    && tl.acceptIfNext("<")) {
-			subtypes.add(parseType(tl));
-			tl.accept(">"); // PURKKAA
-		}
-		else if (!name.equals("function")
-			 && !name.equals("string")
-			 && !name.equals("boolean")
-			 && !name.equals("number")
-			 && tl.acceptIfNext("<")) {
 			do {
 				subtypes.add(parseType(tl));
 			} while (tl.acceptIfNext(","));

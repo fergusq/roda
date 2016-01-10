@@ -53,10 +53,6 @@ public class RödaReference extends RödaValue {
 		return true;
 	}
 
-	@Override public String typeString() {
-		return "reference";
-	}
-
 	@Override public boolean strongEq(RödaValue value) {
 		error("can't compare a reference");
 		return false;

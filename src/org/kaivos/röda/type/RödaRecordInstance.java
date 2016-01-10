@@ -65,10 +65,6 @@ public class RödaRecordInstance extends RödaValue {
 		return true;
 	}
 
-	@Override public String typeString() {
-		return basicIdentity().toString();
-	}
-
 	@Override public boolean strongEq(RödaValue value) {
 		if (!basicIdentity().equals(value.basicIdentity()))
 			return false;

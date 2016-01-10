@@ -27,10 +27,6 @@ public class RödaBoolean extends RödaValue {
 		return true;
 	}
 
-	@Override public String typeString() {
-		return "bool";
-	}
-
 	@Override public boolean strongEq(RödaValue value) {
 		return value.isBoolean() && value.bool() == bool;
 	}

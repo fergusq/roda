@@ -9,14 +9,23 @@ import static java.util.stream.Collectors.joining;
 
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaMap extends RödaValue {
 
+	private Datatype type;
 	private Map<String, RödaValue> map;
 
 	private RödaMap(Map<String, RödaValue> map) {
 		assumeIdentity("map");
+		this.type = null;
 		this.map = map;
+	}
+
+	private RödaMap(Datatype type) {
+		assumeIdentity(new Datatype("map", Arrays.asList(type)));
+		this.type = type;
+		this.map = new HashMap<>();
 	}
 
 	@Override public RödaValue copy() {
@@ -42,6 +51,8 @@ public class RödaMap extends RödaValue {
 
 	@Override public void set(RödaValue indexVal, RödaValue value) {
 		String index = indexVal.str();
+		if (type != null && !value.is(type))
+			error("cannot put a " + value.typeString() + " to a " + typeString());
 		map.put(index, value);
 	}
 
@@ -56,10 +67,6 @@ public class RödaMap extends RödaValue {
 
 	@Override public boolean isMap() {
 		return true;
-	}
-
-	@Override public String typeString() {
-		return "map";
 	}
 
 	@Override public boolean strongEq(RödaValue value) {
@@ -77,5 +84,9 @@ public class RödaMap extends RödaValue {
 
 	public static RödaMap empty() {
 		return new RödaMap(new HashMap<>());
+	}
+
+	public static RödaMap empty(Datatype type) {
+		return new RödaMap(type);
 	}
 }

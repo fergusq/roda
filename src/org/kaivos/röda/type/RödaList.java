@@ -9,14 +9,23 @@ import static java.util.stream.Collectors.joining;
 
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaList extends RödaValue {
 
+	private Datatype type;
 	private List<RödaValue> list;
 
 	private RödaList(List<RödaValue> list) {
 		assumeIdentity("list");
+		this.type = null;
 		this.list = list;
+	}
+
+	private RödaList(Datatype type) {
+		assumeIdentity(new Datatype("list", Arrays.asList(type)));
+		this.type = type;
+		this.list = new ArrayList<>();
 	}
 
 	@Override public RödaValue copy() {
@@ -47,6 +56,8 @@ public class RödaList extends RödaValue {
 		if (list.size() <= index)
 			error("array index out of bounds: index " + index
 			      + ", size " + list.size());
+		if (type != null && !value.is(type))
+			error("cannot put a " + value.typeString() + " to a " + typeString());
 		list.set(index, value);
 	}
 
@@ -80,15 +91,13 @@ public class RödaList extends RödaValue {
 	}
 
 	@Override public void add(RödaValue value) {
+		if (type != null && !value.is(type))
+			error("cannot put a " + value.typeString() + " to a " + typeString());
 		list.add(value);
 	}
 
 	@Override public boolean isList() {
 		return true;
-	}
-
-	@Override public String typeString() {
-		return "list";
 	}
 
 	@Override public boolean strongEq(RödaValue value) {
@@ -110,5 +119,9 @@ public class RödaList extends RödaValue {
 
 	public static RödaList empty() {
 		return new RödaList(new ArrayList<>());
+	}
+
+	public static RödaList empty(Datatype type) {
+		return new RödaList(type);
 	}
 }

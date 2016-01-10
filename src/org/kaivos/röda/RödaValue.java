@@ -213,7 +213,9 @@ public abstract class RödaValue {
 		return false;
 	}
 
-	public abstract String typeString();
+	public final String typeString() {
+		return basicIdentity().toString();
+	}
 	
 	@Override
 	public String toString() {
