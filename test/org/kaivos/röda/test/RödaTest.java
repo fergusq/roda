@@ -50,7 +50,7 @@ public class RödaTest {
 
 	@Test
 	public void testLuaLiteral() {
-		assertEquals("emma", eval("main{push[[emma]]}"));
+		assertEquals("Emma", eval("main{push[[Emma]]}"));
 	}
 	
 	// Laskutoimitukset
@@ -81,6 +81,23 @@ public class RödaTest {
 	public void testAccessingInheritedRecordFields() {
 		assertEquals("9,5", eval("record R{a:number}record S:R{b:number};"
 					 + "main{r:=new S;r.a=5;r.b=9;push r.b r.a}"));
+	}
+
+	@Test
+	public void testTypeparametrization() {
+		assertEquals("Elsa,Kyllikki", eval("record R<T>{t:T;l:list<T>}main{r:=new R<string>;"
+						   + "r.t=\"Kyllikki\";r.l=new list<string>;r.l+=\"Elsa\";"
+						   + "push r.l[0] r.t}"));
+	}
+
+	@Test(expected=RödaException.class)
+	public void testFieldTypeparametrizationWithWrongTypes() {
+		eval("record R<T>{t:T}main{r:=new R<string>;r.t=5}");
+	}
+
+	@Test(expected=RödaException.class)
+	public void testListTypeparametrizationWithWrongTypes() {
+		eval("record R<T>{l:list<T>}main{r:=new R<string>;r.l=new list<number>;r.l+=5}");
 	}
 
 	/* README:n esimerkit (hieman muutettuina)*/
