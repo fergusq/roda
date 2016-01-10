@@ -255,7 +255,10 @@ class Builtins {
 							if (matcher.matches()) {
 								RödaValue[] results = new RödaValue[matcher.groupCount()+1];
 								for (int i = 0; i < results.length; i++) {
-									results[i] = RödaString.of(matcher.group(i));
+									String group = matcher.group(i);
+									results[i] = RödaString.of(group != null
+												   ? group
+												   : "");
 								}
 								out.push(RödaList.of(results));
 							}
@@ -271,7 +274,10 @@ class Builtins {
 							if (matcher.matches()) {
 								RödaValue[] results = new RödaValue[matcher.groupCount()];
 								for (int i = 0; i < results.length; i++) {
-									results[i] = RödaString.of(matcher.group(i));
+									String group = matcher.group(i);
+									results[i] = RödaString.of(group != null
+												   ? group
+												   : "");
 								}
 								out.push(RödaList.of(results));
 							}
