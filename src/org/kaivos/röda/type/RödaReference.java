@@ -22,6 +22,10 @@ public class RödaReference extends RödaValue {
 		return "&" + target;
 	}
 
+	@Override public String target() {
+		return target;
+	}
+
 	@Override public RödaValue resolve(boolean implicite) {
 		RödaValue t = scope.resolve(target);
 		if (t == null) error("variable not found (via " + (implicite ? "implicite" : "explicite")
