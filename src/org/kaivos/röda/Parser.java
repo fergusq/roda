@@ -734,6 +734,8 @@ public class Parser {
 				return "'...'";
 			case ELEMENT:
 				return sub.asString() + "[" + index.asString() + "]";
+			case CONTAINS:
+				return sub.asString() + "[" + index.asString() + "]?";
 			case FIELD:
 				return sub.asString() + "." + field;
 			case LENGTH:

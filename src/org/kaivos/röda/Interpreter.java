@@ -772,7 +772,7 @@ public class Interpreter {
 	
 	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out,
 					 boolean variablesAreReferences) {
-		callStack.get().push("expression " + exp.type + "\n\tat " + exp.file + ":" + exp.line);
+		callStack.get().push("expression " + exp.asString() + "\n\tat " + exp.file + ":" + exp.line);
 		RödaValue value = evalExpressionWithoutErrorHandling(exp, scope, in, out,
 								     variablesAreReferences);
 		callStack.get().pop();
