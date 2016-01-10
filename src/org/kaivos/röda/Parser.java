@@ -1036,20 +1036,22 @@ public class Parser {
 			ans = expressionVariable(file, line, name);
 		}
 
-		ans = parseArrayAccessIfPossible(tl, ans);
+		ans = parseArrayAccessIfPossible(tl, ans, Parser::parseExpression);
 
 		return ans;
 	}
 
-	private static Expression parseArrayAccessIfPossible(TokenList tl, Expression ans) {
+	private static Expression parseArrayAccessIfPossible(TokenList tl, Expression ans,
+							     java.util.function.
+							     Function<TokenList, Expression> expressionParser) {
 		while (tl.isNext("[", ".")) {
 			String file = tl.seek().getFile();
 			int line = tl.seek().getLine();
 			if (tl.acceptIfNext("[")) {
-				Expression e1 = tl.isNext(":") ? null : parseExpression(tl);
+				Expression e1 = tl.isNext(":") ? null : expressionParser.apply(tl);
 				if (tl.isNext(":")) {
 					tl.accept(":");
-					Expression e2 = tl.isNext("]") ? null : parseExpression(tl);
+					Expression e2 = tl.isNext("]") ? null : expressionParser.apply(tl);
 					tl.accept("]");
 					ans = expressionSlice(file, line, ans, e1, e2);
 				}
@@ -1190,7 +1192,7 @@ public class Parser {
 			ans = expressionVariable(file, line, name);
 		}
 
-		ans = parseArrayAccessIfPossible(tl, ans);
+		ans = parseArrayAccessIfPossible(tl, ans, Parser::parseCalculatorExpression);
 
 		return ans;
 	}

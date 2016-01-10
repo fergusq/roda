@@ -240,7 +240,13 @@ class Builtins {
 					if (args.size() < 1) argumentUnderflow("match", 1, 0);
 					checkString("match", args.get(0));
 				        String regex = args.get(0).str(); args.remove(0);
-					Pattern pattern = Pattern.compile(regex);
+					Pattern pattern;
+					try {
+						pattern = Pattern.compile(regex);
+					} catch (PatternSyntaxException e) {
+						error("match: pattern syntax exception: " + e.getMessage());
+						return;
+					}
 
 					if (args.size() > 0) {
 						for (RödaValue arg : args) {

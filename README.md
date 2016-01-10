@@ -420,13 +420,13 @@ done
 Operaattorit taulukossa (tunniste tarkoittaa joko lukua tai merkkijonoa riippuen siitä, onko kyseessä lista
 vai kartta):
 
-| Operaattori | Selitys               | Ottaa                                   | Palauttaa              |
-|:-----------:| --------------------- | --------------------------------------- | ---------------------- |
-| `..`        | Yhdistää merkkijonoja | 2 merkkijonoa tai listan ja merkkijonon | Merkkijonon tai listan |
+| Operaattori | Selitys                     | Ottaa                             | Palauttaa              |
+|:-----------:| --------------------------- | --------------------------------- | ---------------------- |
+| `..`        | Yhdistää merkkijonoja       | 2 arvoa, merkkijonoja tai listoja | Merkkijonon tai listan |
 | `&`         | Yhdistää listan alkiot merkkijonoksi | Listan ja merkkijonon    | Merkkijonon            |
-| `#`         | Palauttaa arvon pituuden | Listan, kartan tai merkkijonon       | Kokonaisluvun          |
-| `[]`        | Palauttaa listan alkion  | Listan tai kartan ja tunnisteen      | Alkion                 |
-| `[:]`       | Palauttaa listan osalistan | Listan tai merkkijonon ja nollasta kahteen kokonaislukua | Listan tai merkkijonon |
+| `#`         | Palauttaa arvon pituuden    | Listan, kartan tai merkkijonon    | Kokonaisluvun          |
+| `[]`        | Palauttaa listan alkion     | Listan tai kartan ja tunnisteen   | Alkion                 |
+| `[:]`       | Palauttaa listan osalistan  | Listan tai merkkijonon ja nollasta kahteen kokonaislukua | Listan tai merkkijonon |
 | `[]?`       | Kertoo, onko alkio olemassa | Listan tai kartan ja tunnisteen   | Totuusarvon            |
 
 Laskujärjestys:

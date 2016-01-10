@@ -324,7 +324,8 @@ public class Interpreter {
 		
 		if (args.size() > 0) {
 			callStack.get().push("calling " + value.str()
-					     + " with arguments " + args.stream()
+					     + " with argument" + (args.size() == 1 ? " " : "s ")
+					     + args.stream()
 					     .map(RödaValue::str).collect(joining(", "))
 					     + "\n\tat " + file + ":" + line);
 		}
