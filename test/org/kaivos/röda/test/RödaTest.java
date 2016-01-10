@@ -242,6 +242,12 @@ public class RödaTest {
 			     eval("main{push\"b\";if true;do return;done;push\"a\"}"));
 	}
 
+	@Test
+	public void testReturningValue() {
+		assertEquals("Laila,Ella,Tuuli",
+			     eval("f{return\"Ella\";push\"Salla\"}main{push\"Laila\";f;push\"Tuuli\"}"));
+	}
+
 	// Merkkijono-operaatiot
 
 	@Test
