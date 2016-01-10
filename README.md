@@ -113,8 +113,9 @@ pull_twice &variable {
 
 ### Tietueet
 
-Ohjelman ylätasolla voi funktioiden lisäksi esiintyä tietueitamäärityksiä. Tietueet ovat tapa säilöä useita arvoja yhteen
-olioon. Ne ovat vahvasti tyypitettyjä ja siksi turvallisempia kuin listat ja hajautuskartat.
+Ohjelman ylätasolla voi funktioiden lisäksi esiintyä tietueitamäärityksiä.
+Tietueet ovat tapa säilöä useita arvoja yhteen olioon.
+Ne ovat vahvasti tyypitettyjä ja siksi turvallisempia kuin tyypittämättömät listat ja hajautuskartat.
 
 Tietuemääritys koostuu nimestä ja joukosta kenttiä:
 
@@ -137,8 +138,7 @@ perhe.jäsenet = ("Miete" "Joona" "Linn")
 ```
 
 Jos haluaa, osalle kentistä voi antaa oletusarvoja. Oletusarvolausekkeet suoritetaan uudestaan aina, kun uusi
-tietue luodaan. Niiden sisään- ja ulostulovirrat ovat kiinni ja niiden näkyvyysalue on sama kuin sillä funktiolla,
-joka luo tietueolion.
+tietue luodaan. Niiden sisään- ja ulostulovirrat ovat kiinni ja niiden näkyvyysalue on sama kuin ylätasolla.
 
 ```
 record Perhe {
@@ -180,8 +180,7 @@ erityistapaukset on alempana.
 Funktion argumentteina mahdollisesti olevat funktiokutsut on kytketty isäntäfunktion virtaan, eikä
 putkeen. Vain kutsuttava funktio putkittuu.
 
-Kutsuttava funktio saa näkyvyysalueekseen sen näkyvyysalueen, jossa se on määritelty. Jos funktio
-on kuitenkin määritelty ylätasolla, sen näkyvyysalue on sama kuin kutsuvalla funktiolla.
+Kutsuttava funktio saa näkyvyysalueekseen sen näkyvyysalueen, jossa se on määritelty.
 
 Argumentit annetaan funktiolle siinä järjestyksessä, missä ne ovat kutsussa. Jos funktion viimeisessä
 parametrissa on valitsin `...`, asetetaan kaikki yli menevät argumentit siihen listana. Lista voi olla
@@ -399,12 +398,23 @@ kokonimet := sisarukset.." "..sukunimi
 push "Sisarusten koko nimet ovat " kokonimet&" ja " ".\n"
 ```
 
-#### Kartat
-
-Uuden kartan voi luoda samaan tapaan kuten tietueolion:
+Listan alkioille voi määritellä tyypin, jos se luodaan `new`-avainsanan avulla:
 
 ```
-iät := new map
+tytöt := new list<string>
+tytöt .= ("Eveliina" "Lilja" "Nea")
+```
+
+Jos listaan yrittäisi laittaa joitain muita olioita kuin merkkijonoja, antaisi koodi suorituksenaikaisen
+virheen.
+
+#### Kartat
+
+Uuden kartan voi luoda samaan tapaan kuten tietueolion.
+Kuten listoille, myös tauluille voi määritellä erikseen alkion tyypin. Tätä ei kuitenkaan ole pakko tehdä.
+
+```
+iät := new map<number>
 iät["Maija"] = 13
 iät["Ilmari"] = 19
 ```
@@ -416,6 +426,8 @@ if push '!iät["Maija"]?'; do
 	push "Maijan ikää ei löydy!\n"
 done
 ```
+
+#### Operaattorit
 
 Operaattorit taulukossa (tunniste tarkoittaa joko lukua tai merkkijonoa riippuen siitä, onko kyseessä lista
 vai kartta):
