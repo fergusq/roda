@@ -612,6 +612,13 @@ määrittää, että avaimet annetaan merkkijonoina listojen sijaan. (TODO parem
 
 Palauttaa argumentit listana.
 
+### match
+
+>`match regex merkkijono*`
+
+Yrittää parsia annetut merkkijonot (tai vaihtoehtoisesti sisääntulovirrasta otetut merkkijonot) annetun säännöllisen
+lausekkeen avulla. Palauttaa listan säännöllisen lausekkeen mukaisista ryhmistä merkkijonossa.
+
 ### name
 
 >`name muuttuja+`

@@ -236,6 +236,45 @@ class Builtins {
 				}, Arrays.asList(new Parameter("patterns", false)), true,
 				new ValueStream(), new ValueStream()));
 
+		S.setLocal("match", valueFromNativeFunction("match", (rawArgs, args, scope, in, out) -> {
+					if (args.size() < 1) argumentUnderflow("match", 1, 0);
+					checkString("match", args.get(0));
+				        String regex = args.get(0).str(); args.remove(0);
+					Pattern pattern = Pattern.compile(regex);
+
+					if (args.size() > 0) {
+						for (RödaValue arg : args) {
+							checkString("match", arg);
+							Matcher matcher = pattern.matcher(arg.str());
+							if (matcher.matches()) {
+								RödaValue[] results = new RödaValue[matcher.groupCount()+1];
+								for (int i = 0; i < results.length; i++) {
+									results[i] = RödaString.of(matcher.group(i));
+								}
+								out.push(RödaList.of(results));
+							}
+							else out.push(RödaList.of());
+						}
+					}
+					else {
+						while (true) {
+							RödaValue input = in.pull();
+							if (input == null) break;
+							checkString("match", input);
+							Matcher matcher = pattern.matcher(input.str());
+							if (matcher.matches()) {
+								RödaValue[] results = new RödaValue[matcher.groupCount()];
+								for (int i = 0; i < results.length; i++) {
+									results[i] = RödaString.of(matcher.group(i));
+								}
+								out.push(RödaList.of(results));
+							}
+							else out.push(RödaList.of());
+						}
+					}
+				}, Arrays.asList(new Parameter("pattern", false), new Parameter("strings", false)), true,
+				new ValueStream(), new ValueStream()));
+
 		S.setLocal("replace", valueFromNativeFunction("replace", (rawArgs, args, scope, in, out) -> {
 					if (args.size() % 2 != 0) error("invalid arguments for replace: even number required (got " + args.size() + ")");
 					try {
