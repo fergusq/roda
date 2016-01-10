@@ -84,6 +84,13 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testDefaultValues() {
+		assertEquals("Isabella", eval("f{push \"Isabella\"}"
+					      + "record R{a:string=![f]}"
+					      + "main{r:=new R;push r.a}"));
+	}
+
+	@Test
 	public void testTypeparametrization() {
 		assertEquals("Elsa,Kyllikki", eval("record R<T>{t:T;l:list<T>}main{r:=new R<string>;"
 						   + "r.t=\"Kyllikki\";r.l=new list<string>;r.l+=\"Elsa\";"
