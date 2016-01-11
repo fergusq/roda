@@ -9,13 +9,14 @@ import org.kaivos.nept.parser.ParsingException;
 
 public class Calculator {
 	private static TokenScanner t = new TokenScanner()
-		.addOperators("+-*/%^&|~=<>()E")
 		.addOperatorRule("&&")
 		.addOperatorRule("||")
 		.addOperatorRule("^^")
 		.addOperatorRule("!=")
 		.addOperatorRule("<=")
 		.addOperatorRule(">=")
+		.addOperatorRule("**")
+		.addOperators("+-*/%^&|~=<>()E")
 		.addOperatorRule("abs")
 		.addOperatorRule("exp")
 		.addOperatorRule("ln")
