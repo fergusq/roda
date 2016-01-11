@@ -528,12 +528,15 @@ public class Parser {
 		return cmd;
 	}
 
-	static Command _makeTryCommand(String file, int line, List<Statement> body) {
+	static Command _makeTryCommand(String file, int line, List<Statement> body,
+				       String catchVar, List<Statement> elseBody) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.TRY_DO;
 		cmd.file = file;
 		cmd.line = line;
 		cmd.body = body;
+		cmd.variable = catchVar;
+		cmd.elseBody = elseBody;
 		return cmd;
 	}
 
@@ -604,12 +607,23 @@ public class Parser {
 				tl.accept("do");
 				maybeNewline(tl);
 				List<Statement> body = new ArrayList<>();
-				while (!tl.isNext("done")) {
+				while (!tl.isNext("catch", "done")) {
 					body.add(parseStatement(tl));
 					newline(tl);
 				}
+				String catchVar = null;
+				List<Statement> elseBody = null;
+				if (tl.acceptIfNext("catch")) {
+					catchVar = identifier(tl);
+					newline(tl);
+					elseBody = new ArrayList<>();
+					while (!tl.isNext("done")) {
+						elseBody.add(parseStatement(tl));
+						newline(tl);
+					}
+				}
 				tl.accept("done");
-				return _makeTryCommand(file, line, body);
+				return _makeTryCommand(file, line, body, catchVar, elseBody);
 			} else {
 				return _makeTryCommand(file, line, parseCommand(tl));
 			}

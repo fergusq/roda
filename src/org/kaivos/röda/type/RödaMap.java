@@ -22,10 +22,16 @@ public class RödaMap extends RödaValue {
 		this.map = map;
 	}
 
-	private RödaMap(Datatype type) {
+	private RödaMap(Datatype type, Map<String, RödaValue> map) {
 		assumeIdentity(new Datatype("map", Arrays.asList(type)));
+		assumeIdentity("map");
 		this.type = type;
-		this.map = new HashMap<>();
+		this.map = map;
+		for (RödaValue value : map.values()) {
+			if (!value.is(type)) {
+				error("can't make a " + typeString() + " that contains a " + value.typeString());
+			}
+		}
 	}
 
 	@Override public RödaValue copy() {
@@ -82,11 +88,19 @@ public class RödaMap extends RödaValue {
 		return new RödaMap(new HashMap<>(map));
 	}
 
+	public static RödaMap of(Datatype type, Map<String, RödaValue> map) {
+		return new RödaMap(type, new HashMap<>(map));
+	}
+
+	public static RödaMap of(String type, Map<String, RödaValue> map) {
+		return new RödaMap(new Datatype(type), new HashMap<>(map));
+	}
+
 	public static RödaMap empty() {
 		return new RödaMap(new HashMap<>());
 	}
 
 	public static RödaMap empty(Datatype type) {
-		return new RödaMap(type);
+		return new RödaMap(type, new HashMap<>());
 	}
 }

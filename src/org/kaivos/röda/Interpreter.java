@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Deque;
 import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Collections;
 
 import java.util.Optional;
 
@@ -35,6 +37,7 @@ import static org.kaivos.röda.RödaValue.*;
 import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
+import org.kaivos.röda.type.RödaString;
 import org.kaivos.röda.RödaStream;
 import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Parser.*;
@@ -90,7 +93,28 @@ public class Interpreter {
 		STDOUT = new OSStream(out);
 	}
 
-	{ Builtins.populate(this); /*System.out.println(G.map.keySet());*/ }
+	private static final Record errorRecord;
+	static {
+		errorRecord = new Record("error",
+					 Collections.emptyList(),
+					 null,
+					 Arrays.asList(new Record.Field("message", new Datatype("string")),
+						       new Record.Field("stack", new Datatype("list",
+											      Arrays
+											      .asList(new Datatype
+												      ("string")))),
+						       new Record.Field("javastack", new Datatype("list",
+											      Arrays
+											      .asList(new Datatype
+												      ("string"))))
+						       ),
+					 false);
+	}
+
+	{
+		Builtins.populate(this);
+		records.put("error", errorRecord);
+	}
 
 	static ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -118,30 +142,52 @@ public class Interpreter {
 	@SuppressWarnings("serial")
 	public static class RödaException extends RuntimeException {
 		private Deque<String> stack;
-		private RödaException(String message, Deque<String> stack) {
+		private RödaValue errorObject;
+		private RödaException(String message, Deque<String> stack, RödaValue errorObject) {
 			super(message);
 			this.stack = stack;
+			this.errorObject = errorObject;
 		}
 
-		private RödaException(Throwable cause, Deque<String> stack) {
+		private RödaException(Throwable cause, Deque<String> stack, RödaValue errorObject) {
 			super(cause);
 			this.stack = stack;
+			this.errorObject = errorObject;
 		}
 
 		public Deque<String> getStack() {
 			return stack;
 		}
+
+		public RödaValue getErrorObject() {
+			return errorObject;
+		}
+	}
+
+	private static RödaValue makeErrorObject(String message, StackTraceElement[] javaStackTrace) {
+		RödaValue errorObject = RödaRecordInstance
+			.of(errorRecord,
+			    Collections.emptyList(),
+			    new HashMap<>()); // Purkkaa, mutta toimii: errorilla ei ole riippuvuuksia
+		errorObject.setField("message", RödaString.of(message));
+		errorObject.setField("stack", RödaList.of("string", callStack.get().stream()
+							  .map(RödaString::of).collect(toList())));
+		errorObject.setField("javastack", RödaList.of("string", Arrays.stream(javaStackTrace)
+							      .map(StackTraceElement::toString).map(RödaString::of)
+							      .collect(toList())));
+		return errorObject;
 	}
 	
 	public static void error(String message) {
-		RödaException e = new RödaException(message, new ArrayDeque<>(callStack.get()));
-		callStack.get().clear();
+		RödaValue errorObject = makeErrorObject(message, Thread.currentThread().getStackTrace());
+		RödaException e = new RödaException(message, new ArrayDeque<>(callStack.get()), errorObject);
 		throw e;
 	}
 
 	public static void error(Throwable cause) {
-		RödaException e = new RödaException(cause, new ArrayDeque<>(callStack.get()));
-		callStack.get().clear();
+		RödaValue errorObject = makeErrorObject(cause.getClass().getName() + ": " + cause.getMessage(),
+							cause.getStackTrace());
+		RödaException e = new RödaException(cause, new ArrayDeque<>(callStack.get()), errorObject);
 		throw e;
 	}
 
@@ -334,8 +380,12 @@ public class Interpreter {
 					     + " with no arguments\n"
 					     + "\tat " + file + ":" + line);
 		}
-		execWithoutErrorHandling(value, rawArgs, args, scope, in, out);
-		callStack.get().pop();
+		try {
+			execWithoutErrorHandling(value, rawArgs, args, scope, in, out);
+		}
+		finally {
+			callStack.get().pop();
+		}
 	}
 
 	@SuppressWarnings("serial")
@@ -675,8 +725,12 @@ public class Interpreter {
 				callStack.get().push("variable command " + e.asString() + " " + cmd.operator + " "
 						     + args.stream().map(RödaValue::str).collect(joining(" "))
 						     + "\n\tat " + cmd.file + ":" + cmd.line);
-				r.run();
-				callStack.get().pop();
+				try {
+					r.run();
+				}
+				finally {
+					callStack.get().pop();
+				}
 			};
 			return new Trair<>(finalR, new ValueStream(), new ValueStream());
 		}
@@ -731,7 +785,21 @@ public class Interpreter {
 				} catch (ReturnException e) {
 					if (canFinish) _out.finish();
 					throw e;
-				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
+				} catch (Exception e) {
+					if (cmd.variable != null) {
+						RödaScope newScope = new RödaScope(scope);
+						RödaValue errorObject;
+						if (e instanceof RödaException) errorObject = ((RödaException) e)
+											.getErrorObject();
+						else errorObject = makeErrorObject(e.getClass().getName() + ": "
+										   + e.getMessage(),
+										   e.getStackTrace());
+						newScope.setLocal(cmd.variable, errorObject);
+						for (Statement s : cmd.elseBody) {
+							evalStatement(s, newScope, _in, _out, false);
+						}
+					}
+				}
 				if (canFinish) _out.finish();
 			};
 			return new Trair<>(r, new ValueStream(), new ValueStream());
@@ -773,9 +841,14 @@ public class Interpreter {
 	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out,
 					 boolean variablesAreReferences) {
 		callStack.get().push("expression " + exp.asString() + "\n\tat " + exp.file + ":" + exp.line);
-		RödaValue value = evalExpressionWithoutErrorHandling(exp, scope, in, out,
-								     variablesAreReferences);
-		callStack.get().pop();
+		RödaValue value;
+		try {
+			value = evalExpressionWithoutErrorHandling(exp, scope, in, out,
+								   variablesAreReferences);
+		}
+		finally {
+			callStack.get().pop();
+		}
 		return value;
 	}
 	

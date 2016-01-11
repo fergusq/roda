@@ -22,10 +22,16 @@ public class RödaList extends RödaValue {
 		this.list = list;
 	}
 
-	private RödaList(Datatype type) {
+	private RödaList(Datatype type, List<RödaValue> list) {
 		assumeIdentity(new Datatype("list", Arrays.asList(type)));
+		assumeIdentity("list");
 		this.type = type;
-		this.list = new ArrayList<>();
+		this.list = list;
+		for (RödaValue value : list) {
+			if (!value.is(type)) {
+				error("can't make a " + typeString() + " that contains a " + value.typeString());
+			}
+		}
 	}
 
 	@Override public RödaValue copy() {
@@ -113,6 +119,14 @@ public class RödaList extends RödaValue {
 		return new RödaList(new ArrayList<>(list));
 	}
 
+	public static RödaList of(Datatype type, List<RödaValue> list) {
+		return new RödaList(type, new ArrayList<>(list));
+	}
+
+	public static RödaList of(String type, List<RödaValue> list) {
+		return new RödaList(new Datatype(type), new ArrayList<>(list));
+	}
+
 	public static RödaList of(RödaValue... elements) {
 		return new RödaList(new ArrayList<>(Arrays.asList(elements)));
 	}
@@ -122,6 +136,6 @@ public class RödaList extends RödaValue {
 	}
 
 	public static RödaList empty(Datatype type) {
-		return new RödaList(type);
+		return new RödaList(type, new ArrayList<>());
 	}
 }
