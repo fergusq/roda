@@ -154,7 +154,10 @@ public abstract class RödaValue {
 		return identities.get(0);
 	}
 
-	// TODO
+	public boolean is(String type) {
+		return is(new Datatype(type));
+	}
+	
 	public boolean is(Datatype type) {
 	        return identities.contains(type);
 	}

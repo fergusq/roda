@@ -191,6 +191,11 @@ public class Interpreter {
 		throw e;
 	}
 
+	public static void error(RödaValue errorObject) {
+		RödaException e = new RödaException(errorObject.getField("message").str(), new ArrayDeque<>(callStack.get()), errorObject);
+		throw e;
+	}
+
 	private static void printStackTrace() {
 	        for (String step : callStack.get()) {
 			System.err.println(step);
