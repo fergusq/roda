@@ -51,16 +51,18 @@ public class Interpreter {
 	public static class RödaScope {
 		Optional<RödaScope> parent;
 		Map<String, RödaValue> map;
+		Map<String, Datatype> typeargs;
 		RödaScope(Optional<RödaScope> parent) {
 			this.parent = parent;
 			this.map = new HashMap<>();
+			this.typeargs = new HashMap<>();
 		}
 		RödaScope(RödaScope parent) {
 			this(Optional.of(parent));
 		}
 
 		public synchronized RödaValue resolve(String name) {
-			if (map.get(name) != null) return map.get(name);
+			if (map.containsKey(name)) return map.get(name);
 			if (parent.isPresent()) return parent.get().resolve(name);
 			return null;
 		}
@@ -75,6 +77,37 @@ public class Interpreter {
 
 		public synchronized void setLocal(String name, RödaValue value) {
 		        map.put(name, value);
+		}
+
+		public void addTypearg(String name, Datatype value) {
+			if (getTypearg(name) != null) {
+				error("can't override typeargument '" + name + "'");
+			}
+			typeargs.put(name, value);
+		}
+
+		public Datatype getTypearg(String name) {
+			if (typeargs.containsKey(name)) {
+				return typeargs.get(name);
+			}
+			if (parent.isPresent()) {
+				return parent.get().getTypearg(name);
+			}
+			return null;
+		}
+
+		public Datatype substitute(Datatype type) {
+			Datatype typearg = getTypearg(type.name);
+			if (typearg != null) {
+				if (!type.subtypes.isEmpty())
+					error("a typeparameter can't have subtypes");
+				return typearg;
+			}
+			List<Datatype> subtypes = new ArrayList<>();
+			for (Datatype t : type.subtypes) {
+				subtypes.add(substitute(t));
+			}
+			return new Datatype(type.name, subtypes);
 		}
 	}
 	
@@ -219,7 +252,7 @@ public class Interpreter {
 			if (!main.isFunction() || main.isNativeFunction())
 				error("The variable 'main' must be a function");
 			
-			exec("<runtime>", 0, main, args, G, STDIN, STDOUT);
+			exec("<runtime>", 0, main, Collections.emptyList(), args, G, STDIN, STDOUT);
 		} catch (ParsingException|RödaException e) {
 			throw e;
 		} catch (Exception e) {
@@ -347,8 +380,8 @@ public class Interpreter {
 	}
 
 	void exec(String file, int line,
-		  RödaValue value, List<RödaValue> rawArgs, RödaScope scope,
-		  RödaStream in, RödaStream out) {
+		  RödaValue value, List<Datatype> typeargs, List<RödaValue> rawArgs,
+		  RödaScope scope, RödaStream in, RödaStream out) {
 		List<RödaValue> args = new ArrayList<>();
 		int i = 0;
 		for (RödaValue val : rawArgs) {
@@ -386,8 +419,10 @@ public class Interpreter {
 					     + "\tat " + file + ":" + line);
 		}
 		try {
-			execWithoutErrorHandling(value, rawArgs, args, scope, in, out);
+			execWithoutErrorHandling(value, typeargs, rawArgs, args, scope, in, out);
 		}
+		catch (RödaException e) { throw e; }
+		catch (Throwable e) { error(e); }
 		finally {
 			callStack.get().pop();
 		}
@@ -396,7 +431,8 @@ public class Interpreter {
 	@SuppressWarnings("serial")
 	private static class ReturnException extends RuntimeException {  }
 	
-	public void execWithoutErrorHandling(RödaValue value, List<RödaValue> rawArgs, List<RödaValue> args,
+	public void execWithoutErrorHandling(RödaValue value, List<Datatype> typeargs,
+					     List<RödaValue> rawArgs, List<RödaValue> args,
 					     RödaScope scope, RödaStream in, RödaStream out) {
 		
 		//System.err.println("exec " + value + "("+args+") " + in + " -> " + out);
@@ -407,6 +443,7 @@ public class Interpreter {
 		}
 		if (value.isFunction() && !value.isNativeFunction()) {
 			boolean isVarargs = value.function().isVarargs;
+			List<String> typeparams = value.function().typeparams;
 			List<Parameter> parameters = value.function().parameters;
 			String name = value.function().name;
 			if (!isVarargs) {
@@ -417,6 +454,12 @@ public class Interpreter {
 			}
 			// joko nimettömän funktion paikallinen scope tai ylätason scope
 			RödaScope newScope = value.localScope() == null ? new RödaScope(G) : new RödaScope(value.localScope());
+			if (typeparams.size() != typeargs.size())
+				error("invalid number of typearguments for '" + name + "': "
+				      + typeparams.size() + " required, got " + typeargs.size());
+			for (int i = 0; i < typeparams.size(); i++) {
+				newScope.addTypearg(typeparams.get(i), typeargs.get(i));
+			}
 			int j = 0;
 			for (Parameter p : parameters) {
 				if (isVarargs && j == parameters.size()-1) break;
@@ -460,18 +503,25 @@ public class Interpreter {
 			RödaStream _out = last ? out : new RödaStreamImpl();
 			Trair<Runnable, StreamType, StreamType> tr = evalCommand(command, scope,
 										 in, out,
-										 _in, _out,
-										 !last || redirected);
-			runnables[i] = tr.first();
+										 _in, _out);
+			runnables[i] = () -> {
+				try {
+					tr.first().run();
+				} finally {
+					// sulje virta jos se on putki tai muulla tavalla uudelleenohjaus
+					if (!last || redirected)
+						_out.finish();
+				}
+			};
 		        _out.inHandler = tr.third().newHandler();
 		        _in.outHandler = tr.second().newHandler();
 			_in = _out;
 			i++;
 		}
-		i = 0;
 		if (runnables.length == 1) runnables[0].run();
 		else {
 			Future<?>[] futures = new Future<?>[runnables.length];
+			i = 0;
 			for (Runnable r : runnables) {
 				futures[i++] = executor.submit(r);
 			}
@@ -549,14 +599,14 @@ public class Interpreter {
 	public Trair<Runnable, StreamType, StreamType> evalCommand(Command cmd,
 								   RödaScope scope,
 								   RödaStream in, RödaStream out,
-								   RödaStream _in, RödaStream _out,
-								   boolean canFinish) {
+								   RödaStream _in, RödaStream _out) {
 		if (cmd.type == Command.Type.NORMAL) {
 			RödaValue function = evalExpression(cmd.name, scope, in, out);
+			List<Datatype> typeargs = cmd.typearguments.stream()
+				.map(scope::substitute).collect(toList());
 			List<RödaValue> args = flattenArguments(cmd.arguments, scope, in, out, false);
 			Runnable r = () -> {
-				exec(cmd.file, cmd.line, function, args, scope, _in, _out);
-				if (canFinish) _out.finish();
+				exec(cmd.file, cmd.line, function, typeargs, args, scope, _in, _out);
 			};
 			StreamType ins, outs;
 			if (function.isFunction() && !function.isNativeFunction()) {
@@ -733,6 +783,8 @@ public class Interpreter {
 				try {
 					r.run();
 				}
+				catch (RödaException ex) { throw ex; }
+				catch (Throwable ex) { error(ex); }
 				finally {
 					callStack.get().pop();
 				}
@@ -759,7 +811,6 @@ public class Interpreter {
 						evalStatement(s, newScope, _in, _out, false);
 					}
 				}
-				if (canFinish) _out.finish();
 			};
 			return new Trair<>(r, new ValueStream(), new ValueStream());
 		}
@@ -775,7 +826,6 @@ public class Interpreter {
 						evalStatement(s, newScope, _in, _out, false);
 					}
 				}
-				if (canFinish) _out.finish();
 			};
 			return new Trair<>(r, new ValueStream(), new ValueStream());
 		}
@@ -788,8 +838,7 @@ public class Interpreter {
 						evalStatement(s, newScope, _in, _out, false);
 					}
 				} catch (ReturnException e) {
-					if (canFinish) _out.finish();
-					throw e;
+			        	throw e;
 				} catch (Exception e) {
 					if (cmd.variable != null) {
 						RödaScope newScope = new RödaScope(scope);
@@ -805,22 +854,19 @@ public class Interpreter {
 						}
 					}
 				}
-				if (canFinish) _out.finish();
 			};
 			return new Trair<>(r, new ValueStream(), new ValueStream());
 		}
 
 		if (cmd.type == Command.Type.TRY) {
 			Trair<Runnable, StreamType, StreamType> trair
-				= evalCommand(cmd.cmd, scope, in, out, _in, _out, false);
+				= evalCommand(cmd.cmd, scope, in, out, _in, _out);
 			Runnable r = () -> {
 				try {
 					trair.first().run();
 				} catch (ReturnException e) {
-					if (canFinish) _out.finish();
 					throw e;
 				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
-				if (canFinish) _out.finish();
 			};
 			return new Trair<>(r, trair.second(), trair.third());
 		}
@@ -829,7 +875,6 @@ public class Interpreter {
 			List<RödaValue> args = flattenArguments(cmd.arguments, scope, in, out, false);
 			Runnable r = () -> {
 				for (RödaValue arg : args) out.push(arg);
-				if (canFinish) _out.finish();
 				throw new ReturnException();
 			};
 			return new Trair<>(r, new ValueStream(), new ValueStream());
@@ -851,6 +896,8 @@ public class Interpreter {
 			value = evalExpressionWithoutErrorHandling(exp, scope, in, out,
 								   variablesAreReferences);
 		}
+		catch (RödaException e) { throw e; }
+		catch (Throwable e) { error(e); value = null; }
 		finally {
 			callStack.get().pop();
 		}
@@ -872,28 +919,37 @@ public class Interpreter {
 										)
 									   .collect(toList()));
 		if (exp.type == Expression.Type.NEW) {
-			switch (exp.datatype.name) {
+			Datatype type = scope.substitute(exp.datatype);
+			List<Datatype> subtypes = exp.datatype.subtypes.stream()
+				.map(scope::substitute).collect(toList());
+			switch (type.name) {
 			case "list":
-				if (exp.datatype.subtypes.size() == 0)
+				if (subtypes.size() == 0)
 					return RödaList.empty();
-				else if (exp.datatype.subtypes.size() == 1)
-					return RödaList.empty(exp.datatype.subtypes.get(0));
-				error("wrong number of typearguments to list");
+				else if (subtypes.size() == 1)
+					return RödaList.empty(subtypes.get(0));
+				error("wrong number of typearguments to 'list': 1 required, got " + subtypes.size());
 				return null;
 			case "map":
-				if (exp.datatype.subtypes.size() == 0)
+				if (subtypes.size() == 0)
 					return RödaMap.empty();
-				else if (exp.datatype.subtypes.size() == 1)
-					return RödaMap.empty(exp.datatype.subtypes.get(0));
-				error("wrong number of typearguments to map");
+				else if (subtypes.size() == 1)
+					return RödaMap.empty(subtypes.get(0));
+				error("wrong number of typearguments to 'map': 1 required, got " + subtypes.size());
 				return null;
 			}
-			Record r = records.get(exp.datatype.name);
+			Record r = records.get(type.name);
 			if (r == null)
-				error("record class '" + r.name + "' not found");
-			RödaValue value = RödaRecordInstance.of(r, exp.datatype.subtypes, records);
+				error("record class '" + type.name + "' not found");
+			if (r.typeparams.size() != subtypes.size())
+				error("wrong number of typearguments for '" + r.name + "': "
+				      + r.typeparams.size() + " required, got " + subtypes.size());
+			RödaValue value = RödaRecordInstance.of(r, subtypes, records);
 			RödaScope recordScope = new RödaScope(G);
 			recordScope.setLocal("self", value);
+			for (int i = 0; i < subtypes.size(); i++) {
+				recordScope.addTypearg(r.typeparams.get(i), subtypes.get(i));
+			}
 			for (Record.Field f : r.fields) {
 				if (f.defaultValue != null) {
 					value.setField(f.name, evalExpression(f.defaultValue, recordScope, VoidStream.STREAM, VoidStream.STREAM, false));

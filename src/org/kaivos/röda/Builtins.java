@@ -159,7 +159,7 @@ class Builtins {
 					}
 					else error(args.get(0));
 				}, Arrays.asList(new Parameter("errorObject", false)), false,
-				new VoidStream(), new ValueStream()));
+				new VoidStream(), new VoidStream()));
 
 		/* Täydentävät virtaoperaatiot */
 
@@ -873,7 +873,7 @@ class Builtins {
 
 					Runnable task = () -> {
 						try {
-							I.exec("<thread.start>", 0, function,
+							I.exec("<thread.start>", 0, function, Collections.emptyList(),
 							       Collections.emptyList(), newScope, _in, _out);
 						} catch (RödaException e) {
 							System.err.println("[E] " + e.getMessage());

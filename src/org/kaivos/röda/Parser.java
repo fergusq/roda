@@ -321,6 +321,7 @@ public class Parser {
 
 	public static class Function {
 		public String name;
+		public List<String> typeparams;
 		public List<Parameter> parameters;
 		public boolean isVarargs;
 		public StreamType input;
@@ -328,6 +329,7 @@ public class Parser {
 		public List<Statement> body;
 
 		Function(String name,
+			 List<String> typeparams,
 			 List<Parameter> parameters,
 			 boolean isVarargs,
 			 StreamType input,
@@ -335,6 +337,7 @@ public class Parser {
 			 List<Statement> body) {
 
 			this.name = name;
+			this.typeparams = typeparams;
 			this.parameters = parameters;
 			this.isVarargs = isVarargs;
 			this.input = input;
@@ -365,6 +368,17 @@ public class Parser {
 		tl.acceptIfNext("function");
 		
 		String name = identifier(tl);
+
+		List<String> typeparams = new ArrayList<>();
+		if (tl.acceptIfNext("<")) {
+			do {
+				String typeparam = identifier(tl);
+				typeparams.add(typeparam);
+			} while (tl.acceptIfNext(","));
+			tl.accept(">");
+		}
+
+		maybeNewline(tl);
 
 		List<Parameter> parameters = new ArrayList<>();
 		boolean isVarargs = false;
@@ -400,7 +414,7 @@ public class Parser {
 		maybeNewline(tl);
 		tl.accept("}");
 
-		return new Function(name, parameters, isVarargs, input, output, body);
+		return new Function(name, typeparams, parameters, isVarargs, input, output, body);
 	}
 	
 	static StreamType parseStreamType(TokenList tl) {
@@ -458,6 +472,7 @@ public class Parser {
 		Type type;
 		Expression name;
 		String operator;
+		List<Datatype> typearguments;
 		List<Argument> arguments;
 		Statement cond;
 		String variable;
@@ -482,12 +497,14 @@ public class Parser {
 	}
 	
 	static Command _makeNormalCommand(String file, int line, Expression name,
+					  List<Datatype> typearguments,
 					  List<Argument> arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.NORMAL;
 		cmd.file = file;
 		cmd.line = line;
 		cmd.name = name;
+		cmd.typearguments = typearguments;
 		cmd.arguments = arguments;
 		return cmd;
 	}
@@ -636,13 +653,20 @@ public class Parser {
 
 		Expression name = parseExpression(tl);
 		String operator = null;
+		List<Datatype> typeargs = new ArrayList<>();
 		if (tl.isNext(":=", "=", "++", "--", "+=", "-=", "*=", "/=", ".=", "~=", "?")) {
 			operator = tl.nextString();
+		}
+		else if (tl.acceptIfNext("<")) {
+			do {
+				typeargs.add(parseType(tl));
+			} while (tl.acceptIfNext(","));
+			tl.accept(">");
 		}
 		
 		List<Argument> arguments = parseArguments(tl);
 		if (operator == null)
-			return _makeNormalCommand(file, line, name, arguments);
+			return _makeNormalCommand(file, line, name, typeargs, arguments);
 		else
 			return _makeVariableCommand(file, line, name, operator, arguments);
 	}
@@ -995,7 +1019,8 @@ public class Parser {
 			}
 			maybeNewline(tl);
 			tl.accept("}");
-			ans = expressionFunction(file, line, new Function("<block>", parameters, isVarargs, input, output, body));
+			ans = expressionFunction(file, line, new Function("<block>", Collections.emptyList(), parameters,
+									  isVarargs, input, output, body));
 		}
 		else if (tl.acceptIfNext("!")) {
 			if (tl.acceptIfNext("(")) {
