@@ -111,6 +111,15 @@ pull_twice &variable {
 }
 ```
 
+Muuttujaparametrien lisäksi funktiolla voi olla tyyppiparametreja, joille pitää antaa funktiokutsussa
+arvot muiden parametrien tapaan:
+
+```
+init_list<T> &variable {
+	variable := new list<T>
+}
+```
+
 ### Tietueet
 
 Ohjelman ylätasolla voi funktioiden lisäksi esiintyä tietueitamäärityksiä.
@@ -212,6 +221,15 @@ jos halutaan antaa arvot olemassa olevasta listasta.
 ```
 sisarukset := ("Joonas" "Amelie")
 tulosta_perheenjäsenet "Mikkola" *sisarukset
+```
+
+Jos funktiolle on määritelty tyyppiparametreja, sille on annettava kutsun yhteydessä vastaava määrä
+tyyppiargumentteja:
+
+```
+init_list<string> sisarukset
+sisarukset += "Joonas"
+sisarukset += "Amelie"
 ```
 
 #### Eri arvojen "kutsuminen"
