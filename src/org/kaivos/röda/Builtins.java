@@ -975,11 +975,13 @@ class Builtins {
 						    while (true) {
 							    RödaValue v = in.pull();
 							    if (v == null) break;
+							    checkString(name, v);
 							    _out.write(v.str().getBytes(StandardCharsets.UTF_8));
 						    }
 					    }
 					    else {
 						    for (RödaValue v : args) {
+							    checkString(name, v);
 							    _out.write(v.str().getBytes(StandardCharsets.UTF_8));
 						    }
 					    }

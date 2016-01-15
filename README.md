@@ -361,7 +361,7 @@ done
 ```
 hae_syntymävuodella_yksi_tyttö vuosi {
 	for tyttö in tytöt; do
-		if tyttö[1] -eq vuosi; do
+		if push 'tyttö[1] = vuosi'; do
 			return tyttö
 		done
 	done
@@ -729,7 +729,22 @@ record socket {
 }
 ```
 
-(TODO selitä, miten socketin metodeja käytetään)
+Metodit toimivat seuraavasti:
+
+>`socket.write arvo*`
+
+Kirjoittaa annettujen merkkijonojen (joko argumentien tai sisääntulovirran arvojen) UTF-8-esitykset
+virtaan.
+
+>`socket.read ((-b n|-l) muuttuja)*`
+
+Ilman argumentteja työntää ulostulovirtaansa virrasta luettuja tavuja lukuina.
+Jos argumentteja on, asettaa jokaiseen annettuun muuttujaan joko `n` seuraavaa tavua tulkittuna UTF-8-merkkijonona
+tai seuraavan rivin (tavuja seuraavaan `\n`-tavuun asti) tulkittuja UTF-8-merkkijonona.
+
+>`socket.close`
+
+Sulkee yhteyden.
 
 ### split
 
