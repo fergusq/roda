@@ -205,6 +205,9 @@ public class Parser {
 	
 	static Program parse(TokenList tl) {
 		//System.err.println(tl);
+		if (tl.acceptIfNext("#")) { // purkkaa, tee tämä lekseriin
+			while (!tl.nextString().equals("\n"));
+		}
 
 		maybeNewline(tl);
 
@@ -400,7 +403,7 @@ public class Parser {
 		return new Function(name, typeparams, parameters, isVarargs, input, output, body);
 	}
 
-	static List<String> parseTypeParameters(TokenList tl) {
+	static List<String> parseTypeparameters(TokenList tl) {
 		List<String> typeparams = new ArrayList<>();
 		if (tl.acceptIfNext("<")) {
 			do {
@@ -464,7 +467,9 @@ public class Parser {
 			TRY,
 			TRY_DO,
 			VARIABLE,
-			RETURN
+			RETURN,
+			BREAK,
+			CONTINUE
 		}
 		Type type;
 		Expression name;
@@ -572,6 +577,22 @@ public class Parser {
 		return cmd;
 	}
 	
+	static Command _makeBreakCommand(String file, int line) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.BREAK;
+		cmd.file = file;
+		cmd.line = line;
+		return cmd;
+	}
+	
+	static Command _makeContinueCommand(String file, int line) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.CONTINUE;
+		cmd.file = file;
+		cmd.line = line;
+		return cmd;
+	}
+	
 	static Command parseCommand(TokenList tl, boolean acceptNewlines) {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
@@ -580,7 +601,7 @@ public class Parser {
 			Statement cond = parseStatement(tl, true);
 			newline(tl);
 			tl.accept("do");
-o			maybeNewline(tl);
+			maybeNewline(tl);
 			List<Statement> body = new ArrayList<>(), elseBody = null;
 			while (!tl.isNext("done") && !tl.isNext("else")) {
 				body.add(parseStatement(tl, false));
@@ -646,6 +667,14 @@ o			maybeNewline(tl);
 		if (tl.acceptIfNext("return")) {
 			List<Argument> arguments = parseArguments(tl, acceptNewlines);
 			return _makeReturnCommand(file, line, arguments);
+		}
+
+		if (tl.acceptIfNext("break")) {
+			return _makeBreakCommand(file, line);
+		}
+
+		if (tl.acceptIfNext("continue")) {
+			return _makeContinueCommand(file, line);
 		}
 
 		Expression name = parseExpression(tl);

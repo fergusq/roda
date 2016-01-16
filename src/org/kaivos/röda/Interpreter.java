@@ -429,7 +429,7 @@ public class Interpreter {
 	}
 
 	@SuppressWarnings("serial")
-	private static class ReturnException extends RuntimeException {  }
+	private static class ReturnException extends RuntimeException { }
 	
 	public void execWithoutErrorHandling(RödaValue value, List<Datatype> typeargs,
 					     List<RödaValue> rawArgs, List<RödaValue> args,
@@ -539,6 +539,9 @@ public class Interpreter {
 				if (e.getCause() instanceof ReturnException) {
 					error("cannot pipe a return command");
 				}
+				if (e.getCause() instanceof BreakOrContinueException) {
+					error("cannot pipe a break or continue command");
+				}
 				error(e.getCause());
 			}
 		}
@@ -577,6 +580,12 @@ public class Interpreter {
 		public V third() {
 			return v;
 		}
+	}
+
+	@SuppressWarnings("serial")
+	private static class BreakOrContinueException extends RuntimeException {
+		private boolean isBreak;
+		private BreakOrContinueException(boolean isBreak) { this.isBreak = isBreak; }
 	}
 
 	private List<RödaValue> flattenArguments(List<Argument> arguments,
@@ -802,8 +811,13 @@ public class Interpreter {
 					evalStatement(cmd.cond, scope, _in, condOut, true);
 					if (!condOut.pull().bool()) break;
 					goToElse = false;
-					for (Statement s : cmd.body) {
-						evalStatement(s, newScope, _in, _out, false);
+					try {
+						for (Statement s : cmd.body) {
+							evalStatement(s, newScope, _in, _out, false);
+						}
+					} catch (BreakOrContinueException e) {
+						if (!isWhile) throw e;
+						if (e.isBreak) break;
 					}
 				} while (isWhile);
 				if (goToElse && cmd.elseBody != null) {
@@ -822,8 +836,12 @@ public class Interpreter {
 				RödaScope newScope = new RödaScope(scope);
 				for (RödaValue val : list.list()) {
 					newScope.setLocal(cmd.variable, val);
-					for (Statement s : cmd.body) {
-						evalStatement(s, newScope, _in, _out, false);
+					try {
+						for (Statement s : cmd.body) {
+							evalStatement(s, newScope, _in, _out, false);
+						}
+					} catch (BreakOrContinueException e) {
+						if (e.isBreak) break;
 					}
 				}
 			};
@@ -876,6 +894,14 @@ public class Interpreter {
 			Runnable r = () -> {
 				for (RödaValue arg : args) out.push(arg);
 				throw new ReturnException();
+			};
+			return new Trair<>(r, new ValueStream(), new ValueStream());
+		}
+
+		if (cmd.type == Command.Type.BREAK
+		    || cmd.type == Command.Type.CONTINUE) {
+		        Runnable r = () -> {
+			        throw new BreakOrContinueException(cmd.type == Command.Type.BREAK);
 			};
 			return new Trair<>(r, new ValueStream(), new ValueStream());
 		}
