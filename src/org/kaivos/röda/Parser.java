@@ -40,7 +40,7 @@ public class Parser {
 		.addOperatorRule("/=")
 		.addOperatorRule("++")
 		.addPatternRule(Pattern.compile("--(?!\\p{L})"))
-		.addOperators("<>()[]{}|&.,:;=#%!?\n\\*")
+		.addOperators("<>()[]{}|&.,:;=#%!?\n\\*@")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
 		.addStringRule('\'', '\'', (char) 0)
@@ -187,10 +187,13 @@ public class Parser {
 	static class Program {
 		List<Function> functions;
 		List<Record> records;
+		List<Function> blocks;
 		Program(List<Function> functions,
-			List<Record> records) {
+			List<Record> records,
+			List<Function> blocks) {
 			this.functions = functions;
 			this.records = records;
+			this.blocks = blocks;
 		}
 	}
 	
@@ -203,18 +206,23 @@ public class Parser {
 		maybeNewline(tl);
 
 		List<Function> functions = new ArrayList<>();
+		List<Function> blocks = new ArrayList<>();
 		List<Record> records = new ArrayList<>();
 		while (!tl.isNext("<EOF>")) {
 			List<Annotation> annotations = parseAnnotations(tl);
 			if (tl.isNext("record")) {
 				records.add(parseRecord(tl, annotations));
 			}
+			else if (tl.isNext("{")) {
+				blocks.add(new Function("<block>", Collections.emptyList(), Collections.emptyList(),
+							false, new VoidStream(), new VoidStream(), parseBody(tl)));
+			}
 			else {
 				functions.add(parseFunction(tl, true));
 			}
 			maybeNewline(tl);
 		}
-		return new Program(functions, records);
+		return new Program(functions, records, blocks);
 	}
 
 	public static class Annotation {
@@ -424,16 +432,7 @@ public class Parser {
 			output = new ValueStream();
 		}
 
-		tl.accept("{");
-		maybeNewline(tl);
-		List<Statement> body = new ArrayList<>();
-		while (!tl.isNext("}")) {
-			body.add(parseStatement(tl, false));
-			if (!tl.isNext("}"))
-				newline(tl);
-		}
-		maybeNewline(tl);
-		tl.accept("}");
+		List<Statement> body = parseBody(tl);
 
 		return new Function(name, typeparams, parameters, isVarargs, input, output, body);
 	}
@@ -474,6 +473,20 @@ public class Parser {
 		}
 
 		throw new ParsingException(TokenList.expected("_character", "_line", "void", "_value"), tl.next());
+	}
+
+	static List<Statement> parseBody(TokenList tl) {
+		tl.accept("{");
+		maybeNewline(tl);
+		List<Statement> body = new ArrayList<>();
+		while (!tl.isNext("}")) {
+			body.add(parseStatement(tl, false));
+			if (!tl.isNext("}"))
+				newline(tl);
+		}
+		maybeNewline(tl);
+		tl.accept("}");
+		return body;
 	}
 
 	static class Statement {
@@ -1220,7 +1233,7 @@ public class Parser {
 		.addOperatorRule("<<")
 		.addOperatorRule(">>")
 		.addOperatorRule(">>>")
-		.addOperators("#()[:].=+-*/<>&|^~!\n")
+		.addOperators("#()[:].=+-*/<>&|^~!")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
 		.addStringRule("[[", "]]", (char) 0)
@@ -1230,7 +1243,6 @@ public class Parser {
 		.addEscapeCode('r', "\r")
 		.addEscapeCode('t', "\t")
 		.addCharacterEscapeCode('x', 2, 16)
-		.dontIgnore('\n')
 		.appendOnEOF("<EOF>");
 	
 	private static OperatorLibrary<Expression> library;

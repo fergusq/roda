@@ -38,6 +38,7 @@ import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
 import org.kaivos.röda.type.RödaString;
+import org.kaivos.röda.type.RödaFunction;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.RödaStream;
 import static org.kaivos.röda.RödaStream.*;
@@ -236,6 +237,7 @@ public class Interpreter {
 					RödaStream _out = makeStream(ValueStream.HANDLER, ValueStream.HANDLER);
 					exec(a.file, a.line, function, Collections.emptyList(), args,
 					     G, VoidStream.STREAM, _out);
+					_out.finish();
 					RödaValue list = _out.readAll();
 					return list.list();
 				})
@@ -358,8 +360,13 @@ public class Interpreter {
 	public void load(String code, String filename, RödaScope scope) {
 		try {
 			Program program = parse(t.tokenize(code, filename));
+			for (Function f : program.blocks) {
+				exec("<runtime>", 0, RödaFunction.of(f),
+				     Collections.emptyList(), Collections.emptyList(),
+				     G, VoidStream.STREAM, VoidStream.STREAM);
+			}
 			for (Function f : program.functions) {
-				scope.setLocal(f.name, valueFromFunction(f));
+				scope.setLocal(f.name, RödaFunction.of(f));
 			}
 			for (Record r : program.records) {
 				records.put(r.name, r);
@@ -986,7 +993,7 @@ public class Interpreter {
 		}
 
 		if (cmd.type == Command.Type.RETURN) {
-			List<RödaValue> args = flattenArguments(cmd.arguments, scope, in, out, false);
+			List<RödaValue> args = flattenArguments(cmd.arguments, scope, in, out, true);
 			Runnable r = () -> {
 				for (RödaValue arg : args) out.push(arg);
 				throw new ReturnException();
@@ -1151,20 +1158,30 @@ public class Interpreter {
 			}
 			else {
 				RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
-				RödaValue val2 = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
+				RödaValue val2 = null;
+				Supplier<RödaValue> getVal2 = () -> evalExpression(exp.exprB, scope, in, out)
+					.impliciteResolve();
 				switch (exp.ctype) {
 				case AND:
 					if (!val1.isBoolean()) error("tried to AND a " + val1.typeString());
+					if (val1.bool() == false) return valueFromBoolean(false);
+				        val2 = getVal2.get();
 					if (!val2.isBoolean()) error("tried to AND a " + val2.typeString());
-					return valueFromBoolean(val1.bool() && val2.bool());
+					return valueFromBoolean(val2.bool());
 				case OR:
 					if (!val1.isBoolean()) error("tried to OR a " + val1.typeString());
+					if (val1.bool() == true) return valueFromBoolean(true);
+					val2 = getVal2.get();
 					if (!val2.isBoolean()) error("tried to OR a " + val2.typeString());
 					return valueFromBoolean(val1.bool() || val2.bool());
 				case XOR:
 					if (!val1.isBoolean()) error("tried to XOR a " + val1.typeString());
+					val2 = getVal2.get();
 					if (!val2.isBoolean()) error("tried to XOR a " + val2.typeString());
 					return valueFromBoolean(val1.bool() ^ val2.bool());
+				}
+				val2 = getVal2.get();
+				switch (exp.ctype) {
 				case EQ:
 					return valueFromBoolean(val1.halfEq(val2));
 				case NEQ:
