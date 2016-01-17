@@ -68,7 +68,7 @@ record http_server {
 			if push request.valid; do
 				try do
 					request.handle
-					catch e
+				catch e
 					request.send500 e
 				done
 			done

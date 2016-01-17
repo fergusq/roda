@@ -96,6 +96,10 @@ public abstract class RödaValue {
 	        error("can't add values to a " + typeString());
 	}
 
+	public void addAll(List<RödaValue> value) {
+	        error("can't add values to a " + typeString());
+	}
+
 	public void setField(String field, RödaValue value) {
 		error("can't edit a " + typeString());
 	}

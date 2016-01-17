@@ -9,6 +9,7 @@ import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Parser.Parameter;
+import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaNativeFunction extends RödaValue {
 	public static class NativeFunction {
@@ -21,7 +22,7 @@ public class RödaNativeFunction extends RödaValue {
 	}
 	
 	public static interface NativeFunctionBody {
-		public void exec(List<RödaValue> rawArgs, List<RödaValue> args, RödaScope scope,
+		public void exec(List<Datatype> typeargs, List<RödaValue> args, RödaScope scope,
 				 RödaStream in, RödaStream out);
 	}
 

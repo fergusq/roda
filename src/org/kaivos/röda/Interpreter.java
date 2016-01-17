@@ -38,6 +38,7 @@ import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
 import org.kaivos.röda.type.RödaString;
+import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.RödaStream;
 import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Parser.*;
@@ -113,6 +114,7 @@ public class Interpreter {
 	
 	public RödaScope G = new RödaScope(Optional.empty());
 	Map<String, Record> records = new HashMap<>();
+	Map<String, RödaValue> typeReflections = new HashMap<>();
 
 	RödaStream STDIN, STDOUT;
 
@@ -126,7 +128,7 @@ public class Interpreter {
 		STDOUT = new OSStream(out);
 	}
 
-	private static final Record errorRecord;
+	private static final Record errorRecord, typeRecord, fieldRecord;
 	static {
 		errorRecord = new Record("error",
 					 Collections.emptyList(),
@@ -142,11 +144,104 @@ public class Interpreter {
 												      ("string"))))
 						       ),
 					 false);
+		typeRecord = new Record("type",
+					Collections.emptyList(),
+					null,
+					Arrays.asList(new Record.Field("name", new Datatype("string")),
+						      new Record.Field("annotations", new Datatype("list")),
+						      new Record.Field("fields", new Datatype("list",
+											      Arrays
+											      .asList(new Datatype
+												      ("field")))),
+						      new Record.Field("new_instance", new Datatype("function"))
+						      ),
+					false);
+		fieldRecord = new Record("field",
+					 Collections.emptyList(),
+					 null,
+					 Arrays.asList(new Record.Field("name", new Datatype("string")),
+						       new Record.Field("annotations", new Datatype("list")),
+						       new Record.Field("type", new Datatype("type")),
+						       new Record.Field("get", new Datatype("function")),
+						       new Record.Field("set", new Datatype("function"))
+						       ),
+					 false);
 	}
 
 	{
 		Builtins.populate(this);
 		records.put("error", errorRecord);
+		records.put("type", typeRecord);
+		records.put("field", fieldRecord);
+		typeReflections.put("error", createRecordClassReflection(errorRecord));
+		typeReflections.put("type", createRecordClassReflection(typeRecord));
+		typeReflections.put("field", createRecordClassReflection(fieldRecord));
+	}
+
+	private RödaValue createRecordClassReflection(Record record) {
+		RödaValue typeObj = RödaRecordInstance.of(typeRecord, Collections.emptyList(), records);
+		typeObj.setField("name", RödaString.of(record.name));
+		typeObj.setField("annotations", evalAnnotations(record.annotations));
+		typeObj.setField("fields", RödaList.of("field", record.fields.stream()
+						       .map(f -> createFieldReflection(record, f))
+						       .collect(toList())));
+		typeObj.setField("new_instance", RödaNativeFunction
+				 .of("type.new_instance",
+				     (ta, a, s, i, o) -> {
+					     o.push(newRecord(new Datatype(record.name), ta));
+				     }, Collections.emptyList(), false,
+				     new VoidStream(), new SingleValueStream()));
+		return typeObj;
+	}
+
+	private RödaValue createFieldReflection(Record record, Record.Field field) {
+		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, Collections.emptyList(), records);
+		fieldObj.setField("name", RödaString.of(field.name));
+		fieldObj.setField("annotations", evalAnnotations(field.annotations));
+		fieldObj.setField("get", RödaNativeFunction
+				  .of("field.get",
+				      (ta, a, s, i, o) -> {
+					      RödaValue obj = a.get(0);
+					      if (!obj.is(new Datatype(record.name))) {
+						      error("invalid argument for field.get: "
+							    + record.name + " required, got " + obj.typeString());
+					      }
+					      o.push(obj.getField(field.name));
+				      }, Arrays.asList(new Parameter("object", false)), false,
+				      new VoidStream(), new SingleValueStream()));
+		fieldObj.setField("set", RödaNativeFunction
+				  .of("field.set",
+				      (ta, a, s, i, o) -> {
+					      RödaValue obj = a.get(0);
+					      if (!obj.is(new Datatype(record.name))) {
+						      error("invalid argument for field.get: "
+							    + record.name + " required, got " + obj.typeString());
+					      }
+					      RödaValue val = a.get(1);
+					      obj.setField(field.name, val);
+				      }, Arrays.asList(new Parameter("object", false),
+						       new Parameter("value", false)), false,
+				      new VoidStream(), new VoidStream()));
+		return fieldObj;
+	}
+
+	private RödaValue evalAnnotations(List<Annotation> annotations) {
+		return annotations.stream()
+			.map(a -> {
+					RödaValue function = G.resolve(a.name);
+					List<RödaValue> args = flattenArguments(a.args, G,
+										VoidStream.STREAM,
+										VoidStream.STREAM,
+										false);
+					RödaStream _out = makeStream(ValueStream.HANDLER, ValueStream.HANDLER);
+					exec(a.file, a.line, function, Collections.emptyList(), args,
+					     G, VoidStream.STREAM, _out);
+					RödaValue list = _out.readAll();
+					return list.list();
+				})
+			.collect(() -> RödaList.empty(),
+				 (list, values) -> { list.addAll(values); },
+				 (list, list2) -> { list.addAll(list2.list()); });
 	}
 
 	static ExecutorService executor = Executors.newCachedThreadPool();
@@ -268,6 +363,7 @@ public class Interpreter {
 			}
 			for (Record r : program.records) {
 				records.put(r.name, r);
+				typeReflections.put(r.name, createRecordClassReflection(r));
 			}
 		} catch (ParsingException|RödaException e) {
 			throw e;
@@ -487,7 +583,7 @@ public class Interpreter {
 			if (!value.nfunction().isVarargs) {
 				checkArgs(value.nfunction().name, value.nfunction().parameters.size(), args.size());
 			}
-			value.nfunction().body.exec(rawArgs, args, scope, in, out);
+			value.nfunction().body.exec(typeargs, args, scope, in, out);
 			return;
 		}
 		error("can't execute a value of type " + value.typeString());
@@ -944,44 +1040,25 @@ public class Interpreter {
 										.impliciteResolve()
 										)
 									   .collect(toList()));
+		if (exp.type == Expression.Type.REFLECT
+		    || exp.type == Expression.Type.TYPEOF) {
+			Datatype type;
+			if (exp.type == Expression.Type.REFLECT) {
+				type = scope.substitute(exp.datatype);
+			}
+			else { // TYPEOF
+				RödaValue value = evalExpression(exp.sub, scope, in, out).impliciteResolve();
+				type = value.basicIdentity();
+			}
+			if (!typeReflections.containsKey(type.name))
+				error("reflect: unknown record class '" + type + "'");
+			return typeReflections.get(type.name);
+		}
 		if (exp.type == Expression.Type.NEW) {
 			Datatype type = scope.substitute(exp.datatype);
 			List<Datatype> subtypes = exp.datatype.subtypes.stream()
 				.map(scope::substitute).collect(toList());
-			switch (type.name) {
-			case "list":
-				if (subtypes.size() == 0)
-					return RödaList.empty();
-				else if (subtypes.size() == 1)
-					return RödaList.empty(subtypes.get(0));
-				error("wrong number of typearguments to 'list': 1 required, got " + subtypes.size());
-				return null;
-			case "map":
-				if (subtypes.size() == 0)
-					return RödaMap.empty();
-				else if (subtypes.size() == 1)
-					return RödaMap.empty(subtypes.get(0));
-				error("wrong number of typearguments to 'map': 1 required, got " + subtypes.size());
-				return null;
-			}
-			Record r = records.get(type.name);
-			if (r == null)
-				error("record class '" + type.name + "' not found");
-			if (r.typeparams.size() != subtypes.size())
-				error("wrong number of typearguments for '" + r.name + "': "
-				      + r.typeparams.size() + " required, got " + subtypes.size());
-			RödaValue value = RödaRecordInstance.of(r, subtypes, records);
-			RödaScope recordScope = new RödaScope(G);
-			recordScope.setLocal("self", value);
-			for (int i = 0; i < subtypes.size(); i++) {
-				recordScope.addTypearg(r.typeparams.get(i), subtypes.get(i));
-			}
-			for (Record.Field f : r.fields) {
-				if (f.defaultValue != null) {
-					value.setField(f.name, evalExpression(f.defaultValue, recordScope, VoidStream.STREAM, VoidStream.STREAM, false));
-				}
-			}
-			return value;
+			return newRecord(type, subtypes);
 		}
 		if (exp.type == Expression.Type.LENGTH
 		    || exp.type == Expression.Type.ELEMENT
@@ -1136,6 +1213,43 @@ public class Interpreter {
 
 		error("unknown expression type " + exp.type);
 		return null;
+	}
+
+	private RödaValue newRecord(Datatype type, List<Datatype> subtypes) {
+		switch (type.name) {
+		case "list":
+			if (subtypes.size() == 0)
+				return RödaList.empty();
+			else if (subtypes.size() == 1)
+				return RödaList.empty(subtypes.get(0));
+			error("wrong number of typearguments to 'list': 1 required, got " + subtypes.size());
+			return null;
+		case "map":
+			if (subtypes.size() == 0)
+				return RödaMap.empty();
+			else if (subtypes.size() == 1)
+				return RödaMap.empty(subtypes.get(0));
+			error("wrong number of typearguments to 'map': 1 required, got " + subtypes.size());
+			return null;
+		}
+		Record r = records.get(type.name);
+		if (r == null)
+			error("record class '" + type.name + "' not found");
+		if (r.typeparams.size() != subtypes.size())
+			error("wrong number of typearguments for '" + r.name + "': "
+			      + r.typeparams.size() + " required, got " + subtypes.size());
+		RödaValue value = RödaRecordInstance.of(r, subtypes, records);
+		RödaScope recordScope = new RödaScope(G);
+		recordScope.setLocal("self", value);
+		for (int i = 0; i < subtypes.size(); i++) {
+			recordScope.addTypearg(r.typeparams.get(i), subtypes.get(i));
+		}
+		for (Record.Field f : r.fields) {
+			if (f.defaultValue != null) {
+				value.setField(f.name, evalExpression(f.defaultValue, recordScope, VoidStream.STREAM, VoidStream.STREAM, false));
+			}
+		}
+		return value;
 	}
 
 	private RödaValue concat(RödaValue val1, RödaValue val2) {

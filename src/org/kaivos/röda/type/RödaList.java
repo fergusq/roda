@@ -106,6 +106,16 @@ public class RödaList extends RödaValue {
 		list.add(value);
 	}
 
+	@Override public void addAll(List<RödaValue> values) {
+		if (type != null) {
+			for (RödaValue value : values) {
+				if (!value.is(type))
+					error("cannot put a " + value.typeString() + " to a " + typeString());
+			}
+		}
+		list.addAll(values);
+	}
+
 	@Override public boolean isList() {
 		return true;
 	}

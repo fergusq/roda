@@ -56,21 +56,9 @@ public class Parser {
 		.appendOnEOF("<EOF>");
 
 	private static boolean validIdentifier(String applicant) {
+		if (!validTypename(applicant)) return false;
 		switch (applicant) {
-		case "if":
-		case "while":
-		case "else":
-		case "for":
-		case "do":
-		case "done":
-		case "record":
 		case "function":
-		case "new":
-		case "_character":
-		case "_line":
-		case "_value":
-		case "void":
-		case "reference":
 		case "list":
 		case "map":
 		case "string":
@@ -91,7 +79,10 @@ public class Parser {
 		case "do":
 		case "done":
 		case "record":
+		case "value":
 		case "new":
+		case "reflect":
+		case "typeof":
 		case "_character":
 		case "_line":
 		case "_value":
@@ -214,15 +205,42 @@ public class Parser {
 		List<Function> functions = new ArrayList<>();
 		List<Record> records = new ArrayList<>();
 		while (!tl.isNext("<EOF>")) {
+			List<Annotation> annotations = parseAnnotations(tl);
 			if (tl.isNext("record")) {
-				records.add(parseRecord(tl));
+				records.add(parseRecord(tl, annotations));
 			}
 			else {
-				functions.add(parseFunction(tl));
+				functions.add(parseFunction(tl, true));
 			}
 			maybeNewline(tl);
 		}
 		return new Program(functions, records);
+	}
+
+	public static class Annotation {
+		public final String name;
+		public final List<Argument> args;
+		final String file;
+		final int line;
+		public Annotation(String file, int line, String name, List<Argument> args) {
+			this.file = file;
+			this.line = line;
+			this.name = name;
+			this.args = args;
+		}
+	}
+
+	private static List<Annotation> parseAnnotations(TokenList tl) {
+		List<Annotation> annotations = new ArrayList<>();
+		while (tl.acceptIfNext("@")) {
+			String file = tl.seek().getFile();
+			int line = tl.seek().getLine();
+			String name = "@" + identifier(tl);
+			List<Argument> arguments = parseArguments(tl, false);
+			annotations.add(new Annotation(file, line, name, arguments));
+			newline(tl);
+		}
+		return annotations;
 	}
 
 	public static class Record {
@@ -230,24 +248,28 @@ public class Parser {
 			public final String name;
 			public final Datatype type;
 			final Expression defaultValue;
+			public final List<Annotation> annotations;
 
 			Field(String name,
 			      Datatype type) {
-				this(name, type, null);
+				this(name, type, null, Collections.emptyList());
 			}
 
 			Field(String name,
 			      Datatype type,
-			      Expression defaultValue) {
+			      Expression defaultValue,
+			      List<Annotation> annotations) {
 				this.name = name;
 				this.type = type;
 				this.defaultValue = defaultValue;
+				this.annotations = Collections.unmodifiableList(annotations);
 			}
 		}
-		
+
 		public final String name;
 		public final List<String> typeparams;
 		public final Datatype superType;
+		public final List<Annotation> annotations;
 		public final List<Field> fields;
 		public final boolean isValueType;
 
@@ -256,15 +278,26 @@ public class Parser {
 		       Datatype superType,
 		       List<Field> fields,
 		       boolean isValueType) {
+			this(name, typeparams, superType, Collections.emptyList(),
+			     fields, isValueType);
+		}
+
+		Record(String name,
+		       List<String> typeparams,
+		       Datatype superType,
+		       List<Annotation> annotations,
+		       List<Field> fields,
+		       boolean isValueType) {
 			this.name = name;
 			this.typeparams = Collections.unmodifiableList(typeparams);
+			this.annotations = Collections.unmodifiableList(annotations);
 			this.fields = Collections.unmodifiableList(fields);
 			this.superType = superType;
 			this.isValueType = isValueType;
 		}
 	}
 
-	static Record parseRecord(TokenList tl) {
+	static Record parseRecord(TokenList tl, List<Annotation> recordAnnotations) {
 		tl.accept("record");
 
 		boolean isValueType = tl.acceptIfNext("value");
@@ -286,14 +319,15 @@ public class Parser {
 		tl.accept("{");
 		maybeNewline(tl);
 		while (!tl.isNext("}")) {
+			List<Annotation> annotations = parseAnnotations(tl);
 			if (tl.isNext("function")) {
 				String file = tl.seek().getFile();
 				int line = tl.seek().getLine();
-				Function method = parseFunction(tl);
+				Function method = parseFunction(tl, false);
 				String fieldName = method.name;
 				Datatype type = new Datatype("function");
 				Expression defaultValue = expressionFunction(file, line, method);
-				fields.add(new Record.Field(fieldName, type, defaultValue));
+				fields.add(new Record.Field(fieldName, type, defaultValue, annotations));
 			}
 			else {
 				String fieldName = identifier(tl);
@@ -303,7 +337,7 @@ public class Parser {
 				if (tl.acceptIfNext("=")) {
 					defaultValue = parseExpression(tl);
 				}
-				fields.add(new Record.Field(fieldName, type, defaultValue));
+				fields.add(new Record.Field(fieldName, type, defaultValue, annotations));
 			}
 			if (!tl.isNext("}"))
 				newline(tl);
@@ -311,7 +345,7 @@ public class Parser {
 		maybeNewline(tl);
 		tl.accept("}");
 
-		return new Record(name, typeparams, superType, fields, isValueType);
+		return new Record(name, typeparams, superType, recordAnnotations, fields, isValueType);
 	}
 
 	public static class Function {
@@ -359,10 +393,11 @@ public class Parser {
 		return new Parameter(name, reference);
 	}
 	
-	static Function parseFunction(TokenList tl) {
+	static Function parseFunction(TokenList tl, boolean mayBeAnnotation) {
 		tl.acceptIfNext("function");
-		
-		String name = identifier(tl);
+
+		boolean isAnnotation = mayBeAnnotation ? tl.acceptIfNext("@") : false;
+		String name = (isAnnotation ? "@" : "") + identifier(tl);
 		List<String> typeparams = parseTypeparameters(tl);
 
 		maybeNewline(tl);
@@ -730,7 +765,9 @@ public class Parser {
 			CONCAT,
 			JOIN,
 			CALCULATOR,
-			NEW
+			NEW,
+			REFLECT,
+			TYPEOF
 		}
 		enum CType {
 			MUL,
@@ -794,7 +831,7 @@ public class Parser {
 			case STATEMENT_LIST:
 				return "!(...)";
 			case STATEMENT_SINGLE:
-				return "!(...)";
+				return "![...]";
 			case CALCULATOR:
 				return "'...'";
 			case ELEMENT:
@@ -811,6 +848,10 @@ public class Parser {
 				return exprA.asString() + "&" + exprB.asString();
 			case NEW:
 				return "new " + datatype.toString();
+			case REFLECT:
+				return "reflect " + datatype.toString();
+			case TYPEOF:
+				return "typeof " + sub.asString();
 			default:
 				return "<" + type + ">";
 			}
@@ -984,6 +1025,24 @@ public class Parser {
 		e.datatype = datatype;
 		return e;
 	}
+
+	private static Expression expressionReflect(String file, int line, Datatype datatype) {
+		Expression e = new Expression();
+		e.type = Expression.Type.REFLECT;
+		e.file = file;
+		e.line = line;
+		e.datatype = datatype;
+		return e;
+	}
+
+	private static Expression expressionTypeof(String file, int line, Expression sub) {
+		Expression e = new Expression();
+		e.type = Expression.Type.TYPEOF;
+		e.file = file;
+		e.line = line;
+		e.sub = sub;
+		return e;
+	}
 	
 	private static Expression parseExpression(TokenList tl) {
 		Expression ans = parseExpressionJoin(tl);
@@ -1018,7 +1077,15 @@ public class Parser {
 		}
 		else if (tl.acceptIfNext("new")) {
 			Datatype type = parseType(tl);
-			return expressionNew(file, line, type);
+			ans = expressionNew(file, line, type);
+		}
+		else if (tl.acceptIfNext("reflect")) {
+			Datatype type = parseType(tl);
+			ans = expressionReflect(file, line, type);
+		}
+		else if (tl.acceptIfNext("typeof")) {
+			Expression e = parseExpressionPrimary(tl);
+			return expressionTypeof(file, line, e);
 		}
 		else if (tl.acceptIfNext("#")) {
 			Expression e = parseExpressionPrimary(tl);

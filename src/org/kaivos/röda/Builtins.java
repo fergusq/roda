@@ -68,7 +68,7 @@ class Builtins {
 
 		/* Perusvirtaoperaatiot */
 
-		S.setLocal("print", valueFromNativeFunction("print", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("print", valueFromNativeFunction("print", (typeargs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("print", 1, 0);
 						return;
@@ -79,7 +79,7 @@ class Builtins {
 					out.push(valueFromString("\n"));
 				}, Arrays.asList(new Parameter("values", false)), true,
 				new VoidStream(), new ValueStream()));
-		S.setLocal("push", valueFromNativeFunction("push", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("push", valueFromNativeFunction("push", (typeargs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("push", 1, 0);
 						return;
@@ -90,7 +90,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("values", false)), true,
 				new VoidStream(), new ValueStream()));
 
-		S.setLocal("pull", valueFromNativeFunction("pull", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("pull", valueFromNativeFunction("pull", (typeargs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("pull", 1, 0);
 						return;
@@ -116,7 +116,7 @@ class Builtins {
 
 		/* Muuttujaoperaatiot */
 
-		S.setLocal("undefine", valueFromNativeFunction("undefine", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("undefine", valueFromNativeFunction("undefine", (typeargs, args, scope, in, out) -> {
 					for (RödaValue value : args) {
 						checkReference("undefine", value);
 
@@ -125,7 +125,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("variables", true)), true,
 				new VoidStream(), new VoidStream()));
 
-		S.setLocal("name", valueFromNativeFunction("name", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("name", valueFromNativeFunction("name", (typeargs, args, scope, in, out) -> {
 					for (RödaValue value : args) {
 						if (!value.isReference())
 							error("invalid argument for undefine: "
@@ -136,7 +136,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("variables", true)), true,
 				new VoidStream(), new ValueStream()));
 
-		S.setLocal("import", valueFromNativeFunction("import", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("import", valueFromNativeFunction("import", (typeargs, args, scope, in, out) -> {
 				        for (RödaValue value : args) {
 						checkString("import", value);
 						String filename = value.str();
@@ -149,7 +149,7 @@ class Builtins {
 
 		/* Muut oleelliset kielen rakenteet */
 
-		S.setLocal("error", valueFromNativeFunction("error", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("error", valueFromNativeFunction("error", (typeargs, args, scope, in, out) -> {
 					checkArgs("error", 1, args.size());
 					if (args.get(0).isString()) {
 						error(args.get(0).str());
@@ -163,7 +163,7 @@ class Builtins {
 
 		/* Täydentävät virtaoperaatiot */
 
-		S.setLocal("head", valueFromNativeFunction("head", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("head", valueFromNativeFunction("head", (typeargs, args, scope, in, out) -> {
 				        if (args.size() > 1) argumentOverflow("head", 1, args.size());
 					if (args.size() == 0) {
 						out.push(in.pull());
@@ -181,7 +181,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("number", false)), true,
 				new ValueStream(), new ValueStream()));
 
-		S.setLocal("tail", valueFromNativeFunction("tail", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("tail", valueFromNativeFunction("tail", (typeargs, args, scope, in, out) -> {
 				        if (args.size() > 1) argumentOverflow("tail", 1, args.size());
 
 					int num;
@@ -208,7 +208,7 @@ class Builtins {
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
-		S.setLocal("grep", valueFromNativeFunction("grep", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("grep", valueFromNativeFunction("grep", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("grep", 1, 0);
 					checkString("grep", args.get(0));
 					boolean onlyMatching = args.get(0).str().equals("-o");
@@ -250,7 +250,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("patterns", false)), true,
 				new ValueStream(), new ValueStream()));
 
-		S.setLocal("match", valueFromNativeFunction("match", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("match", valueFromNativeFunction("match", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("match", 1, 0);
 					checkString("match", args.get(0));
 				        String regex = args.get(0).str(); args.remove(0);
@@ -301,7 +301,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("pattern", false), new Parameter("strings", false)), true,
 				new ValueStream(), new ValueStream()));
 
-		S.setLocal("replace", valueFromNativeFunction("replace", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("replace", valueFromNativeFunction("replace", (typeargs, args, scope, in, out) -> {
 					if (args.size() % 2 != 0) error("invalid arguments for replace: even number required (got " + args.size() + ")");
 					try {
 						while (true) {
@@ -326,7 +326,7 @@ class Builtins {
 
 		/* Parserit */
 
-		S.setLocal("split", valueFromNativeFunction("split", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("split", valueFromNativeFunction("split", (typeargs, args, scope, in, out) -> {
 					String separator = " ";
 					for (int i = 0; i < args.size(); i++) {
 						RödaValue value = args.get(i);
@@ -345,7 +345,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("flags_and_strings", false)), true,
 				new VoidStream(), new ValueStream()));
 
-		S.setLocal("json", valueFromNativeFunction("json", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("json", valueFromNativeFunction("json", (typeargs, args, scope, in, out) -> {
 					boolean _stringOutput = false;
 					boolean _iterativeOutput = false;
 					while (args.size() > 0
@@ -425,12 +425,12 @@ class Builtins {
 					}
 				}, Arrays.asList(new Parameter("flags_and_code", false)), true, new ValueStream(), new SingleValueStream()));
 		
-		S.setLocal("expr", valueFromNativeFunction("expr", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("expr", valueFromNativeFunction("expr", (typeargs, args, scope, in, out) -> {
 				        String expression = args.stream().map(RödaValue::str).collect(joining(" "));
 					out.push(valueFromString(String.valueOf(Calculator.eval(expression))));
 				}, Arrays.asList(new Parameter("expressions", false)), true, new VoidStream(), new SingleValueStream()));
 
-		S.setLocal("test", valueFromNativeFunction("test", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("test", valueFromNativeFunction("test", (typeargs, args, scope, in, out) -> {
 					checkString("test", args.get(1));
 					String operator = args.get(1).str();
 					boolean not = false;
@@ -487,12 +487,12 @@ class Builtins {
 
 		/* Konstruktorit */
 		
-		S.setLocal("list", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("list", valueFromNativeFunction("list", (typeargs, args, scope, in, out) -> {
 				        out.push(valueFromList(args));
 				}, Arrays.asList(new Parameter("values", false)), true,
 				new VoidStream(), new SingleValueStream()));
 
-		S.setLocal("seq", valueFromNativeFunction("seq", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("seq", valueFromNativeFunction("seq", (typeargs, args, scope, in, out) -> {
 					checkNumber("seq", args.get(0));
 					checkNumber("seq", args.get(1));
 					int from = args.get(0).num();
@@ -501,23 +501,23 @@ class Builtins {
 				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false,
 				new VoidStream(), new ValueStream()));
 
-		S.setLocal("true", valueFromNativeFunction("list", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("true", valueFromNativeFunction("list", (typeargs, args, scope, in, out) -> {
 				        out.push(valueFromBoolean(true));
 				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
 
-		S.setLocal("false", valueFromNativeFunction("false", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("false", valueFromNativeFunction("false", (typeargs, args, scope, in, out) -> {
 				        out.push(valueFromBoolean(false));
 				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
 
 		/* Apuoperaatiot */
 
-		S.setLocal("time", valueFromNativeFunction("time", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("time", valueFromNativeFunction("time", (typeargs, args, scope, in, out) -> {
 				        out.push(valueFromInt((int) System.currentTimeMillis()));
 				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
 
 		Random rnd = new Random();
 		
-		S.setLocal("random", valueFromNativeFunction("random", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("random", valueFromNativeFunction("random", (typeargs, args, scope, in, out) -> {
 					final int INTEGER=0,
 						FLOAT=1,
 						BOOLEAN=2;
@@ -550,7 +550,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("flags_and_variables", true)), true,
 				new VoidStream(), new SingleValueStream()));
 		
-		S.setLocal("exec", valueFromNativeFunction("exec", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("exec", valueFromNativeFunction("exec", (typeargs, args, scope, in, out) -> {
 					HashMap<String, String> envVars = new HashMap<>();
 					while (args.size() > 0 && args.get(0).isString()
 					       && args.get(0).str().equals("-E")) {
@@ -616,7 +616,7 @@ class Builtins {
 
 		/* Tiedosto-operaatiot */
 
-		S.setLocal("cd", valueFromNativeFunction("cd", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("cd", valueFromNativeFunction("cd", (typeargs, args, scope, in, out) -> {
 					checkArgs("cd", 1, args.size());
 					checkString("cd", args.get(0));
 					String dirname = args.get(0).str();
@@ -628,7 +628,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("path", false)), false,
 				new VoidStream(), new VoidStream()));
 
-		S.setLocal("pwd", valueFromNativeFunction("pwd", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("pwd", valueFromNativeFunction("pwd", (typeargs, args, scope, in, out) -> {
 					try {
 						out.push(valueFromString(I.currentDir.getCanonicalPath()));
 					} catch (IOException e) {
@@ -637,7 +637,7 @@ class Builtins {
 				}, Arrays.asList(), false,
 				new VoidStream(), new ValueStream()));
 
-		S.setLocal("write", valueFromNativeFunction("write", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("write", valueFromNativeFunction("write", (typeargs, args, scope, in, out) -> {
 					checkString("write", args.get(0));
 					String filename = args.get(0).str();
 					File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
@@ -653,7 +653,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("file", false)), false,
 				new ValueStream(), new VoidStream()));
 
-		S.setLocal("cat", valueFromNativeFunction("cat", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("cat", valueFromNativeFunction("cat", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("wcat", 1, args.size());
 					for (RödaValue value : args) {
 						checkString("cat", value);
@@ -669,7 +669,7 @@ class Builtins {
 
 		/* Verkko-operaatiot */
 
-		S.setLocal("wcat", valueFromNativeFunction("wcat", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("wcat", valueFromNativeFunction("wcat", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("wcat", 1, args.size());
 					try {
 						String useragent = "";
@@ -736,7 +736,7 @@ class Builtins {
 						 false);
 		I.records.put("socket", socketRecord);
 
-		S.setLocal("server", valueFromNativeFunction("server", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("server", valueFromNativeFunction("server", (typeargs, args, scope, in, out) -> {
 					checkArgs("server", 1, args.size());
 					checkNumber("server", args.get(0));
 					int port = args.get(0).num();
@@ -855,7 +855,7 @@ class Builtins {
 						 false);
 		I.records.put("thread", threadRecord);
 
-		S.setLocal("thread", valueFromNativeFunction("thread", (rawArgs, args, scope, in, out) -> {
+		S.setLocal("thread", valueFromNativeFunction("thread", (typeargs, args, scope, in, out) -> {
 				        checkArgs("thread", 1, args.size());
 				        RödaValue function = args.get(0);
 					checkFunction("thread", function);

@@ -818,3 +818,4 @@ ja kirjoittaa ne annettuihin tiedostoihin (tai oletuksena rivi kerrallaan ulostu
 >`write tiedoston_nimi`
 
 Lukee kaiken sisääntulovirrasta, muuttaa arvot merkkijonoiksi ja kirjoittaa ne annettuun tiedostoon.
+
