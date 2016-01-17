@@ -1,0 +1,184 @@
+record http_server {
+	port : number
+	socket : server
+	controllers : map<controller> = new map<controller>
+	
+	/* Luku */
+	
+	function read connection &request {
+		request := new request
+		request.server = self
+		request.connection = connection
+		connection.read -l line
+		things := !(split line)
+		if test #things -ge 3; do
+			request.command = things[0]
+			request.path = things[1]
+			request.protocol = things[2]
+		else
+			/* kysely on väärän muotoinen */
+			/* TODO: virheenkäsittely */
+			request.valid = ![false]
+			connection.close
+			return
+		done
+		request.path ~= "^([a-z0-9]+://)?[^/]+" ""
+		if test request.protocol -not-eq "HTTP/1.0"; do
+			self.send_continue connection
+		done
+		length := 0
+		request.headers = new map<string>
+		request.as_text = ""
+		while test line -not-matches "\r?\n"; do
+			request.as_text .= line
+			connection.read -l line
+			if test line -matches "[A-Za-z\\-]+:[ \t]*.*\r?\n"; do
+				header_name := line
+				header_name ~= ":[ \t]*.*\r?\n$" ""
+				header_value := line
+				header_value ~= "^[A-Za-z\\-]+:[ \t]*" "" "\r?\n$" ""
+				request.headers[header_name] = header_value
+			done
+			if test line -matches "Content-Length: .*\r?\n"; do
+				cl := line
+				cl ~= "^Content-Length: " "" "\r?\n$" ""
+				length = cl
+			done
+		done
+		request.content = ""
+		if test length -gt 0; do
+			content := ""
+			connection.read -b length content
+			request.content = content
+		done
+	}
+	
+	/* Lähetys */
+	
+	function send_continue connection {
+		response := "HTTP/1.1 100 Continue\r\n\r\n"
+		connection.write response
+	}
+	
+	/* Ohjaus */
+	
+	function handle connection {
+		while true; do
+			self.read connection request
+			if push request.valid; do
+				try do
+					request.handle
+					catch e
+					request.send500 e
+				done
+			done
+		done
+	}
+	
+	function update {
+		connection := ![self.socket.accept]
+		print "[ ] Connection from "..connection.hostname.." ("..connection.ip..":"..connection.port..")."
+		handler := ![thread { self.handle connection }]
+		handler.start
+	}
+}
+
+http_server port {
+	http := new http_server
+	http.port = port
+	http.socket := ![server port]
+	push http
+}
+
+record request {
+	valid : boolean = ![true]
+	command : string
+	path : string
+	protocol : string
+	headers : map<string>
+	as_text : string
+	content : string
+	server : http_server
+	connection : socket
+	
+	function create_headers status length {
+		content_headers := ""
+		if test length -not-eq 0; do
+			content_headers = "Content-Type: text/html; charset=utf-8\r\n"
+			content_headers .= "Content-Length: "..length.."\r\n"
+			content_headers .= "Accept-Ranges: bytes\r\n"
+		done
+		headers := ""
+		if test self.protocol -not-eq "HTTP/1.0"; do
+			headers = "HTTP/1.1 "..status.."\r\n"
+			headers .= "Server: http_server.roed\r\n"
+			headers .= "Date: "
+			headers .= !(exec -E "LC_TIME" "c.UTF-8" "date" -u "+%a, %b %d %Y %H:%M:%S GMT")[:-1]&"".."\r\n"
+			headers .= content_headers
+			headers .= "Connection: keep-alive\r\n"
+			headers .= "\r\n"
+		else
+			headers = "HTTP/1.0 "..status.."\r\n"
+			headers .= "Server: httpd.roed\r\n"
+			headers .= content_headers
+			headers .= "\r\n"
+		done
+		push headers
+	}
+	
+	function send status data {
+		response := ![self.create_headers status #data]
+		if test self.command -not-eq "HEAD"; do
+			response .= data
+		done
+		self.connection.write response
+	}
+	
+	function send404 {
+		self.send "404 Not found" [[<html>
+		<head><title>404 Not found</title></head>
+		<body><h1>404 Not found</h1><p>The resource you were looking for doesn't exist.</p>
+		<hr/>
+		<p><i>http_server.röd</i></p></body>
+		</html>]]
+	}
+	
+	function send412 {
+		self.send "412 Precondition failed" ""
+	}
+	
+	function send500 err {
+		self.send "500 Internal server error" [[<html>
+		<head><title>500 Internal server error</title></head>
+		<body><h1>500 Internal server error</h1><p>Diagnostics:</p>
+		<pre>]]..err.message..[[</pre>
+		<pre>]]..!(err.stack | replace "<" "&lt;")&"\n"..[[</pre>
+		<hr/>
+		<p><i>http_server.röd</i></p></body>
+		</html>]]
+	}
+	
+	function handle {
+		if push self.headers["If-Unmodified-Since"]?; do
+			self.send412
+			return
+		done
+		path := ![match "(/[^/]*)(/[^/]*)*" self.path]
+		if test #path -eq 0; do path = ("/" "/" ""); done
+		if push self.server.controllers[path[1]]?; do
+			self.server.controllers[path[1]].handle self
+		else
+			self.send404
+		done
+	}
+}
+
+record controller {
+	handle : function
+}
+
+controller handler {
+	ctrl := new controller
+	ctrl.handle = handler
+	push ctrl
+}
