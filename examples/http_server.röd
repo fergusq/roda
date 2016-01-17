@@ -166,11 +166,26 @@ record request {
 		path := ![match "(/[^/]*)(/[^/]*)*" self.path]
 		if test #path -eq 0; do path = ("/" "/" ""); done
 		if push self.server.controllers[path[1]]?; do
-			self.server.controllers[path[1]].handle self
+			ctrl := self.server.controllers[path[1]]
+			type := typeof ctrl
+			for f in type.fields do
+				for a in f.annotations do
+					if push '#a = 2 && a[0] = "HANDLE" && self.path =~ a[1]'; do
+						handler := ![f.get ctrl]
+						handler self
+						return
+					done
+				done
+			done
+			ctrl.handle self
 		else
 			self.send404
 		done
 	}
+}
+
+function @handle path {
+	return ("HANDLE" path)
 }
 
 record controller {
