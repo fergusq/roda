@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.io.FileInputStream;
 
 import java.nio.charset.StandardCharsets;
 
@@ -97,7 +98,7 @@ class Builtins {
 					}
 					boolean readMode = false;
 					for (RödaValue value : args) {
-						if (value.isString() && value.str().equals("-r")) {
+						if (value.isFlag("-r")) {
 							readMode = true;
 							continue;
 						}
@@ -210,8 +211,9 @@ class Builtins {
 
 		S.setLocal("grep", valueFromNativeFunction("grep", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("grep", 1, 0);
-					checkString("grep", args.get(0));
-					boolean onlyMatching = args.get(0).str().equals("-o");
+					boolean onlyMatching = args.get(0).isFlag("-o");
+					if (onlyMatching && args.size() == 1)
+						argumentUnderflow("grep", 2, 1);
 					
 					// basic mode
 					if (!onlyMatching) {
@@ -330,14 +332,14 @@ class Builtins {
 					String separator = " ";
 					for (int i = 0; i < args.size(); i++) {
 						RödaValue value = args.get(i);
-						checkString("split", value);
-						String str = value.str();
-						if (str.equals("-s")) {
+						if (value.isFlag("-s")) {
 							RödaValue newSep = args.get(++i);
 							checkString("split", newSep);
 							separator = newSep.str();
 							continue;
 						}
+						checkString("split", value);
+						String str = value.str();
 						for (String s : str.split(separator)) {
 							out.push(valueFromString(s));
 						}
@@ -349,12 +351,11 @@ class Builtins {
 					boolean _stringOutput = false;
 					boolean _iterativeOutput = false;
 					while (args.size() > 0
-					       && args.get(0).isString()
-					       && args.get(0).str().startsWith("-")) {
-						String flag = args.get(0).str();
-						if (flag.equals("-s")) _stringOutput = true;
-						if (flag.equals("-i")) _iterativeOutput = true;
-						else error("json: unknown option " + flag);
+					       && args.get(0).isFlag()) {
+						RödaValue flag = args.get(0);
+						if (flag.isFlag("-s")) _stringOutput = true;
+						if (flag.isFlag("-i")) _iterativeOutput = true;
+						else error("json: unknown option " + flag.str());
 						args.remove(0);
 					}
 					boolean stringOutput = _stringOutput;
@@ -431,7 +432,7 @@ class Builtins {
 				}, Arrays.asList(new Parameter("expressions", false)), true, new VoidStream(), new SingleValueStream()));
 
 		S.setLocal("test", valueFromNativeFunction("test", (typeargs, args, scope, in, out) -> {
-					checkString("test", args.get(1));
+					checkFlag("test", args.get(1));
 					String operator = args.get(1).str();
 					boolean not = false;
 					if (operator.startsWith("-not-")) {
@@ -530,7 +531,7 @@ class Builtins {
 						return null;
 					};
 					int mode = BOOLEAN;
-					if (args.size() == 1 && args.get(0).isString()) {
+					if (args.size() == 1 && args.get(0).isFlag()) {
 						switch (args.get(0).str()) {
 						case "-integer": mode = INTEGER; break;
 						case "-boolean": mode = BOOLEAN; break;
@@ -552,8 +553,7 @@ class Builtins {
 		
 		S.setLocal("exec", valueFromNativeFunction("exec", (typeargs, args, scope, in, out) -> {
 					HashMap<String, String> envVars = new HashMap<>();
-					while (args.size() > 0 && args.get(0).isString()
-					       && args.get(0).str().equals("-E")) {
+					while (args.size() > 0 && args.get(0).isFlag("-E")) {
 						args.remove(0);
 						if (args.size() < 3) argumentUnderflow("exec", 4, args.size()+1);
 						checkString("exec", args.get(0));
@@ -676,21 +676,23 @@ class Builtins {
 						String outputFile = "";
 						for (int i = 0; i < args.size(); i++) {
 							RödaValue _arg = args.get(i);
-							checkString("wcat", _arg);
-							String arg = _arg.str();
 							
-							if (arg.equals("-U")) {
+							if (_arg.isFlag("-U")) {
 								RödaValue _ua = args.get(++i);
 								checkString("wcat", _ua);
 								useragent = _ua.str();
 								continue;
 							}
-							if (arg.equals("-O")) {
+							if (_arg.isFlag("-O")) {
 								RödaValue _of = args.get(++i);
 								checkString("wcat", _of);
 								outputFile = _of.str();
 								continue;
 							}
+							
+							checkString("wcat", _arg);
+							String arg = _arg.str();
+							
 							URL url = new URL(arg);
 							URLConnection c = url.openConnection();
 							if (!useragent.isEmpty())
@@ -774,10 +776,10 @@ class Builtins {
 											  I.records);
 									      socketObject
 										      .setField("read",
-												genericRead("socket.read", _in));
+												genericRead("socket.read", _in, I));
 									      socketObject
 										      .setField("write",
-												genericWrite("socket.write", _out));
+												genericWrite("socket.write", _out, I));
 									      socketObject
 										      .setField("close",
 												RödaNativeFunction
@@ -941,8 +943,7 @@ class Builtins {
 				    else {
 					    boolean readMode = false;
 					    for (RödaValue v : a) {
-						    if (v.isString()
-							&& v.str().equals("-r")) {
+						    if (v.isFlag("-r")) {
 							    readMode = true;
 							    continue;
 						    }
@@ -966,7 +967,7 @@ class Builtins {
 			    new ValueStream());
 	}
 
-	private static RödaValue genericWrite(String name, OutputStream _out) {
+	private static RödaValue genericWrite(String name, OutputStream _out, Interpreter I) {
 		return RödaNativeFunction
 			.of(name,
 			    (ra, args, scope, in, out) -> {
@@ -977,12 +978,38 @@ class Builtins {
 							    if (v == null) break;
 							    checkString(name, v);
 							    _out.write(v.str().getBytes(StandardCharsets.UTF_8));
+							    _out.flush();
 						    }
 					    }
 					    else {
-						    for (RödaValue v : args) {
+						    for (int i = 0; i < args.size(); i++) {
+							    RödaValue v = args.get(i);
+							    if (v.isFlag("-f")) {
+								    RödaValue _file = args.get(++i);
+								    checkString(name, _file);
+								    File file = IOUtils
+									    .getMaybeRelativeFile(I.currentDir,
+												  _file.str());
+								    try {
+									    byte[] buf = new byte[2048];
+									    InputStream is =
+										    new FileInputStream(file);
+									    int c = 0;
+									    while ((c=is.read(buf, 0, buf.length))
+										   > 0) {
+										    _out.write(buf, 0, c);
+										    _out.flush();
+									    }
+									    is.close();
+								    } catch (IOException e) {
+									    error(e);
+								    }
+								    
+								    continue;
+							    }
 							    checkString(name, v);
 							    _out.write(v.str().getBytes(StandardCharsets.UTF_8));
+							    _out.flush();
 						    }
 					    }
 				    } catch (IOException e) {
@@ -992,7 +1019,7 @@ class Builtins {
 			    new ValueStream(), new VoidStream());
 	}
 
-	private static RödaValue genericRead(String name, InputStream _in) {
+	private static RödaValue genericRead(String name, InputStream _in, Interpreter I) {
 		return RödaNativeFunction
 			.of(name,
 			    (ra, args, scope, in, out) -> {
@@ -1009,7 +1036,7 @@ class Builtins {
 						    Iterator<RödaValue> it = args.iterator();
 						    while (it.hasNext()) {
 							    RödaValue v = it.next();
-							    checkString(name, v);
+							    checkFlag(name, v);
 							    String option = v.str();
 							    RödaValue value;
 							    switch (option) {

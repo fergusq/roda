@@ -765,6 +765,7 @@ public class Parser {
 		enum Type {
 			VARIABLE,
 			STRING,
+			FLAG,
 			NUMBER,
 			STATEMENT_LIST,
 			STATEMENT_SINGLE,
@@ -830,6 +831,8 @@ public class Parser {
 				return variable;
 			case STRING:
 				return "\"" + string.replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
+			case FLAG:
+				return string;
 			case NUMBER:
 				return String.valueOf(number);
 			case SLICE: {
@@ -883,6 +886,15 @@ public class Parser {
 	private static Expression expressionString(String file, int line, String t) {
 		Expression e = new Expression();
 		e.type = Expression.Type.STRING;
+		e.file = file;
+		e.line = line;
+		e.string = t;
+		return e;
+	}
+
+	private static Expression expressionFlag(String file, int line, String t) {
+		Expression e = new Expression();
+		e.type = Expression.Type.FLAG;
 		e.file = file;
 		e.line = line;
 		e.string = t;
@@ -1172,11 +1184,11 @@ public class Parser {
 			tl.accept("]]");
 		        ans = expressionString(file, line, s);
 		}
-		else if (tl.seekString().matches("[0-9]+")) {
+		else if (tl.seekString().matches("-?[0-9]+")) {
 			ans = expressionInt(file, line, Integer.parseInt(tl.nextString()));
 		}
 		else if (tl.seekString().startsWith("-")) {
-			ans = expressionString(file, line, tl.nextString());
+			ans = expressionFlag(file, line, tl.nextString());
 		}
 		else if (tl.isNext("<EOF>")) throw new ParsingException(TokenList.expected("#", "(", "{", "!", "<identifier>", "<number>", "<string>"), tl.next());
 		else {

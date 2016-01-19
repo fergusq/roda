@@ -211,6 +211,14 @@ public abstract class RödaValue {
 	public boolean isString() {
 		return false;
 	}
+	
+	public boolean isFlag() {
+		return false;
+	}
+	
+	public boolean isFlag(String flag) {
+		return false;
+	}
 
 	public boolean isBoolean() {
 		return false;

@@ -56,4 +56,5 @@ public class RödaString extends RödaValue {
 	public static RödaString of(String text) {
 		return new RödaString(text);
 	}
+
 }

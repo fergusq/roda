@@ -38,6 +38,8 @@ import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
 import org.kaivos.röda.type.RödaString;
+import org.kaivos.röda.type.RödaFlag;
+import org.kaivos.röda.type.RödaNumber;
 import org.kaivos.röda.type.RödaFunction;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.RödaStream;
@@ -450,6 +452,13 @@ public class Interpreter {
 	        if (!arg.isString()) {
 			error("illegal argument for '" + function
 			      + "': string expected (got " + arg.typeString() + ")");
+		}
+	}
+	
+	static void checkFlag(String function, RödaValue arg) {
+	        if (!arg.isFlag()) {
+			error("illegal argument for '" + function
+			      + "': flag expected (got " + arg.typeString() + ")");
 		}
 	}
 
@@ -1036,17 +1045,18 @@ public class Interpreter {
 	private RödaValue evalExpressionWithoutErrorHandling(Expression exp, RödaScope scope,
 							     RödaStream in, RödaStream out,
 							     boolean variablesAreReferences) {
-		if (exp.type == Expression.Type.STRING) return valueFromString(exp.string);
-		if (exp.type == Expression.Type.NUMBER) return valueFromInt(exp.number);
-		if (exp.type == Expression.Type.BLOCK) return valueFromFunction(exp.block, scope);
-		if (exp.type == Expression.Type.LIST) return valueFromList(exp.list
-									   .stream()
-									   .map(e
-										->
-										evalExpression(e, scope, in, out)
-										.impliciteResolve()
-										)
-									   .collect(toList()));
+		if (exp.type == Expression.Type.STRING) return RödaString.of(exp.string);
+		if (exp.type == Expression.Type.FLAG) return RödaFlag.of(exp.string);
+		if (exp.type == Expression.Type.NUMBER) return RödaNumber.of(exp.number);
+		if (exp.type == Expression.Type.BLOCK) return RödaFunction.of(exp.block, scope);
+		if (exp.type == Expression.Type.LIST) return RödaList.of(exp.list
+									 .stream()
+									 .map(e
+									      ->
+									      evalExpression(e, scope, in, out)
+									      .impliciteResolve()
+									      )
+									 .collect(toList()));
 		if (exp.type == Expression.Type.REFLECT
 		    || exp.type == Expression.Type.TYPEOF) {
 			Datatype type;
