@@ -380,8 +380,7 @@ Kaikki funktiot hyväksyvät lukujen tilalla merkkijonoja (joiden toki pitää s
 ja merkkijonojen tilalla lukuja. Optimointisyistä on kuitenkin aina hyvä käyttää lukuliteraaleja kaikkialla,
 missä mahdollista.
 
-Viiva-merkki (`-`) aloittaa lippuliteraalin. Liput ovat syntaksisokeria merkkijonoille. `-lippu` ja `"-lippu"`
-ovat sama asia.
+Viiva-merkki (`-`) aloittaa lippuliteraalin. Lippuja käytetään lisäohjeiden antamiseksi komennoille.
 
 Merkkijonoja voi yhdistellä `..`-operaattorilla ja niiden pituuden voi saada `#`-operaattorilla.
 
