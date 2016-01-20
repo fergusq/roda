@@ -585,6 +585,17 @@ Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 Vaihtaa nykyistä työhakemistoa. Työhakemisto on se hakemisto, jossa tiedostonkäsittelykomennot olettavat
 tiedostojen olevan.
 
+### file
+
+>`file ((-l|-e|-f|-l) tiedosto)*`
+
+Palauttaa halutun tiedon tiedostosta.
+
+- `-l` palauttaa tiedoston koon.
+- `-e` palauttaa totuusarvon siitä, onko tiedosto olemassa.
+- `-f` kertoo, onko tiedosto tavallinen tiedosto.
+- `-d` kertoo, onko tiedosto kansio.
+
 ### false
 
 >`false`
@@ -730,10 +741,10 @@ record socket {
 
 Metodit toimivat seuraavasti:
 
->`socket.write arvo*`
+>`socket.write (-f tiedosto|arvo)*`
 
 Kirjoittaa annettujen merkkijonojen (joko argumentien tai sisääntulovirran arvojen) UTF-8-esitykset
-virtaan.
+virtaan. Argumentin avulla virtaan voi kirjoittaa myös tiedoston sisällön.
 
 >`socket.read ((-b n|-l) muuttuja)*`
 

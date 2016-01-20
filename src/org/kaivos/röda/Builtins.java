@@ -171,7 +171,7 @@ class Builtins {
 					}
 					else {
 						checkNumber("head", args.get(0));
-						int num = args.get(0).num();
+						long num = args.get(0).num();
 						for (int i = 0; i < num; i++) {
 							RödaValue input = in.pull();
 							if (input == null)
@@ -185,13 +185,17 @@ class Builtins {
 		S.setLocal("tail", valueFromNativeFunction("tail", (typeargs, args, scope, in, out) -> {
 				        if (args.size() > 1) argumentOverflow("tail", 1, args.size());
 
-					int num;
+					long numl;
 
-					if (args.size() == 0) num = 1;
+					if (args.size() == 0) numl = 1;
 					else {
 						checkNumber("tail", args.get(0));
-						num = args.get(0).num();
+						numl = args.get(0).num();
+						if (numl > Integer.MAX_VALUE)
+							error("tail: too large number: " + numl);
 					}
+
+					int num = (int) numl;
 					
 					List<RödaValue> values = new ArrayList<>();
 					for (RödaValue value : in) {
@@ -383,7 +387,7 @@ class Builtins {
 								RödaValue elementName = valueFromString(json.getElementName());
 								RödaValue value;
 								if (json instanceof JSONInteger) {
-									value = valueFromInt(((JSONInteger) json).getValue());
+									value = RödaNumber.of(((JSONInteger) json).getValue());
 								}
 								else if (json instanceof JSONString) {
 									value = valueFromString(((JSONString) json).getValue());
@@ -496,9 +500,9 @@ class Builtins {
 		S.setLocal("seq", valueFromNativeFunction("seq", (typeargs, args, scope, in, out) -> {
 					checkNumber("seq", args.get(0));
 					checkNumber("seq", args.get(1));
-					int from = args.get(0).num();
-					int to = args.get(1).num();
-					for (int i = from; i <= to; i++) out.push(valueFromInt(i));
+					long from = args.get(0).num();
+					long to = args.get(1).num();
+					for (long i = from; i <= to; i++) out.push(RödaNumber.of(i));
 				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false,
 				new VoidStream(), new ValueStream()));
 
@@ -513,7 +517,7 @@ class Builtins {
 		/* Apuoperaatiot */
 
 		S.setLocal("time", valueFromNativeFunction("time", (typeargs, args, scope, in, out) -> {
-				        out.push(valueFromInt((int) System.currentTimeMillis()));
+				        out.push(RödaNumber.of((int) System.currentTimeMillis()));
 				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
 
 		Random rnd = new Random();
@@ -524,7 +528,7 @@ class Builtins {
 						BOOLEAN=2;
 					java.util.function.Function<Integer, RödaValue> next = i -> {
 						switch (i) {
-						case INTEGER: return valueFromInt(rnd.nextInt());
+						case INTEGER: return RödaNumber.of(rnd.nextInt());
 						case FLOAT: return valueFromString(rnd.nextDouble()+"");
 						case BOOLEAN: return valueFromBoolean(rnd.nextBoolean());
 						}
@@ -654,17 +658,40 @@ class Builtins {
 				new ValueStream(), new VoidStream()));
 
 		S.setLocal("cat", valueFromNativeFunction("cat", (typeargs, args, scope, in, out) -> {
-					if (args.size() < 1) argumentUnderflow("wcat", 1, args.size());
+					if (args.size() < 1) argumentUnderflow("cat", 1, args.size());
 					for (RödaValue value : args) {
 						checkString("cat", value);
 						String filename = value.str();
 						File file = IOUtils.getMaybeRelativeFile(I.currentDir,
 											 filename);
 						for (String line : IOUtils.fileIterator(file)) {
-							out.push(valueFromString(line));
+							out.push(RödaString.of(line));
 						}
 					}
 				}, Arrays.asList(new Parameter("files", false)), true,
+				new VoidStream(), new ValueStream()));
+
+		S.setLocal("file", valueFromNativeFunction("file", (typeargs, args, scope, in, out) -> {
+					if (args.size() < 1) argumentUnderflow("file", 1, args.size());
+					for (int i = 0; i < args.size(); i++) {
+						RödaValue flag = args.get(i);
+						checkFlag("file", flag);
+						RödaValue value = args.get(++i);
+						checkString("file", value);
+						String filename = value.str();
+						File file = IOUtils.getMaybeRelativeFile(I.currentDir,
+											 filename);
+						if (flag.isFlag("-l"))
+							out.push(RödaNumber.of(file.length()));
+						else if (flag.isFlag("-e"))
+							out.push(RödaBoolean.of(file.exists()));
+						else if (flag.isFlag("-f"))
+							out.push(RödaBoolean.of(file.isFile()));
+						else if (flag.isFlag("-d"))
+							out.push(RödaBoolean.of(file.isDirectory()));
+						else error("unknown command " + flag.str());
+					}
+				}, Arrays.asList(new Parameter("commands_and_files", false)), true,
 				new VoidStream(), new ValueStream()));
 
 		/* Verkko-operaatiot */
@@ -741,11 +768,13 @@ class Builtins {
 		S.setLocal("server", valueFromNativeFunction("server", (typeargs, args, scope, in, out) -> {
 					checkArgs("server", 1, args.size());
 					checkNumber("server", args.get(0));
-					int port = args.get(0).num();
+					long port = args.get(0).num();
+					if (port > Integer.MAX_VALUE)
+						error("can't open port greater than " + Integer.MAX_VALUE);
 
 					try {
 
-						ServerSocket server = new ServerSocket(port);
+						ServerSocket server = new ServerSocket((int) port);
 						
 						RödaValue serverObject = RödaRecordInstance
 							.of(serverRecord,
@@ -1043,8 +1072,12 @@ class Builtins {
 							    case "-b": {
 								    RödaValue sizeVal = it.next().impliciteResolve();
 								    checkNumber(name, sizeVal);
-								    int size = sizeVal.num();
-								    byte[] data = new byte[size];
+								    long size = sizeVal.num();
+								    if (size > Integer.MAX_VALUE)
+									    error(name + ": can't read more than "
+										  + Integer.MAX_VALUE + " bytes "
+										  + "at time");
+								    byte[] data = new byte[(int) size];
 								    _in.read(data);
 								    value = RödaString.of(new String(data, StandardCharsets.UTF_8));
 							    } break;

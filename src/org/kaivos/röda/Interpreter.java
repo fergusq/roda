@@ -800,14 +800,14 @@ public class Interpreter {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkNumber("++", v);
-					assign.accept(valueFromInt(v.num()+1));
+					assign.accept(RödaNumber.of(v.num()+1));
 				};
 			} break;
 			case "--": {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkNumber("--", v);
-					assign.accept(valueFromInt(v.num()-1));
+					assign.accept(RödaNumber.of(v.num()-1));
 				};
 			} break;
 			case "+=": {
@@ -819,7 +819,7 @@ public class Interpreter {
 					}
 					else {
 						checkNumber("+=", args.get(0));
-						assign.accept(valueFromInt(v.num()+args.get(0).num()));
+						assign.accept(RödaNumber.of(v.num()+args.get(0).num()));
 					}
 				};
 			} break;
@@ -828,7 +828,7 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkNumber("-=", v);
 					checkNumber("-=", args.get(0));
-					assign.accept(valueFromInt(v.num()-args.get(0).num()));
+					assign.accept(RödaNumber.of(v.num()-args.get(0).num()));
 				};
 			} break;
 			case "*=": {
@@ -836,7 +836,7 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkNumber("*=", v);
 					checkNumber("*=", args.get(0));
-					assign.accept(valueFromInt(v.num()*args.get(0).num()));
+					assign.accept(RödaNumber.of(v.num()*args.get(0).num()));
 				};
 			} break;
 			case "/=": {
@@ -844,7 +844,7 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkNumber("/=", v);
 					checkNumber("/=", args.get(0));
-					assign.accept(valueFromInt(v.num()/args.get(0).num()));
+					assign.accept(RödaNumber.of(v.num()/args.get(0).num()));
 				};
 			} break;
 			case ".=": {
@@ -1160,10 +1160,10 @@ public class Interpreter {
 					return valueFromBoolean(!sub.bool());
 				case NEG:
 					if (!sub.isNumber()) error("tried to NEG a " + sub.typeString());
-					return valueFromInt(-sub.num());
+					return RödaNumber.of(-sub.num());
 				case BNOT:
 					if (!sub.isNumber()) error("tried to BNOT a " + sub.typeString());
-					return valueFromInt(~sub.num());
+					return RödaNumber.of(~sub.num());
 				}
 			}
 			else {
@@ -1205,25 +1205,25 @@ public class Interpreter {
 				if (!val2.isNumber()) error("tried to " + exp.ctype + " a " + val2.typeString());
 				switch (exp.ctype) {
 				case MUL:
-					return valueFromInt(val1.num()*val2.num());
+					return RödaNumber.of(val1.num()*val2.num());
 				case DIV:
-					return valueFromInt(val1.num()/val2.num());
+					return RödaNumber.of(val1.num()/val2.num());
 				case ADD:
-					return valueFromInt(val1.num()+val2.num());
+					return RödaNumber.of(val1.num()+val2.num());
 				case SUB:
-					return valueFromInt(val1.num()-val2.num());
+					return RödaNumber.of(val1.num()-val2.num());
 				case BAND:
-					return valueFromInt(val1.num()&val2.num());
+					return RödaNumber.of(val1.num()&val2.num());
 				case BOR:
-					return valueFromInt(val1.num()|val2.num());
+					return RödaNumber.of(val1.num()|val2.num());
 				case BXOR:
-					return valueFromInt(val1.num()^val2.num());
+					return RödaNumber.of(val1.num()^val2.num());
 				case BLSHIFT:
-					return valueFromInt(val1.num()<<val2.num());
+					return RödaNumber.of(val1.num()<<val2.num());
 				case BRSHIFT:
-					return valueFromInt(val1.num()>>val2.num());
+					return RödaNumber.of(val1.num()>>val2.num());
 				case BRRSHIFT:
-					return valueFromInt(val1.num()>>>val2.num());
+					return RödaNumber.of(val1.num()>>>val2.num());
 				case LT:
 					return valueFromBoolean(val1.num()<val2.num());
 				case GT:

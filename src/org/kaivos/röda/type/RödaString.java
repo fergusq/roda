@@ -19,9 +19,9 @@ public class RödaString extends RödaValue {
 		return text;
 	}
 
-	@Override public int num() {
+	@Override public long num() {
 		try {
-			return Integer.parseInt(text);
+			return Long.parseLong(text);
 		} catch (NumberFormatException e) {
 			error("can't convert '" + text + "' to a number");
 			return -1;
@@ -33,12 +33,14 @@ public class RödaString extends RödaValue {
 	}
 
 	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal) {
-		int start = startVal == null ? 0 : startVal.num();
-		int end = endVal == null ? text.length() : endVal.num();
+		long start = startVal == null ? 0 : startVal.num();
+		long end = endVal == null ? text.length() : endVal.num();
 		if (start < 0) start = text.length()+start;
 		if (end < 0) end = text.length()+end;
 		if (end == 0 && start > 0) end = text.length();
-		return of(text.substring(start, end));
+		if (start > Integer.MAX_VALUE || end > Integer.MAX_VALUE)
+			error("string index out of bounds: too large number: " + (start > end ? start : end));
+		return of(text.substring((int) start, (int) end));
 	}
 
 	@Override public boolean isString() {

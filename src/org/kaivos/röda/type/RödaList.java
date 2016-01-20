@@ -53,26 +53,28 @@ public class RödaList extends RödaValue {
 	}
 
 	@Override public RödaValue get(RödaValue indexVal) {
-		int index = indexVal.num();
+		long index = indexVal.num();
 		if (index < 0) index = list.size()+index;
 		if (list.size() <= index) error("array index out of bounds: index " + index
 						+ ", size " + list.size());
-		return list.get(index);
+		if (index > Integer.MAX_VALUE) error("array index out of bounds: too large index: "+index);
+		return list.get((int) index);
 	}
 
 	@Override public void set(RödaValue indexVal, RödaValue value) {
-		int index = indexVal.num();
+		long index = indexVal.num();
 		if (index < 0) index = list.size()+index;
 		if (list.size() <= index)
 			error("array index out of bounds: index " + index
 			      + ", size " + list.size());
 		if (type != null && !value.is(type))
 			error("cannot put a " + value.typeString() + " to a " + typeString());
-		list.set(index, value);
+		if (index > Integer.MAX_VALUE) error("array index out of bounds: too large index: "+index);
+		list.set((int) index, value);
 	}
 
 	@Override public RödaValue contains(RödaValue indexVal) {
-		int index = indexVal.num();
+		long index = indexVal.num();
 		if (index < 0) index = list.size()+index;
 		return RödaBoolean.of(index < list.size());
 	}
@@ -82,12 +84,14 @@ public class RödaList extends RödaValue {
 	}
 
 	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal) {
-		int start = startVal == null ? 0 : startVal.num();
-		int end = endVal == null ? list.size() : endVal.num();
+		long start = startVal == null ? 0 : startVal.num();
+		long end = endVal == null ? list.size() : endVal.num();
 		if (start < 0) start = list.size()+start;
 		if (end < 0) end = list.size()+end;
 		if (end == 0 && start > 0) end = list.size();
-		return of(list.subList(start, end));
+		if (start > Integer.MAX_VALUE) error("array index out of bounds: too large index: "+start);
+		if (end > Integer.MAX_VALUE) error("array index out of bounds: too large index: "+end);
+		return of(list.subList((int) start, (int) end));
 	}
 
 	@Override public RödaValue join(RödaValue separatorVal) {

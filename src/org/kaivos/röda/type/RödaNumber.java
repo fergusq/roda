@@ -4,9 +4,9 @@ import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.Interpreter.error;
 
 public class RödaNumber extends RödaValue {
-	private int number;
+	private long number;
 
-	private RödaNumber(int number) {
+	private RödaNumber(long number) {
 		assumeIdentity("number");
 		this.number = number;
 	}
@@ -19,7 +19,7 @@ public class RödaNumber extends RödaValue {
 		return String.valueOf(number);
 	}
 
-	@Override public int num() {
+	@Override public long num() {
 	        return number;
 	}
 
@@ -35,7 +35,7 @@ public class RödaNumber extends RödaValue {
 		return value.isNumber() && value.num() == number;
 	}
 
-	public static RödaNumber of(int number) {
+	public static RödaNumber of(long number) {
 		return new RödaNumber(number);
 	}
 }

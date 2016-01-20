@@ -38,7 +38,7 @@ public abstract class RödaValue {
 		return true;
 	}
 	
-	public int num() {
+	public long num() {
 		error("can't convert '" + str() + "' to a number");
 		return -1;
 	}
@@ -241,7 +241,7 @@ public abstract class RödaValue {
 		return RödaString.of(text);
 	}
 
-	public static RödaValue valueFromInt(int number) {
+	public static RödaValue valueFromLong(long number) {
 	        return RödaNumber.of(number);
 	}
 
