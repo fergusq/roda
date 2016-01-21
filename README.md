@@ -313,12 +313,12 @@ Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
 
 #### Ohjausrakenteet
 
-Ohjausrakenteita ovat `if`, `while`, `for`, `try` ja `return`.
+Ohjausrakenteita ovat `if`, `while`, `for`, `break`, `continue`, `try` ja `return`.
 
 **`if`** ja **`while`** suorittavat annetun lauseen ja olettavat sen palauttavan joko arvon `true` tai arvon `false`.
 Muut arvot tulkitaan aina samoin kuin `true`. Vain yksi arvo luetaan.
 
-Sisäänrakennetuista funktioista vain `true`, `false`, `test`, `random` (ks. alempana)
+Sisäänrakennetuista funktioista vain `true`, `false`, `test`, `random`, `file` (ks. alempana)
 ja `pull -r` palauttavat totuusarvon.
 
 ```
@@ -566,6 +566,40 @@ Laskujärjestys:
 | 6.   | `<`, `>`, `<=`, `>=`                                       |
 | 7.   | `=`, `!=`                                                  |
 | 8.   | `&&`, `||`, `^^`                                           |
+
+#### Reflektio
+
+Reflektion avulla on mahdollista saada metatietoa olioiden tyypeistä. Rödassa on kaksi mekanismia reflektion
+käyttämiseen: `reflect`-avainsana ja `typeof`-avainsana.
+```
+record type {
+	name : string
+	annotations : list
+	fields : list<field>
+	new_instance : function
+}
+record field {
+	name : string
+	annotations : list
+	type : type
+	get : function
+	set : function
+}
+```
+
+`reflect` palauttaa annetun tyypin metaluokan, joka on tyyppiä `type`.
+```
+record R {
+	a : string
+	b : number
+}
+
+...
+
+reflect R.fields /* palauttaa listan, jossa on kaksi field oliota, yksi a:lle ja toinen b:lle */
+```
+
+`typeof` toimii samoin, mutta ottaa tyyppinimen sijasta arvon ja palauttaa sen tyypin.
 
 ## Lista sisäänrakennetuista funktioista
 
