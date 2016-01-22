@@ -689,6 +689,11 @@ class Builtins {
 							out.push(RödaBoolean.of(file.isFile()));
 						else if (flag.isFlag("-d"))
 							out.push(RödaBoolean.of(file.isDirectory()));
+						else if (flag.isFlag("-m")) try {
+								out.push(RödaString
+									 .of(Files
+									     .probeContentType(file.toPath())));
+							} catch (IOException e) { error(e); }
 						else error("unknown command " + flag.str());
 					}
 				}, Arrays.asList(new Parameter("commands_and_files", false)), true,

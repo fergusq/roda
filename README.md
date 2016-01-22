@@ -343,6 +343,8 @@ for tyttö in tytöt; do
 done
 ```
 
+**`break`**ia ja **`continue`**a voi käyttää silmukasta poistumiseen tai vuoron yli hyppäämiseen.
+
 **`try`** suorittaa annetun komennon tai lohkon ja ohittaa hiljaisesti kaikki vastaan tulleet virheet.
 Aion ehkä tehdä jonkinlaisen virheenkäsittelytoiminnon siihen tulevaisuudessa. Tällä hetkellä tätä
 kannattaa käyttää vain palvelimissa ym. joissa prosessin on pysyttävä virheistä huolimatta päällä.
@@ -621,7 +623,7 @@ tiedostojen olevan.
 
 ### file
 
->`file ((-l|-e|-f|-l) tiedosto)*`
+>`file ((-l|-e|-f|-l|-m) tiedosto)*`
 
 Palauttaa halutun tiedon tiedostosta.
 
@@ -629,6 +631,7 @@ Palauttaa halutun tiedon tiedostosta.
 - `-e` palauttaa totuusarvon siitä, onko tiedosto olemassa.
 - `-f` kertoo, onko tiedosto tavallinen tiedosto.
 - `-d` kertoo, onko tiedosto kansio.
+- `-m` palauttaa tiedoston mime-tyypin.
 
 ### false
 
