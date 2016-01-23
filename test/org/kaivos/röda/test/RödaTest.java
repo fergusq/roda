@@ -144,6 +144,30 @@ public class RödaTest {
 		     + "l:=![r.f<number>];l+=12;push l[0]}");
 	}
 
+	// Reflektio
+
+	@Test
+	public void testReflectRecordName() {
+		assertEquals("Mimmi", eval("record Mimmi{}main{push reflect Mimmi.name}"));
+	}
+
+	@Test
+	public void testReflectFieldName() {
+		assertEquals("Miina", eval("record R{Miina:string}main{push reflect R.fields[0].name}"));
+	}
+
+	@Test
+	public void testReflectRecordAnnotation() {
+		assertEquals("Salli", eval("function @A{push\"Salli\"}"
+					   + "@A;record R{}main{push reflect R.annotations[0]}"));
+	}
+
+	@Test
+	public void testReflectFieldAnnotation() {
+		assertEquals("Maisa", eval("function @A{push\"Maisa\"}"
+					   + "record R{@A;f:number}main{push reflect R.fields[0].annotations[0]}"));
+	}
+
 	/* README:n esimerkit (hieman muutettuina)*/
 
 	// Funktiot
