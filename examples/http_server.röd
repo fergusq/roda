@@ -78,7 +78,8 @@ record http_server {
 	
 	function update {
 		connection := ![self.socket.accept]
-		print "[ ] Connection from "..connection.hostname.." ("..connection.ip..":"..connection.port..")."
+		date := "["..!(exec -l "date" "+%d.%m.%Y/%H:%M")[0].."]"
+		print date.." Connection from "..connection.hostname.." ("..connection.ip..":"..connection.port..")."
 		handler := ![thread { self.handle connection }]
 		handler.start
 	}

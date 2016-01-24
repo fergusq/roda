@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 
 import java.nio.charset.StandardCharsets;
@@ -557,14 +558,23 @@ class Builtins {
 		
 		S.setLocal("exec", valueFromNativeFunction("exec", (typeargs, args, scope, in, out) -> {
 					HashMap<String, String> envVars = new HashMap<>();
-					while (args.size() > 0 && args.get(0).isFlag("-E")) {
-						args.remove(0);
-						if (args.size() < 3) argumentUnderflow("exec", 4, args.size()+1);
-						checkString("exec", args.get(0));
-						checkString("exec", args.get(0));
-						envVars.put(args.get(0).str(), args.get(1).str());
-						args.remove(0);
-						args.remove(0);
+					class C{boolean c=false;}
+					C lineMode = new C();
+					while (args.size() > 0 && args.get(0).isFlag()) {
+					        RödaValue flag = args.remove(0);
+						if (flag.isFlag("-E")) {
+							if (args.size() < 3)
+								argumentUnderflow("exec", 4, args.size()+1);
+							checkString("exec", args.get(0));
+							checkString("exec", args.get(0));
+							envVars.put(args.get(0).str(), args.get(1).str());
+							args.remove(0);
+							args.remove(0);
+						} else if (flag.isFlag("-l")) {
+							lineMode.c = true;
+						} else if (flag.isFlag("-c")) {
+							lineMode.c = false;
+						}
 					}
 					if (args.size() < 1) argumentUnderflow("exec", 1, args.size());
 				        List<String> params = args.stream().map(v -> v.str()).collect(toList());
@@ -588,10 +598,21 @@ class Builtins {
 						Runnable output = () -> {
 							InputStreamReader reader = new InputStreamReader(pout);
 							try {
-							        while (true) {
-								        int chr = reader.read();
-									if (chr == -1) break;
-									out.push(valueFromString(String.valueOf((char) chr)));
+								if (lineMode.c) {
+									BufferedReader br = new BufferedReader(reader);
+									while (true) {
+										String str = br.readLine();
+										if (str == null) break;
+										out.push(RödaString.of(str));
+									}
+									br.close();
+								}
+								else {
+									while (true) {
+										int chr = reader.read();
+										if (chr == -1) break;
+										out.push(RödaString.of(String.valueOf((char) chr)));
+									}
 								}
 								reader.close();
 							} catch (IOException e) {
