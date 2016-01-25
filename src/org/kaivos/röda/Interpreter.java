@@ -23,6 +23,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
 
+import java.util.regex.Matcher;
 import java.util.regex.PatternSyntaxException;
 
 import java.io.File;
@@ -868,6 +869,11 @@ public class Interpreter {
 				r = () -> {
 					RödaValue rval = resolve.get();
 					checkString(".=", rval);
+					boolean quoteMode = false;
+					if (args.size() > 0 && args.get(0).isFlag("-q")) {
+						args.remove(0);
+						quoteMode = true;
+					}
 					if (args.size() % 2 != 0) error("invalid arguments for '~=': even number required (got " + (args.size()-1) + ")");
 					String text = rval.str();
 					try {
@@ -876,6 +882,8 @@ public class Interpreter {
 							checkString(e.asString() + "~=", args.get(j+1));
 							String pattern = args.get(j).str();
 							String replacement = args.get(j+1).str();
+							if (quoteMode) replacement = Matcher
+									       .quoteReplacement(replacement);
 							text = text.replaceAll(pattern, replacement);
 						}
 					} catch (PatternSyntaxException ex) {
