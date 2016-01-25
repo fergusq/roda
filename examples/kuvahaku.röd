@@ -8,7 +8,7 @@ hae_kuva sana tiedosto {
 	etsitty_url := "http://t[0-9]\\.gstatic.com/images\\?q=tbn:[a-zA-Z0-9_-]*"
 	
 	/* haetaan lista kuvista */
-	kuvat := !(wcat -U user_agent hakukone | grep -o etsitty_url)
+	kuvat := !(wcat -U user_agent hakukone | search etsitty_url)
 	
 	/* jos kuvia löytyi... */
 	if test #kuvat -gt 0; do

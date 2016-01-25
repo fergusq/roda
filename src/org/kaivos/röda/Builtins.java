@@ -37,6 +37,7 @@ import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import java.nio.file.Files;
@@ -214,43 +215,19 @@ class Builtins {
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
-		S.setLocal("grep", valueFromNativeFunction("grep", (typeargs, args, scope, in, out) -> {
-					if (args.size() < 1) argumentUnderflow("grep", 1, 0);
-					boolean onlyMatching = args.get(0).isFlag("-o");
-					if (onlyMatching && args.size() == 1)
-						argumentUnderflow("grep", 2, 1);
-					
-					// basic mode
-					if (!onlyMatching) {
-						while (true) {
-							RödaValue input = in.pull();
-							if (input == null) break;
-							
-							String text = input.str();
-							for (RödaValue value : args) {
-								checkString("grep", value);
-								String pattern = value.str();
-								if (text.matches(pattern))
-									out.push(input);
-							}
-						}
-					}
-
-					// only matching mode
-					if (onlyMatching) {
-						args.remove(0);
-						while (true) {
-							RödaValue input = in.pull();
-							if (input == null) break;
-						        
-							String text = input.str();
-							for (RödaValue value : args) {
-								checkString("grep", value);
-								Pattern pattern = Pattern.compile(value.str());
-								Matcher m = pattern.matcher(text);
-								while (m.find()) {
-									out.push(valueFromString(m.group()));
-								}
+		S.setLocal("search", valueFromNativeFunction("search", (typeargs, args, scope, in, out) -> {
+					if (args.size() < 1) argumentUnderflow("search", 1, 0);
+					while (true) {
+						RödaValue input = in.pull();
+						if (input == null) break;
+						
+						String text = input.str();
+						for (RödaValue value : args) {
+							checkString("search", value);
+							Pattern pattern = Pattern.compile(value.str());
+							Matcher m = pattern.matcher(text);
+							while (m.find()) {
+								out.push(valueFromString(m.group()));
 							}
 						}
 					}
@@ -430,6 +407,74 @@ class Builtins {
 						}
 					}
 				}, Arrays.asList(new Parameter("flags_and_code", false)), true, new ValueStream(), new SingleValueStream()));
+		
+		S.setLocal("parse_num", valueFromNativeFunction("parse_num", (typeargs, args, scope, in, out) -> {
+					int radix = 10;
+					boolean tochr = false;
+					while (args.size() > 0 && args.get(0).isFlag()) {
+						String flag = args.remove(0).str();
+						switch (flag) {
+						case "-r":
+							if (args.size() == 0)
+								argumentUnderflow("parse_num", 1, args.size());
+							checkNumber("parse_num", args.get(0));
+							long radixl = args.remove(0).num();
+							if (radixl > Integer.MAX_VALUE)
+								error("parse_num: radix too great: " + radixl);
+							radix = (int) radixl;
+							break;
+						case "-c":
+							tochr = true;
+						}
+					}
+					if (args.size() > 0) {
+						for (RödaValue v : args) {
+							checkString("parse_num", v);
+							long lng = Long.parseLong(v.str(), radix);
+							if (tochr) out.push(RödaString
+									    .of(String.valueOf((char) lng)));
+							else out.push(RödaNumber.of(lng));
+						}
+					} else {
+						while (true) {
+							RödaValue v = in.pull();
+							if (v == null) break;
+							checkString("parse_num", v);
+							long lng = Long.parseLong(v.str(), radix);
+							if (tochr) out.push(RödaString
+									    .of(String.valueOf((char) lng)));
+							else out.push(RödaNumber.of(lng));
+						}
+					}
+				}, Arrays.asList(new Parameter("strings", false)), true, new ValueStream(), new ValueStream()));
+		
+		S.setLocal("btos", valueFromNativeFunction("btos", (typeargs, args, scope, in, out) -> {
+					Charset chrset = StandardCharsets.UTF_8;
+					Consumer<RödaValue> convert = v -> {
+							checkList("btos", v);
+							byte[] arr = new byte[(int) v.list().size()];
+							int c = 0;
+							for (RödaValue i : v.list()) {
+								checkNumber("btos", i);
+								long l = i.num();
+								if (l > Byte.MAX_VALUE*2)
+									error("btos: too large byte: " + l);
+								arr[c++] = (byte) l;
+							}
+							out.push(RödaString.of(new String(arr, chrset)));
+					};
+				        if (args.size() > 0) {
+						for (RödaValue v : args) {
+							convert.accept(v);
+						}
+					} else {
+						while (true) {
+							RödaValue v = in.pull();
+							if (v == null) break;
+							convert.accept(v);
+						}
+					}
+				}, Arrays.asList(new Parameter("lists", false)), true, new ValueStream(), new ValueStream()));
 		
 		S.setLocal("expr", valueFromNativeFunction("expr", (typeargs, args, scope, in, out) -> {
 				        String expression = args.stream().map(RödaValue::str).collect(joining(" "));

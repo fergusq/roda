@@ -52,6 +52,27 @@ record http_server {
 			connection.read -b length content
 			request.content = content
 		done
+		request.form = new map<string>
+		if push request.headers["Content-Type"]?; do
+			if test request.headers["Content-Type"] -eq "application/x-www-form-urlencoded"; do
+				for param in !(split -s "&" request.content) do
+					kv := !(split -s "=" param)
+					if test #kv -eq 2; do
+						key := kv[0]
+						val := kv[1]
+						val ~= "\\+" " "
+						push val | search "(%[0-9A-F]{2})+" | while pull -r escape_code; do
+							code := new list<number>
+							for num in !(split -s "%" escape_code)[1:] do
+								code += ![parse_num -r 16 num]
+							done
+							val ~= -q escape_code ![btos code]
+						done
+						request.form[key] = val
+					done
+				done
+			done
+		done
 	}
 	
 	/* Lähetys */
@@ -72,6 +93,8 @@ record http_server {
 				catch e
 					request.send500 e
 				done
+			else
+				break
 			done
 		done
 	}
@@ -100,6 +123,7 @@ record request {
 	headers : map<string>
 	as_text : string
 	content : string
+	form : map<string>
 	server : http_server
 	connection : socket
 	

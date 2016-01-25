@@ -639,14 +639,6 @@ Palauttaa halutun tiedon tiedostosta.
 
 Työntää arvon `false` ulostulovirtaan.
 
-### grep
-
->`grep [-o] regex`
-
-Lukee sisääntulovirrasta merkkijonoarvoja. Jos merkkijono täsmää annettuun säännölliseen lausekkeeseen, se työnnetään
-ulostulovirtaan. Jos valitsinta `-o` (**o**nly-matching) on käytetty, palautetaan merkkijonoista vain ne osat,
-joihin säännöllinen lauseke täsmää.
-
 ### expr
 
 >`expr merkkijono+`
@@ -702,6 +694,12 @@ lausekkeen avulla. Palauttaa listan säännöllisen lausekkeen mukaisista ryhmis
 
 Työntää annettujen muuttujien nimet ulostulovirtaan merkkijonoina.
 
+### parse_num
+
+>`parse_num [-c] [-r radix] merkkijono+`
+
+Parsii luvun merkkijonosta. Jos valitsin `-c` on annettu, tulkitsee luvun UTF-8-merkkinä ja palauttaa merkkijonon.
+
 ### print
 
 >`print arvo*`
@@ -740,6 +738,13 @@ Voi myös palauttaa kokonaisluvun tai liukuluvun merkkijonona.
 
 Lukee sisääntulovirrasta merkkijonoarvoja ja työntää ne ulostulovirtaan siten, että niihin on tehty annetut
 korvaukset järjestyksessä. Käyttää sisäisesti Javan `String.replaceAll`-metodia.
+
+### search
+
+>`search regex+`
+
+Lukee sisääntulovirrasta merkkijonoja palauttaa jokaisesta ne kohdat, jotka täsmäävät annettuun
+säännölliseen lausekkeeseen.
 
 ### seq
 
