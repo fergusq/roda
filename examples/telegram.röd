@@ -48,16 +48,16 @@ record telegram_bot {
 		})
 	}
 	
-	function send_message chat message {
+	function send_message chat message args... {
 		base_url := "https://api.telegram.org/bot"..self.token
 		message_url = base_url.."/sendMessage"
-		{} | exec "curl" --silent message_url -F "chat_id="..chat -F "text="..message | {}
+		{} | exec "curl" --silent message_url -F "chat_id="..chat -F "text="..message *args | {}
 	}
 	
-	function send_photo chat file {
+	function send_photo chat file args... {
 		base_url := "https://api.telegram.org/bot"..self.token
 		photo_url = base_url.."/sendPhoto"
-		{} | exec "curl" --silent photo_url -F "chat_id="..chat -F "photo=@"..file | {}
+		{} | exec "curl" --silent photo_url -F "chat_id="..chat -F "photo=@"..file *args | {}
 	}
 }
 
