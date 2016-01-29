@@ -498,8 +498,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 			if (!closed()) {
 				String str = val.str();
 				out.print(str);
-				if (str.indexOf('\n') != -1)
-					out.flush();
+			        out.flush();
 			}
 			else error("stream is closed");
 		}
