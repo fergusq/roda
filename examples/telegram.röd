@@ -59,6 +59,12 @@ record telegram_bot {
 		photo_url = base_url.."/sendPhoto"
 		{} | exec "curl" --silent photo_url -F "chat_id="..chat -F "photo=@"..file *args | {}
 	}
+	
+	function send_action chat action {
+		base_url := "https://api.telegram.org/bot"..self.token
+		action_url = base_url.."/sendChatAction"
+		{} | exec "curl" --silent action_url -F "chat_id="..chat -F "action="..action | {}
+	}
 }
 
 json_search tree queries... {
