@@ -152,6 +152,15 @@ class Builtins {
 
 		/* Muut oleelliset kielen rakenteet */
 
+		S.setLocal("identity", valueFromNativeFunction("identity", (typeargs, args, scope, in, out) -> {
+				        while (true) {
+						RödaValue input = in.pull();
+						if (input == null) break;
+						out.push(input);
+					}
+				}, Collections.emptyList(), false,
+				new ValueStream(), new ValueStream()));
+
 		S.setLocal("error", valueFromNativeFunction("error", (typeargs, args, scope, in, out) -> {
 					checkArgs("error", 1, args.size());
 					if (args.get(0).isString()) {
@@ -163,6 +172,21 @@ class Builtins {
 					else error(args.get(0));
 				}, Arrays.asList(new Parameter("errorObject", false)), false,
 				new VoidStream(), new VoidStream()));
+
+		S.setLocal("errprint", valueFromNativeFunction("errprint", (typeargs, args, scope, in, out) -> {
+					if (args.isEmpty()) {
+						while (true) {
+							RödaValue input = in.pull();
+							if (input == null) break;
+							System.err.print(input.str());
+						}
+					}
+					else for (RödaValue value : args) {
+						System.err.print(value.str());
+						out.push(valueFromString("\n"));
+					}
+				}, Arrays.asList(new Parameter("values", false)), true,
+				new ValueStream(), new VoidStream()));
 
 		/* Täydentävät virtaoperaatiot */
 

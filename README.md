@@ -621,6 +621,12 @@ Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 Vaihtaa nykyistä työhakemistoa. Työhakemisto on se hakemisto, jossa tiedostonkäsittelykomennot olettavat
 tiedostojen olevan.
 
+### errprint
+
+>`errprint merkkijono*`
+
+Tulostaa annetut merkkijonot (tai sisääntulovirran arvot) standardivirheeseen.
+
 ### file
 
 >`file ((-l|-e|-f|-l|-m) tiedosto)*`
@@ -660,6 +666,12 @@ ulostuloa ei halua, voi sen putkittaa nimettömälle funktiolle:
 >`head [määrä]`
 
 Lukee yhden arvon (tai argumenttina annetun määrän arvoja) ja työntää sen/ne ulostulovirtaan.
+
+### identity
+
+>`identity`
+
+Lukee sisääntulovirrasta arvoja ja työntää ne ulostulovirtaan.
 
 ### import
 
