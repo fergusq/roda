@@ -363,7 +363,7 @@ done
 ```
 hae_syntymävuodella_yksi_tyttö vuosi {
 	for tyttö in tytöt; do
-		if push 'tyttö[1] = vuosi'; do
+		if test tyttö[1] -eq vuosi; do
 			return tyttö
 		done
 	done
@@ -441,7 +441,7 @@ iät["Ilmari"] = 19
 `?`-operaattorilla voi tarkastaa, onko kartassa tietty alkio:
 
 ```
-if push '!iät["Maija"]?'; do
+if push $(!iät["Maija"]?); do
 	push "Maijan ikää ei löydy!\n"
 done
 ```
@@ -522,10 +522,10 @@ done
 
 Koska Rödan muu syntaksi varaa jo sulut `( )` ja miinusmerkin `-`, ei niitä voi käyttää laskutoimituksiin.
 Tämän rajoituksen kiertämiseksi Rödassa on aritmetiikkatila, jossa tavallinen syntaksi ei enää päde.
-Tilaan pääsee heittomerkillä `'`.
+Tilaan pääsee dollarimerkillä: `$(...)`.
 ```
-p := 'i/2+7'
-k := '(p-10)*2'
+p := $(i/2+7)'
+k := $((p-10)*2)'
 ```
 
 Aritmetiikkatilassa voi käyttää tavallisia sulkeita ja ylempänä esiteltyjä operaattoreita.
@@ -552,6 +552,7 @@ Lisäksi seuraavat operaattorit ovat käytössä:
 | `-`         | Vähennyslasku               | 2 kokonaislukua   | Kokonaisluvun |
 | `*`         | Kertolasku                  | 2 kokonaislukua   | Kokonaisluvun |
 | `/`         | Jakolasku                   | 2 kokonaislukua   | Kokonaisluvun |
+| `%`         | Jakojäännös                 | 2 kokonaislukua   | Kokonaisluvun |
 | Unäärinen `-` | Vastaluku                 | Kokonaisluvun     | Kokonaisluvun |
 | Unäärinen `~` | Bittitason EI             | Kokonaisluvun     | Kokonaisluvun |
 | Unäärinen `!` | Looginen EI               | Totuusarvon       | Totuusarvon   |
@@ -562,12 +563,13 @@ Laskujärjestys:
 |:----:| ---------------------------------------------------------- |
 | 1.   | `[]`, `[:]`, `[]?`                                         |
 | 2.   | Unäärinen `-`, unäärinen `~`, unäärinen `!`, unäärinen `#` |
-| 3.   | `*`, `/`                                                   |
+| 3.   | `*`, `/`, `%`                                              |
 | 4.   | `+`, binäärinen `-`                                        |
 | 5.   | `&`, `|`, `^`, `<<`, `>>`, `>>>`                           |
 | 6.   | `<`, `>`, `<=`, `>=`                                       |
 | 7.   | `=`, `!=`                                                  |
 | 8.   | `&&`, `||`, `^^`                                           |
+| 9.   | `..`                                                       |
 
 #### Reflektio
 
