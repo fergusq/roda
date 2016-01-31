@@ -57,17 +57,27 @@ public class RödaTest {
 
 	@Test
 	public void test2Plus2Equals4() {
-		assertEquals("4", eval("main{push'2+2';}"));
+		assertEquals("4", eval("main{push$(2+2);}"));
 	}
 
 	@Test
 	public void testGrouping() {
-		assertEquals("13", eval("main{push'1+(3+1)*3';}"));
+		assertEquals("13", eval("main{push$(1+(3+1)*3);}"));
 	}
 
 	@Test
 	public void testVariablesInCalculation() {
-		assertEquals("13", eval("main{a:=6;b:=1;b=2;push'1+a*b';}"));
+		assertEquals("13", eval("main{a:=6;b:=1;b=2;push$(1+a*b);}"));
+	}
+
+	@Test
+	public void testMinusOperation() {
+		assertEquals("3", eval("main{push$(9-2*3);}"));
+	}
+
+	@Test
+	public void testMinusOperationWithVariable() {
+		assertEquals("8", eval("main{a:=4;push$(20-a*3);}"));
 	}
 
 	// Tietueet

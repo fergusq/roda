@@ -39,11 +39,20 @@ public class Parser {
 		.addOperatorRule("*=")
 		.addOperatorRule("/=")
 		.addOperatorRule("++")
+		.addOperatorRule("&&")
+		.addOperatorRule("||")
+		.addOperatorRule("^^")
+		.addOperatorRule("!=")
+		.addOperatorRule("=~")
+		.addOperatorRule("<=")
+		.addOperatorRule(">=")
+		.addOperatorRule("<<")
+		.addOperatorRule(">>>")
+		.addOperatorRule(">>")
 		.addPatternRule(Pattern.compile("--(?!\\p{L})"))
-		.addOperators("<>()[]{}|&.,:;=#%!?\n\\*@")
+		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
-		.addStringRule('\'', '\'', (char) 0)
 		.addStringRule("[[", "]]", (char) 0)
 		.addStringRule('"','"','\\')
 		.addEscapeCode('\\', "\\")
@@ -169,19 +178,45 @@ public class Parser {
 	}
 
 	static Datatype parseType(TokenList tl) {
+		return _parseType(tl, 0, false).t;
+	}
+
+	/* Pitää kirjaa siitä, montako ylimääräistä kulmasulkua tai yhtäsuuruusmerkkiä on jo parsittu */
+	private static class DTP { int p; int e; Datatype t; }
+	private static DTP _parseType(TokenList tl, int extraPs, boolean allowEqSymbol) {
 		String name = typename(tl);
 		List<Datatype> subtypes = new ArrayList<>();
+		int extraAngles = 0;
+		int extraEq = 0;
 	        if (!name.equals("function")
 		    && !name.equals("string")
 		    && !name.equals("boolean")
 		    && !name.equals("number")
 		    && tl.acceptIfNext("<")) {
 			do {
-				subtypes.add(parseType(tl));
+				DTP dtp = _parseType(tl, extraPs+1, false);
+				subtypes.add(dtp.t);
+				if (dtp.p > 0) {
+					extraAngles = dtp.p;
+					break;
+				}
 			} while (tl.acceptIfNext(","));
-			tl.accept(">");
+			if (extraAngles == 0) {
+				if (extraPs >= 2
+				    && tl.acceptIfNext(">>>")) extraAngles = 2;
+				else if (extraPs >= 1
+					 && tl.acceptIfNext(">>")) extraAngles = 1;
+				else if (allowEqSymbol
+					 && tl.acceptIfNext(">=")) extraEq = 1;
+				else tl.accept(">");
+			}
+			else extraAngles--;
 		}
-		return new Datatype(name, subtypes);
+		DTP ans = new DTP();
+		ans.p = extraAngles;
+		ans.e = extraEq;
+		ans.t = new Datatype(name, subtypes);
+		return ans;
 	}
 	
 	static class Program {
@@ -340,9 +375,10 @@ public class Parser {
 			else {
 				String fieldName = identifier(tl);
 				tl.accept(":");
-				Datatype type = parseType(tl);
+				DTP dtp = _parseType(tl, 0, true);
+				Datatype type = dtp.t;
 				Expression defaultValue = null;
-				if (tl.acceptIfNext("=")) {
+				if (dtp.e > 0 || tl.acceptIfNext("=")) {
 					defaultValue = parseExpression(tl);
 				}
 				fields.add(new Record.Field(fieldName, type, defaultValue, annotations));
@@ -786,6 +822,7 @@ public class Parser {
 		enum CType {
 			MUL,
 			DIV,
+			MOD,
 			ADD,
 			SUB,
 			BAND,
@@ -849,7 +886,7 @@ public class Parser {
 			case STATEMENT_SINGLE:
 				return "![...]";
 			case CALCULATOR:
-				return "'...'";
+				return "$(...)'";
 			case ELEMENT:
 				return sub.asString() + "[" + index.asString() + "]";
 			case CONTAINS:
@@ -1092,15 +1129,67 @@ public class Parser {
 	private static Expression parseExpressionPrimary(TokenList tl) {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
-		Expression ans;
-		if (tl.acceptIfNext("'")) {
-			String expr = tl.nextString();
-			tl.accept("'");
-			TokenList tlc = calculatorScanner.tokenize(expr, file, line);
-			ans = parseCalculatorExpression(tlc);
-			tlc.accept("<EOF>");
+		Expression ans = parseCommonPrimary(file, line, tl);
+		if (ans == null) {
+			if (tl.acceptIfNext("$")) {
+				tl.accept("(");
+				ans = parseCalculatorExpression(tl);
+				tl.accept(")");
+			}
+			else if (tl.acceptIfNext("(")) {
+				List<Expression> list = new ArrayList<>();
+				while (!tl.isNext(")")) {
+					list.add(parseExpression(tl));
+				}
+				tl.accept(")");
+				ans = expressionList(file, line, list);
+			}
+			else if (tl.acceptIfNext("!")) {
+				if (tl.acceptIfNext("(")) {
+					maybeNewline(tl);
+					Statement s = parseStatement(tl, true);
+					maybeNewline(tl);
+					tl.accept(")");
+					ans = expressionStatementList(file, line, s);
+				}
+				else if (tl.acceptIfNext("[")) {
+					maybeNewline(tl);
+					Statement s = parseStatement(tl, true);
+					maybeNewline(tl);
+					tl.accept("]");
+					ans = expressionStatementSingle(file, line, s);
+				}
+				else {
+					ans = null;
+					assert false;
+				}
+			}
+			else if (tl.acceptIfNext("-")) {
+				String flag = "-";
+				while (tl.acceptIfNext("-")) flag += "-";
+				flag += tl.nextString();
+				if (flag.matches("-[0-9]+")) {
+					ans = expressionInt(file, line, Integer.parseInt(flag));
+				}
+				else {
+					ans = expressionFlag(file, line, flag);
+				}
+			}
+			else if (tl.isNext("<EOF>")) throw new ParsingException(TokenList.expected("#", "(", "{", "!", "<identifier>", "<number>", "<string>"), tl.next());
+			else {
+				String name = identifier(tl);
+				ans = expressionVariable(file, line, name);
+			}
 		}
-		else if (tl.acceptIfNext("new")) {
+
+		ans = parseArrayAccessIfPossible(tl, ans, Parser::parseExpression);
+
+		return ans;
+	}
+
+	private static Expression parseCommonPrimary(String file, int line, TokenList tl) {
+		Expression ans = null;
+		if (tl.acceptIfNext("new")) {
 			Datatype type = parseType(tl);
 			ans = expressionNew(file, line, type);
 		}
@@ -1146,34 +1235,6 @@ public class Parser {
 			ans = expressionFunction(file, line, new Function("<block>", Collections.emptyList(), parameters,
 									  isVarargs, input, output, body));
 		}
-		else if (tl.acceptIfNext("!")) {
-			if (tl.acceptIfNext("(")) {
-				maybeNewline(tl);
-				Statement s = parseStatement(tl, true);
-				maybeNewline(tl);
-				tl.accept(")");
-				ans = expressionStatementList(file, line, s);
-			}
-			else if (tl.acceptIfNext("[")) {
-				maybeNewline(tl);
-				Statement s = parseStatement(tl, true);
-				maybeNewline(tl);
-				tl.accept("]");
-				ans = expressionStatementSingle(file, line, s);
-			}
-			else {
-				ans = null;
-				assert false;
-			}
-		}
-		else if (tl.acceptIfNext("(")) {
-			List<Expression> list = new ArrayList<>();
-			while (!tl.isNext(")")) {
-				list.add(parseExpression(tl));
-			}
-			tl.accept(")");
-			ans = expressionList(file, line, list);
-		}
 		else if (tl.acceptIfNext("\"")) {
 			String s = tl.nextString();
 			tl.accept("\"");
@@ -1184,20 +1245,9 @@ public class Parser {
 			tl.accept("]]");
 		        ans = expressionString(file, line, s);
 		}
-		else if (tl.seekString().matches("-?[0-9]+")) {
+		else if (tl.seekString().matches("[0-9]+")) {
 			ans = expressionInt(file, line, Integer.parseInt(tl.nextString()));
 		}
-		else if (tl.seekString().startsWith("-")) {
-			ans = expressionFlag(file, line, tl.nextString());
-		}
-		else if (tl.isNext("<EOF>")) throw new ParsingException(TokenList.expected("#", "(", "{", "!", "<identifier>", "<number>", "<string>"), tl.next());
-		else {
-			String name = identifier(tl);
-			ans = expressionVariable(file, line, name);
-		}
-
-		ans = parseArrayAccessIfPossible(tl, ans, Parser::parseExpression);
-
 		return ans;
 	}
 
@@ -1234,29 +1284,6 @@ public class Parser {
 		return ans;
 	}
 	
-	public static final TokenScanner calculatorScanner = new TokenScanner()
-		.addOperatorRule("&&")
-		.addOperatorRule("||")
-		.addOperatorRule("^^")
-		.addOperatorRule("!=")
-		.addOperatorRule("=~")
-		.addOperatorRule("<=")
-		.addOperatorRule(">=")
-		.addOperatorRule("<<")
-		.addOperatorRule(">>")
-		.addOperatorRule(">>>")
-		.addOperators("#()[:].=+-*/<>&|^~!")
-		.separateIdentifiersAndPunctuation(false)
-		.addCommentRule("/*", "*/")
-		.addStringRule("[[", "]]", (char) 0)
-		.addStringRule('"','"','\\')
-		.addEscapeCode('\\', "\\")
-		.addEscapeCode('n', "\n")
-		.addEscapeCode('r', "\r")
-		.addEscapeCode('t', "\t")
-		.addCharacterEscapeCode('x', 2, 16)
-		.appendOnEOF("<EOF>");
-	
 	private static OperatorLibrary<Expression> library;
 	private static OperatorPrecedenceParser<Expression> opparser;
 
@@ -1268,7 +1295,9 @@ public class Parser {
 		/* Declares the operator library – all operators use parsePrimary() as their RHS parser */
 		library = new OperatorLibrary<>(tl -> parseCalculatorPrimary(tl));
 		
-		/* Declares the operators*/
+		/* Declares the operators */
+		library.add("..", (a, b) -> expressionConcat(a.file, a.line, a, b));
+		library.increaseLevel();
 		library.add("&&", op(Expression.CType.AND));
 		library.add("||", op(Expression.CType.OR));
 		library.add("^^", op(Expression.CType.XOR));
@@ -1294,8 +1323,9 @@ public class Parser {
 		library.increaseLevel();
 		library.add("*", op(Expression.CType.MUL));
 		library.add("/", op(Expression.CType.DIV));
+		library.add("%", op(Expression.CType.MOD));
 		
-		/* Declares the OPP*/
+		/* Declares the OPP */
 		opparser = OperatorPrecedenceParser.fromLibrary(library);
 	}
 	
@@ -1305,50 +1335,39 @@ public class Parser {
 	}
 
 	private static Expression parseCalculatorPrimary(TokenList tl) {
+		maybeNewline(tl);
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
-		Expression ans;
-		if (tl.isNext("-")) {
-			tl.accept("-");
-			return expressionCalculatorUnary(file, line, Expression.CType.NEG,
-							 parseCalculatorPrimary(tl));
-		}
-		if (tl.isNext("~")) {
-			tl.accept("~");
-			return expressionCalculatorUnary(file, line, Expression.CType.BNOT,
-							 parseCalculatorPrimary(tl));
-		}
-		if (tl.isNext("!")) {
-			tl.accept("!");
-			return expressionCalculatorUnary(file, line, Expression.CType.NOT,
-							 parseCalculatorPrimary(tl));
-		}
-		if (tl.isNext("#")) {
-			tl.accept("#");
-			return expressionLength(file, line, parseCalculatorPrimary(tl));
-		}
-		if (tl.isNext("(")) {
-			tl.accept("(");
-			Expression e = parseCalculatorExpression(tl);
-			tl.accept(")");
-			ans = e;
-		}
-		else if (tl.acceptIfNext("\"")) {
-			String s = tl.nextString();
-			tl.accept("\"");
-		        ans = expressionString(file, line, s);
-		}
-		else if (tl.acceptIfNext("[[")) {
-			String s = tl.nextString();
-			tl.accept("]]");
-		        ans = expressionString(file, line, s);
-		}
-		else if (tl.seekString().matches("[0-9]+")) {
-			ans = expressionInt(file, line, Integer.parseInt(tl.nextString()));
-		}
-	        else {
-			String name = identifier(tl);
-			ans = expressionVariable(file, line, name);
+		Expression ans = parseCommonPrimary(file, line, tl);
+		if (ans == null) {
+			if (tl.acceptIfNext("-")) {
+				return expressionCalculatorUnary(file, line, Expression.CType.NEG,
+								 parseCalculatorPrimary(tl));
+			}
+			if (tl.acceptIfNext("~")) {
+				return expressionCalculatorUnary(file, line, Expression.CType.BNOT,
+								 parseCalculatorPrimary(tl));
+			}
+			if (tl.acceptIfNext("!")) {
+				return expressionCalculatorUnary(file, line, Expression.CType.NOT,
+								 parseCalculatorPrimary(tl));
+			}
+			if (tl.acceptIfNext("(")) {
+				Expression e = parseCalculatorExpression(tl);
+				tl.accept(")");
+				ans = e;
+			}
+			else if (tl.acceptIfNext("[")) {
+				maybeNewline(tl);
+				Statement s = parseStatement(tl, true);
+				maybeNewline(tl);
+				tl.accept("]");
+				ans = expressionStatementSingle(file, line, s);
+			}
+			else {
+				String name = identifier(tl);
+				ans = expressionVariable(file, line, name);
+			}
 		}
 
 		ans = parseArrayAccessIfPossible(tl, ans, Parser::parseCalculatorExpression);

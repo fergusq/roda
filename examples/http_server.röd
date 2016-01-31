@@ -208,7 +208,7 @@ record request {
 			type := typeof ctrl
 			for f in type.fields do
 				for a in f.annotations do
-					if push '#a = 2 && a[0] = "HANDLE" && self.path =~ a[1]'; do
+					if push $(#a = 2 && a[0] = "HANDLE" && self.path =~ a[1]); do
 						handler := ![f.get ctrl]
 						handler self
 						return

@@ -16,11 +16,6 @@ public class LexerTest {
 		return joinTokens(tl);
 	}
 
-	String lexc(String code) {
-		TokenList tl = Parser.calculatorScanner.tokenize(code, "<test>");
-		return joinTokens(tl);
-	}
-
 	String joinTokens(TokenList tl) {
 		return tl.toList().stream()
 			.map(token -> token.toString().replaceAll(",", ",,"))
@@ -73,13 +68,13 @@ public class LexerTest {
 
 	@Test
 	public void testLinesAndAngles() {
-		assertEquals("--, <, >, --, ->, <, --, <, >, >, >, <, ->, --, <EOF>",
+		assertEquals("--, <, >, --, ->, <, --, <, >>>, <, ->, --, <EOF>",
 			     lex("--<>---><--<>>><->--"));
 	}
 
 	@Test
 	public void testLinesAndText() {
-		assertEquals("a-b, --, --d, -e, f--gh-ij-, k-, <EOF>",
+		assertEquals("a, -, b, --, -, -, d, -, e, f, -, -, gh, -, ij, -, k, -, <EOF>",
 			     lex("a-b-- --d -e f--gh-ij- k-"));
 	}
 
@@ -114,35 +109,5 @@ public class LexerTest {
 	@Test(expected=ParsingException.class)
 	public void testUnclosedLuaQuote() {
 	        lex("[[abb\na\"\rväli\\nab\\\nba2");
-	}
-	
-	@Test
-	public void testCalculatorQuote() {
-		assertEquals("', a+(c+d)*e, ', <EOF>",
-			     lex("'a+(c+d)*e'"));
-	}
-	
-	@Test
-	public void testCalculatorOperators() {
-		assertEquals("+, *, /, -, =, =, ], :, #, !=, [, <EOF>",
-			     lexc("+*/-==]:#!=["));
-	}
-	
-	@Test
-	public void testCalculatorOperatorsAndParentheses() {
-		assertEquals("+, *, /, -, (, =, =, ], :, #, ), [, <EOF>",
-			     lexc("+*/-(==]:#)["));
-	}
-	
-	@Test
-	public void testCalculatorOperatorsAndText() {
-		assertEquals("a, *, (, b, +, c, ), -, d, <EOF>",
-			     lexc("a*(b+c)-d"));
-	}
-	
-	@Test
-	public void testCalculatorOperatorsAndNumbers() {
-		assertEquals("1, +, (, 3, +, 1, ), *, 3, <EOF>",
-			     lexc("1+(3+1)*3"));
 	}
 }

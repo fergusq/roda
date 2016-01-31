@@ -1216,6 +1216,8 @@ public class Interpreter {
 					return RödaNumber.of(val1.num()*val2.num());
 				case DIV:
 					return RödaNumber.of(val1.num()/val2.num());
+				case MOD:
+					return RödaNumber.of(val1.num()%val2.num());
 				case ADD:
 					return RödaNumber.of(val1.num()+val2.num());
 				case SUB:

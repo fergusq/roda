@@ -30,7 +30,7 @@ record telegram_bot {
 				msg_text := ""
 				json_search update ("update_id" { |id|
 					if test self.offset -le id[1]; do
-						self.offset = 'id[1]+1'
+						self.offset = $(id[1]+1)
 					done
 				}) ("message" { |message|
 					json_search message ("chat" { |chat|
