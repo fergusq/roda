@@ -328,7 +328,7 @@ done
 ```
 
 ```
-while test vastaus -not-matches "kyllä|ei"; do
+while test vastaus -not_matches "kyllä|ei"; do
 	push "Vastaa kyllä tai ei: "
 	pull vastaus
 done
@@ -821,10 +821,10 @@ oletuksena välilyöntien perusteella.
 
 ### test
 
->`test arvo [-not](-eq|-strong_eq|-weak_eq|-matches|-lt|-le|-gt|-ge) arvo`
+>`test arvo -[not_](eq|strong_eq|weak_eq|matches|lt|le|gt|ge) arvo`
 
-Vertailee kahta arvoa annetulla operaattorilla. Valitsin `-not` tekee vertailusta käänteisen. Sen on oltava
-kiinni isäntävalitsimessa (ei välilyöntiä).
+Vertailee kahta arvoa annetulla operaattorilla. Valitsin `-not_` tekee vertailusta käänteisen. Sen on oltava
+kiinni isäntävalitsimessa (ei välilyöntiä), esim. `-not_eq`.
 
 - `-eq` on paras yksinkertainen ekvivalenssioperaattori. Se muuttaa luvut merkkijonoiksi ja toisin päin,
 mutta vaatii muuten tyypeiltä yhtenevyyttä.

@@ -24,13 +24,13 @@ record http_server {
 			return
 		done
 		request.path ~= "^([a-z0-9]+://)?[^/]+" ""
-		if test request.protocol -not-eq "HTTP/1.0"; do
+		if test request.protocol -not_eq "HTTP/1.0"; do
 			self.send_continue connection
 		done
 		length := 0
 		request.headers = new map<string>
 		request.as_text = ""
-		while test line -not-matches "\r?\n"; do
+		while test line -not_matches "\r?\n"; do
 			request.as_text .= line
 			connection.read -l line
 			if test line -matches "[A-Za-z\\-]+:[ \t]*.*\r?\n"; do
@@ -129,7 +129,7 @@ record request {
 	
 	function content_headers type length {
 		content_headers := ""
-		if test length -not-eq 0; do
+		if test length -not_eq 0; do
 			content_headers = "Content-Type: "..type.."\r\n"
 			content_headers .= "Content-Length: "..length.."\r\n"
 			content_headers .= "Accept-Ranges: bytes\r\n"
@@ -139,7 +139,7 @@ record request {
 	
 	function create_headers content_headers status {
 		headers := ""
-		if test self.protocol -not-eq "HTTP/1.0"; do
+		if test self.protocol -not_eq "HTTP/1.0"; do
 			headers = "HTTP/1.1 "..status.."\r\n"
 			headers .= "Server: http_server.roed\r\n"
 			headers .= "Date: "
@@ -158,7 +158,7 @@ record request {
 	
 	function send status data {
 		response := ![self.create_headers ![self.content_headers "text/html; charset=utf-8" #data] status]
-		if test self.command -not-eq "HEAD"; do
+		if test self.command -not_eq "HEAD"; do
 			response .= data
 		done
 		self.connection.write response
@@ -167,7 +167,7 @@ record request {
 	function send_file mime name {
 		response := ![self.create_headers ![self.content_headers mime ![file -l name]] "200 OK"]
 		self.connection.write response
-		if test self.command -not-eq "HEAD"; do
+		if test self.command -not_eq "HEAD"; do
 			self.connection.write -f name
 		done
 	}

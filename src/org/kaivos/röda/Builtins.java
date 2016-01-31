@@ -509,8 +509,8 @@ class Builtins {
 					checkFlag("test", args.get(1));
 					String operator = args.get(1).str();
 					boolean not = false;
-					if (operator.startsWith("-not-")) {
-						operator = operator.substring(4);
+					if (operator.startsWith("-not_")) {
+						operator = "-"+operator.substring(5);
 						not = true;
 					}
 					RödaValue a1 = args.get(0);
