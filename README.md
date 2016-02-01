@@ -524,8 +524,8 @@ Koska Rödan muu syntaksi varaa jo sulut `( )` ja miinusmerkin `-`, ei niitä vo
 Tämän rajoituksen kiertämiseksi Rödassa on aritmetiikkatila, jossa tavallinen syntaksi ei enää päde.
 Tilaan pääsee dollarimerkillä: `$(...)`.
 ```
-p := $(i/2+7)'
-k := $((p-10)*2)'
+p := $(i/2+7)
+k := $((p-10)*2)
 ```
 
 Aritmetiikkatilassa voi käyttää tavallisia sulkeita ja ylempänä esiteltyjä operaattoreita.

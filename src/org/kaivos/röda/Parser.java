@@ -886,7 +886,7 @@ public class Parser {
 			case STATEMENT_SINGLE:
 				return "![...]";
 			case CALCULATOR:
-				return "$(...)'";
+				return "$(...)";
 			case ELEMENT:
 				return sub.asString() + "[" + index.asString() + "]";
 			case CONTAINS:
