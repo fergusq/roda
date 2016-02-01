@@ -150,6 +150,13 @@ class Builtins {
 				}, Arrays.asList(new Parameter("files", false)), true,
 				new VoidStream(), new VoidStream()));
 
+                S.setLocal("assign_global", valueFromNativeFunction("assign_global", (typeargs, args, scope, in, out) -> {
+                                        String variableName = args.get(0).str();
+					S.setLocal(variableName, args.get(1));
+                                }, Arrays.asList(new Parameter("variable", false),
+						 new Parameter("value", false)), false,
+                                new VoidStream(), new VoidStream()));
+
 		/* Muut oleelliset kielen rakenteet */
 
 		S.setLocal("identity", valueFromNativeFunction("identity", (typeargs, args, scope, in, out) -> {
