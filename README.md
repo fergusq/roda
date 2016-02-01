@@ -338,8 +338,16 @@ done
 
 ```
 tytöt := (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
-for tyttö in tytöt; do
+for tyttö in tytöt do
 	push "Hänen nimensä on "..tyttö[0].." ja hän on syntynyt vuonna "..tyttö[1].."\n"
+done
+```
+
+Jos `for`ille ei anna listaa, lukee se arvoja syötteestä:
+
+```
+("Isabella" "Meeri" "Taina") | for tyttö do
+	push tyttö.." on paikalla.\n"
 done
 ```
 
