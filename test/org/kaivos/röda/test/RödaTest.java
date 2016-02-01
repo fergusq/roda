@@ -326,6 +326,15 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testPullingFor() {
+		assertEquals("nimi Annamari; syntynyt 1996,nimi Reetta; syntynyt 1992,nimi Vilma; syntynyt 1999",
+			     eval("main{((\"Annamari\" 1996) (\"Reetta\" 1992) (\"Vilma\" 1999))|"
+				  + "for tyttö;"
+				  + "do push\"nimi \"..tyttö[0]..\"; syntynyt \"..tyttö[1];"
+				  + "done}"));
+	}
+
+	@Test
 	public void testTrivialReturn() {
 		assertEquals("a",
 			     eval("main{push\"a\";return;push\"b\"}"));
