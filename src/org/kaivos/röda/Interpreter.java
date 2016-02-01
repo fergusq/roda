@@ -787,13 +787,23 @@ public class Interpreter {
 			switch (cmd.operator) {
 			case ":=": {
 				r = () -> {
-					if (args.size() > 1) argumentUnderflow(":=", 1, args.size());
-					assignLocal.accept(args.get(0));
+					boolean quoteMode = false;
+                                        if (args.size() > 0 && args.get(0).isFlag("-G")) {
+                                                args.remove(0);
+                                                if (e.type != Expression.Type.VARIABLE)
+                                                	error("bad lvalue for ':=': " + e.asString());
+						if (args.size() > 1) argumentOverflow(":=", 1, args.size());
+						G.setLocal(e.variable, args.get(0));
+                                        }
+					else {
+						if (args.size() > 1) argumentOverflow(":=", 1, args.size());
+						assignLocal.accept(args.get(0));
+					}
 				};
 			} break;
 			case "=": {
 				r = () -> {
-					if (args.size() > 1) argumentUnderflow("=", 1, args.size());
+					if (args.size() > 1) argumentOverflow("=", 1, args.size());
 					assign.accept(args.get(0));
 				};
 			} break;
@@ -953,8 +963,8 @@ public class Interpreter {
 			RödaValue list = evalExpression(cmd.list, scope, in, out).impliciteResolve();
 			checkList("for", list);
 			Runnable r = () -> {
-				RödaScope newScope = new RödaScope(scope);
 				for (RödaValue val : list.list()) {
+                                	RödaScope newScope = new RödaScope(scope);
 					newScope.setLocal(cmd.variable, val);
 					try {
 						for (Statement s : cmd.body) {
