@@ -610,6 +610,12 @@ reflect R.fields /* palauttaa listan, jossa on kaksi field oliota, yksi a:lle ja
 Tässä listassa sulkuja `()` käytetään ryhmittelemiseen, `[]` valinnaisuuteen ja merkkiä `|` vaihtoehtoon.
 Merkki `*` tarkoittaa "nolla tai useampi" ja `+` yksi tai useampi.
 
+### assign_global
+
+>`assign_global nimi arvo`
+
+Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan.
+
 ### cat
 
 >`cat tiedosto*`
