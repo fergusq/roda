@@ -1,10 +1,13 @@
 package org.kaivos.röda;
 
 import org.kaivos.röda.Interpreter;
+import org.kaivos.röda.RödaStream.ISLineStream;
+import org.kaivos.röda.RödaStream.OSStream;
 
 import org.kaivos.nept.parser.ParsingException;
 
 import java.io.BufferedReader;
+import java.io.PrintWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.FileInputStream;
@@ -14,6 +17,8 @@ import java.util.ArrayList;
 
 import java.util.stream.Collectors;
 
+import jline.console.ConsoleReader;
+
 /**
  * A simple stream language
  */
@@ -21,8 +26,8 @@ public class Röda {
 	public static void main(String[] args) throws IOException {
 		String file = null;
 		List<String> argsForRöda = new ArrayList<>();
-		boolean interactive = false;
-		String prompt = "> ";
+		boolean interactive = System.console() != null;
+		String prompt = null;
 		
 		for (int i = 0; i < args.length; i++) {
 			if (file != null) argsForRöda.add(args[i]);
@@ -38,7 +43,7 @@ public class Röda {
 				continue;
 			case "-h":
 			case "--help": {
-				System.out.println("Usage: röda [options] file | röda [options] -i");
+				System.out.println("Usage: röda [options] file | röda [options] -i | röda [options]");
 				System.out.println("Available options:");
 				System.out.println("-p prompt  Change the prompt in interactive mode");
 				System.out.println("-P         Disable prompt in interactive mode");
@@ -51,14 +56,42 @@ public class Röda {
 				continue;
 			}
 		}
-		
+
+		if (prompt == null) prompt = interactive ? "! " : "";
+
 		if (file == null ^ interactive) {
-			System.err.println("Usage: röda file | röda [-p prompt] -i");
+			System.err.println("Usage: röda [options] file | röda [options] -i | röda [options]");
 			System.exit(1);
 			return;
 		}
 
-		if (interactive) {
+		if (interactive && System.console() != null) {
+
+			ConsoleReader in = new ConsoleReader();
+			in.setPrompt(prompt);
+
+			PrintWriter out = new PrintWriter(in.getOutput());
+
+			Interpreter c = new Interpreter(new ISLineStream(new BufferedReader(new InputStreamReader(in.getInput()))),
+							new OSStream(out));
+			String line = "";
+			int i = 1;
+			while ((line = in.readLine()) != null) {
+				if (!line.trim().isEmpty()) {
+					try {
+						c.interpretStatement(line, "<line "+ i++ +">");
+					} catch (ParsingException e) {
+						out.println("[E] " + e.getMessage());
+					} catch (Interpreter.RödaException e) {
+						out.println("[E] " + e.getMessage());
+						for (String step : e.getStack()) {
+							out.println(step);
+						}
+						if (e.getCause() != null) e.getCause().printStackTrace();
+					}
+				}
+			}
+		} else if (file == null) {
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 			Interpreter c = new Interpreter();
