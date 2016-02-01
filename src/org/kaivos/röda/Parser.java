@@ -85,6 +85,7 @@ public class Parser {
 		case "while":
 		case "else":
 		case "for":
+		case "in":
 		case "do":
 		case "done":
 		case "record":
@@ -706,9 +707,12 @@ public class Parser {
 
 		if (tl.acceptIfNext("for")) {
 			String variable = tl.nextString();
-			tl.accept("in");
-			Expression list = parseExpression(tl);
 			maybeNewline(tl);
+			Expression list = null;
+			if (tl.acceptIfNext("in")) {
+				list = parseExpression(tl);
+				maybeNewline(tl);
+			}
 			tl.accept("do");
 			maybeNewline(tl);
 			List<Statement> body = new ArrayList<>();

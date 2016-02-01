@@ -626,8 +626,10 @@ public class Interpreter {
 						_out.finish();
 				}
 			};
-		        _out.inHandler = tr.third().newHandler();
-		        _in.outHandler = tr.second().newHandler();
+			if (!last)
+				_out.inHandler = tr.third().newHandler();
+			if (i != 0)
+				_in.outHandler = tr.second().newHandler();
 			_in = _out;
 			i++;
 		}
@@ -934,9 +936,9 @@ public class Interpreter {
 		if (cmd.type == Command.Type.WHILE || cmd.type == Command.Type.IF) {
 			boolean isWhile = cmd.type == Command.Type.WHILE;
 			Runnable r = () -> {
-				RödaScope newScope = new RödaScope(scope);
 				boolean goToElse = true;
 				do {
+					RödaScope newScope = new RödaScope(scope);
 					RödaStream condOut = makeStream(new ValueStream(), new BooleanStream());
 					evalStatement(cmd.cond, scope, _in, condOut, true);
 					if (!condOut.pull().bool()) break;
@@ -951,6 +953,7 @@ public class Interpreter {
 					}
 				} while (isWhile);
 				if (goToElse && cmd.elseBody != null) {
+					RödaScope newScope = new RödaScope(scope);
 					for (Statement s : cmd.elseBody) {
 						evalStatement(s, newScope, _in, _out, false);
 					}
@@ -960,21 +963,41 @@ public class Interpreter {
 		}
 
 		if (cmd.type == Command.Type.FOR) {
-			RödaValue list = evalExpression(cmd.list, scope, in, out).impliciteResolve();
-			checkList("for", list);
-			Runnable r = () -> {
-				for (RödaValue val : list.list()) {
-                                	RödaScope newScope = new RödaScope(scope);
-					newScope.setLocal(cmd.variable, val);
-					try {
-						for (Statement s : cmd.body) {
-							evalStatement(s, newScope, _in, _out, false);
+			Runnable r;
+			if (cmd.list != null) {
+				RödaValue list = evalExpression(cmd.list, scope, in, out).impliciteResolve();
+				checkList("for", list);
+				r = () -> {
+					for (RödaValue val : list.list()) {
+						RödaScope newScope = new RödaScope(scope);
+						newScope.setLocal(cmd.variable, val);
+						try {
+							for (Statement s : cmd.body) {
+								evalStatement(s, newScope, _in, _out, false);
+							}
+						} catch (BreakOrContinueException e) {
+							if (e.isBreak) break;
 						}
-					} catch (BreakOrContinueException e) {
-						if (e.isBreak) break;
 					}
-				}
-			};
+				};
+			} else {
+				r = () -> {
+					while (true) {
+						RödaValue val = _in.pull();
+						if (val == null) break;
+						
+						RödaScope newScope = new RödaScope(scope);
+						newScope.setLocal(cmd.variable, val);
+						try {
+							for (Statement s : cmd.body) {
+								evalStatement(s, newScope, _in, _out, false);
+							}
+						} catch (BreakOrContinueException e) {
+							if (e.isBreak) break;
+						}
+					}
+				};
+			}
 			return new Trair<>(r, new ValueStream(), new ValueStream());
 		}
 
