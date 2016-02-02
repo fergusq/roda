@@ -247,12 +247,10 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 				}
 				public RödaValue handlePull(Supplier<Boolean> finished,
 							    Supplier<RödaValue> get) {
-					error("can't pull from a void stream");
 					return null;
 				}
 				public RödaValue handleReadAll(Supplier<Boolean> finished,
 							       Supplier<RödaValue> get) {
-					error("can't pull from a void stream");
 					return null;
 				}
 			};

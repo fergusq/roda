@@ -42,6 +42,9 @@ public class Röda {
 				interactive = true;
 				forcedI = true;
 				continue;
+			case "-I":
+				interactive = false;
+				continue;
 			case "-h":
 			case "--help": {
 				System.out.println("Usage: röda [options] file | röda [options] -i | röda [options]");
@@ -49,9 +52,10 @@ public class Röda {
 				System.out.println("-p prompt  Change the prompt in interactive mode");
 				System.out.println("-P         Disable prompt in interactive mode");
 				System.out.println("-i         Enable interactive mode");
+                                System.out.println("-I         Disable interactive mode");
 				System.out.println("-h, --help Show this help text");
-				
-			} continue;
+				return;
+			}
 			default:
 				file = args[i];
 				continue;
@@ -69,6 +73,7 @@ public class Röda {
 		if (interactive && System.console() != null) {
 
 			ConsoleReader in = new ConsoleReader();
+			in.setExpandEvents(false);
 			in.setPrompt(prompt);
 
 			PrintWriter out = new PrintWriter(in.getOutput());
