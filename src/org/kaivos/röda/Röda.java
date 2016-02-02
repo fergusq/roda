@@ -26,7 +26,7 @@ public class Röda {
 	public static void main(String[] args) throws IOException {
 		String file = null;
 		List<String> argsForRöda = new ArrayList<>();
-		boolean interactive = System.console() != null;
+		boolean interactive = System.console() != null, forcedI = false;
 		String prompt = null;
 		
 		for (int i = 0; i < args.length; i++) {
@@ -40,6 +40,7 @@ public class Röda {
 				continue;
 			case "-i":
 				interactive = true;
+				forcedI = true;
 				continue;
 			case "-h":
 			case "--help": {
@@ -59,7 +60,7 @@ public class Röda {
 
 		if (prompt == null) prompt = interactive ? "! " : "";
 
-		if (file == null ^ interactive) {
+		if (file == null ^ forcedI) {
 			System.err.println("Usage: röda [options] file | röda [options] -i | röda [options]");
 			System.exit(1);
 			return;
