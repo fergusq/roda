@@ -14,6 +14,7 @@ import java.io.FileInputStream;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.TreeSet;
 
 import java.util.stream.Collectors;
 
@@ -64,63 +65,13 @@ public class Röda {
 
 		if (prompt == null) prompt = interactive ? "! " : "";
 
-		if (file == null ^ forcedI) {
+		if (file != null && forcedI) {
 			System.err.println("Usage: röda [options] file | röda [options] -i | röda [options]");
 			System.exit(1);
 			return;
 		}
 
-		if (interactive && System.console() != null) {
-
-			ConsoleReader in = new ConsoleReader();
-			in.setExpandEvents(false);
-			in.setPrompt(prompt);
-
-			PrintWriter out = new PrintWriter(in.getOutput());
-
-			Interpreter c = new Interpreter(new ISLineStream(new BufferedReader(new InputStreamReader(in.getInput()))),
-							new OSStream(out));
-			String line = "";
-			int i = 1;
-			while ((line = in.readLine()) != null) {
-				if (!line.trim().isEmpty()) {
-					try {
-						c.interpretStatement(line, "<line "+ i++ +">");
-					} catch (ParsingException e) {
-						out.println("[E] " + e.getMessage());
-					} catch (Interpreter.RödaException e) {
-						out.println("[E] " + e.getMessage());
-						for (String step : e.getStack()) {
-							out.println(step);
-						}
-						if (e.getCause() != null) e.getCause().printStackTrace();
-					}
-				}
-			}
-		} else if (file == null) {
-
-			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-			Interpreter c = new Interpreter();
-			String line = "";
-			int i = 1;
-			System.out.print(prompt);
-			while ((line = in.readLine()) != null) {
-				if (!line.trim().isEmpty()) {
-					try {
-						c.interpretStatement(line, "<line "+ i++ +">");
-					} catch (ParsingException e) {
-						System.out.println("[E] " + e.getMessage());
-					} catch (Interpreter.RödaException e) {
-						System.out.println("[E] " + e.getMessage());
-						for (String step : e.getStack()) {
-							System.out.println(step);
-						}
-						if (e.getCause() != null) e.getCause().printStackTrace();
-					}
-				}
-				System.out.print(prompt);
-			}
-		} else {
+		if (file != null) {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 			String code = "";
 			String line = "";
@@ -142,6 +93,67 @@ public class Röda {
 					System.err.println(step);
 				}
 				if (e.getCause() != null) e.getCause().printStackTrace();
+			}
+		} else if (interactive && System.console() != null) {
+
+			ConsoleReader in = new ConsoleReader();
+			in.setExpandEvents(false);
+			in.setPrompt(prompt);
+
+			PrintWriter out = new PrintWriter(in.getOutput());
+
+			Interpreter c = new Interpreter(new ISLineStream(new BufferedReader(new InputStreamReader(in.getInput()))),
+							new OSStream(out));
+			in.addCompleter((b, k, l) -> {
+					if (b == null) l.addAll(c.G.map.keySet());
+					else {
+						TreeSet<String> vars = new TreeSet<>(c.G.map.keySet());
+						for (String match : vars.tailSet(b)) {
+							if (!match.startsWith(b)) break;
+							l.add(match + " ");
+						}
+					}
+					return l.isEmpty() ? -1 : 0;
+				});
+			String line = "";
+			int i = 1;
+			while ((line = in.readLine()) != null) {
+				if (!line.trim().isEmpty()) {
+					try {
+						c.interpretStatement(line, "<line "+ i++ +">");
+					} catch (ParsingException e) {
+						out.println("[E] " + e.getMessage());
+					} catch (Interpreter.RödaException e) {
+						out.println("[E] " + e.getMessage());
+						for (String step : e.getStack()) {
+							out.println(step);
+						}
+						if (e.getCause() != null) e.getCause().printStackTrace();
+					}
+				}
+			}
+		} else {
+
+			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+			Interpreter c = new Interpreter();
+			String line = "";
+			int i = 1;
+			System.out.print(prompt);
+			while ((line = in.readLine()) != null) {
+				if (!line.trim().isEmpty()) {
+					try {
+						c.interpretStatement(line, "<line "+ i++ +">");
+					} catch (ParsingException e) {
+						System.out.println("[E] " + e.getMessage());
+					} catch (Interpreter.RödaException e) {
+						System.out.println("[E] " + e.getMessage());
+						for (String step : e.getStack()) {
+							System.out.println(step);
+						}
+						if (e.getCause() != null) e.getCause().printStackTrace();
+					}
+				}
+				System.out.print(prompt);
 			}
 		}
 
