@@ -828,10 +828,12 @@ Sulkee yhteyden.
 
 ### split
 
->`split [-s regex] merkkijono`
+>`split [-s regex] [-c] merkkijono*`
 
 Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **s**eparator) osoittamista kohdista tai
-oletuksena välilyöntien perusteella.
+oletuksena välilyöntien perusteella. Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
+
+Valitsin `-c` (**c**ollect) määrittää, että ulostulovirtaan työnnetään merkkijonojen osien sijasta lista merkkijonon osista.
 
 ### test
 
