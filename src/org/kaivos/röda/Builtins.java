@@ -849,7 +849,7 @@ class Builtins {
 					}
 				}, Arrays.asList(new Parameter("urls", false)), true));
 
-		Record serverRecord = new Record("server",
+		Record serverRecord = new Record("Server",
 						 Collections.emptyList(),
 						 null,
 						 Arrays.asList(new Record.Field("accept", new Datatype("function")),
@@ -857,7 +857,7 @@ class Builtins {
 						 false);
 		I.records.put("server", serverRecord);
 
-		Record socketRecord = new Record("socket",
+		Record socketRecord = new Record("Socket",
 						 Collections.emptyList(),
 						 null,
 						 Arrays.asList(new Record.Field("write", new Datatype("function")),
@@ -888,9 +888,9 @@ class Builtins {
 						serverObject
 							.setField("accept",
 								  RödaNativeFunction
-								  .of("server.accept",
+								  .of("Server.accept",
 								      (ra, a, s, i, o) -> {
-									      checkArgs("server.accept",
+									      checkArgs("Server.accept",
 											0, a.size());
 									      Socket socket;
 									      InputStream _in;
@@ -910,16 +910,16 @@ class Builtins {
 											  I.records);
 									      socketObject
 										      .setField("read",
-												genericRead("socket.read", _in, I));
+												genericRead("Socket.read", _in, I));
 									      socketObject
 										      .setField("write",
-												genericWrite("socket.write", _out, I));
+												genericWrite("Socket.write", _out, I));
 									      socketObject
 										      .setField("close",
 												RödaNativeFunction
-												.of("socket.close",
+												.of("Socket.close",
 												    (r,A,z,j,u) -> {
-													    checkArgs("socket.close", 0, A.size());
+													    checkArgs("Socket.close", 0, A.size());
 													    try {
 														    _out.close();
 														    _in.close();
@@ -964,9 +964,9 @@ class Builtins {
 						serverObject
 							.setField("close",
 							      RödaNativeFunction
-							      .of("server.close",
+							      .of("Server.close",
 								  (ra, a, s, i, o) -> {
-									  checkArgs("server.close", 0, a.size());
+									  checkArgs("Server.close", 0, a.size());
 									  
 								  }, Collections.emptyList(), false));
 						out.push(serverObject);
@@ -977,7 +977,7 @@ class Builtins {
 
 		// Säikeet
 
-		Record threadRecord = new Record("thread",
+		Record threadRecord = new Record("Thread",
 						 Collections.emptyList(),
 						 null,
 						 Arrays.asList(new Record.Field("start", new Datatype("function")),
@@ -1004,7 +1004,7 @@ class Builtins {
 
 					Runnable task = () -> {
 						try {
-							I.exec("<thread.start>", 0, function, Collections.emptyList(),
+							I.exec("<Thread.start>", 0, function, Collections.emptyList(),
 							       Collections.emptyList(), newScope, _in, _out);
 						} catch (RödaException e) {
 							System.err.println("[E] " + e.getMessage());
@@ -1021,17 +1021,17 @@ class Builtins {
 										       I.records);
 					threadObject.setField("start",
 							      RödaNativeFunction
-							      .of("thread.start",
+							      .of("Thread.start",
 								  (ra, a, s, i, o) -> {
-									  checkArgs("thread.start", 0, a.size());
+									  checkArgs("Thread.start", 0, a.size());
 									  if (p.started)
-										  error("thread has already "
+										  error("Thread has already "
 											+ "been executed");
 									  p.started = true;
 									  I.executor.execute(task);
 								  }, Collections.emptyList(), false));
-					threadObject.setField("pull",genericPull("thread.pull", _out));
-					threadObject.setField("push",genericPush("thread.push", _in));
+					threadObject.setField("pull",genericPull("Thread.pull", _out));
+					threadObject.setField("push",genericPush("Thread.push", _in));
 					out.push(threadObject);
 				}, Arrays.asList(new Parameter("runnable", false)), false));
 	}

@@ -136,7 +136,7 @@ public class Interpreter {
 
 	private static final Record errorRecord, typeRecord, fieldRecord;
 	static {
-		errorRecord = new Record("error",
+		errorRecord = new Record("Error",
 					 Collections.emptyList(),
 					 null,
 					 Arrays.asList(new Record.Field("message", new Datatype("string")),
@@ -150,7 +150,7 @@ public class Interpreter {
 												      ("string"))))
 						       ),
 					 false);
-		typeRecord = new Record("type",
+		typeRecord = new Record("Type",
 					Collections.emptyList(),
 					null,
 					Arrays.asList(new Record.Field("name", new Datatype("string")),
@@ -158,16 +158,16 @@ public class Interpreter {
 						      new Record.Field("fields", new Datatype("list",
 											      Arrays
 											      .asList(new Datatype
-												      ("field")))),
+												      ("Field")))),
 						      new Record.Field("new_instance", new Datatype("function"))
 						      ),
 					false);
-		fieldRecord = new Record("field",
+		fieldRecord = new Record("Field",
 					 Collections.emptyList(),
 					 null,
 					 Arrays.asList(new Record.Field("name", new Datatype("string")),
 						       new Record.Field("annotations", new Datatype("list")),
-						       new Record.Field("type", new Datatype("type")),
+						       new Record.Field("type", new Datatype("Type")),
 						       new Record.Field("get", new Datatype("function")),
 						       new Record.Field("set", new Datatype("function"))
 						       ),
@@ -188,11 +188,11 @@ public class Interpreter {
 		RödaValue typeObj = RödaRecordInstance.of(typeRecord, Collections.emptyList(), records);
 		typeObj.setField("name", RödaString.of(record.name));
 		typeObj.setField("annotations", evalAnnotations(record.annotations));
-		typeObj.setField("fields", RödaList.of("field", record.fields.stream()
+		typeObj.setField("fields", RödaList.of("Field", record.fields.stream()
 						       .map(f -> createFieldReflection(record, f))
 						       .collect(toList())));
 		typeObj.setField("new_instance", RödaNativeFunction
-				 .of("type.new_instance",
+				 .of("Type.new_instance",
 				     (ta, a, s, i, o) -> {
 					     o.push(newRecord(new Datatype(record.name), ta));
 				     }, Collections.emptyList(), false));
@@ -204,21 +204,21 @@ public class Interpreter {
 		fieldObj.setField("name", RödaString.of(field.name));
 		fieldObj.setField("annotations", evalAnnotations(field.annotations));
 		fieldObj.setField("get", RödaNativeFunction
-				  .of("field.get",
+				  .of("Field.get",
 				      (ta, a, s, i, o) -> {
 					      RödaValue obj = a.get(0);
 					      if (!obj.is(new Datatype(record.name))) {
-						      error("invalid argument for field.get: "
+						      error("invalid argument for Field.get: "
 							    + record.name + " required, got " + obj.typeString());
 					      }
 					      o.push(obj.getField(field.name));
 				      }, Arrays.asList(new Parameter("object", false)), false));
 		fieldObj.setField("set", RödaNativeFunction
-				  .of("field.set",
+				  .of("Field.set",
 				      (ta, a, s, i, o) -> {
 					      RödaValue obj = a.get(0);
 					      if (!obj.is(new Datatype(record.name))) {
-						      error("invalid argument for field.get: "
+						      error("invalid argument for Field.get: "
 							    + record.name + " required, got " + obj.typeString());
 					      }
 					      RödaValue val = a.get(1);
@@ -948,7 +948,7 @@ public class Interpreter {
 					while (true) {
 						RödaValue val = _in.pull();
 						if (val == null) break;
-						
+
 						RödaScope newScope = new RödaScope(scope);
 						newScope.setLocal(cmd.variable, val);
 						try {

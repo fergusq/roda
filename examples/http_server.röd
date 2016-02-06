@@ -1,12 +1,12 @@
-record http_server {
+record HttpServer {
 	port : number
-	socket : server
-	controllers : map<controller> = new map<controller>
+	socket : Server
+	controllers : map<Controller> = new map<Controller>
 	
 	/* Luku */
 	
 	function read connection &request {
-		request := new request
+		request := new Request
 		request.server = self
 		request.connection = connection
 		connection.read -l line
@@ -109,13 +109,13 @@ record http_server {
 }
 
 http_server port {
-	http := new http_server
+	http := new HttpServer
 	http.port = port
 	http.socket := ![server port]
 	push http
 }
 
-record request {
+record Request {
 	valid : boolean = ![true]
 	command : string
 	path : string
@@ -124,8 +124,8 @@ record request {
 	as_text : string
 	content : string
 	form : map<string>
-	server : http_server
-	connection : socket
+	server : HttpServer
+	connection : Socket
 	
 	function content_headers type length {
 		content_headers := ""
@@ -226,12 +226,12 @@ function @handle path {
 	return ("HANDLE" path)
 }
 
-record controller {
+record Controller {
 	handle : function
 }
 
 controller handler {
-	ctrl := new controller
+	ctrl := new Controller
 	ctrl.handle = handler
 	push ctrl
 }

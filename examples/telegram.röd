@@ -1,7 +1,7 @@
-record telegram_bot {
+record TelegramBot {
 	token : string
 	offset : number = 0
-	thread : thread
+	thread : Thread
 	running : boolean = ![true]
 	on_message : function = {|chat message|;}
 	
@@ -78,7 +78,7 @@ json_search tree queries... {
 }
 
 tg_init token {
-	bot := new telegram_bot
+	bot := new TelegramBot
 	bot.token = token
 	push bot
 }
