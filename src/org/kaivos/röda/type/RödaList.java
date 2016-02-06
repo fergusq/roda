@@ -17,14 +17,14 @@ public class RödaList extends RödaValue {
 	private List<RödaValue> list;
 
 	private RödaList(List<RödaValue> list) {
-		assumeIdentity("list");
+		assumeIdentity(LIST);
 		this.type = null;
 		this.list = list;
 	}
 
 	private RödaList(Datatype type, List<RödaValue> list) {
 		if (type != null)
-			assumeIdentity(new Datatype("list", Arrays.asList(type)));
+			assumeIdentity(new Datatype(LIST.name, Arrays.asList(type)));
 		assumeIdentity("list");
 		this.type = type;
 		this.list = list;

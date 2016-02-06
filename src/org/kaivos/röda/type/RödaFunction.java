@@ -10,7 +10,7 @@ public class RödaFunction extends RödaValue {
 	private RödaScope localScope;
 
 	private RödaFunction(Function function) {
-		assumeIdentity("function");
+		assumeIdentity(FUNCTION);
 		this.function = function;
 		this.localScope = null;
 	}

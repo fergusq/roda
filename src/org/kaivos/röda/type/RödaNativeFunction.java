@@ -25,8 +25,8 @@ public class RödaNativeFunction extends RödaValue {
 	private NativeFunction function;
 
 	private RödaNativeFunction(NativeFunction function) {
-		assumeIdentity("nfunction");
-		assumeIdentity("function");
+		assumeIdentity(NFUNCTION);
+		assumeIdentity(FUNCTION);
 		this.function = function;
 	}
 

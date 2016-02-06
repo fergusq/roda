@@ -13,6 +13,16 @@ import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Interpreter.error;
 
 public abstract class RödaValue {
+
+	public static final Datatype STRING = new Datatype("string");
+	public static final Datatype NUMBER = new Datatype("number");
+	public static final Datatype BOOLEAN = new Datatype("boolean");
+	public static final Datatype FLAG = new Datatype("flag");
+	public static final Datatype LIST = new Datatype("list");
+	public static final Datatype MAP = new Datatype("map");
+	public static final Datatype FUNCTION = new Datatype("function");
+	public static final Datatype NFUNCTION = new Datatype("nfunction");
+
 	protected RödaValue() {} // käytä apufunktioita
 	
 	public abstract RödaValue copy();

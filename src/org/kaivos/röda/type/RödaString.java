@@ -7,7 +7,7 @@ public class RödaString extends RödaValue {
 	private String text;
 
 	private RödaString(String text) {
-		assumeIdentity("string");
+		assumeIdentity(STRING);
 		this.text = text;
 	}
 

@@ -17,14 +17,14 @@ public class RödaMap extends RödaValue {
 	private Map<String, RödaValue> map;
 
 	private RödaMap(Map<String, RödaValue> map) {
-		assumeIdentity("map");
+		assumeIdentity(MAP);
 		this.type = null;
 		this.map = map;
 	}
 
 	private RödaMap(Datatype type, Map<String, RödaValue> map) {
 		if (type != null)
-			assumeIdentity(new Datatype("map", Arrays.asList(type)));
+			assumeIdentity(new Datatype(MAP.name, Arrays.asList(type)));
 		assumeIdentity("map");
 		this.type = type;
 		this.map = map;

@@ -408,19 +408,32 @@ public class Parser {
 	public static class Parameter {
 		String name;
 		boolean reference;
+		Datatype type;
 	        Parameter(String name, boolean reference) {
+			this(name, reference, null);
+		}
+	        Parameter(String name, boolean reference, Datatype type) {
 			this.name = name;
 			this.reference = reference;
+			this.type = type;
 		}
 	}
 
 	static Parameter parseParameter(TokenList tl) {
-		boolean reference = false;
+		boolean reference = false, strong = false;
 		if (tl.acceptIfNext("&")) {
 			reference = true;
+		} else if (tl.acceptIfNext("(")) {
+			strong = true;
 		}
 		String name = tl.nextString();
-		return new Parameter(name, reference);
+		Datatype type = null;
+		if (strong) {
+			tl.accept(":");
+			type = parseType(tl);
+			tl.accept(")");
+		}
+		return new Parameter(name, reference, type);
 	}
 	
 	static Function parseFunction(TokenList tl, boolean mayBeAnnotation) {

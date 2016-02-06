@@ -208,7 +208,7 @@ public class Interpreter {
 				      (ta, a, s, i, o) -> {
 					      RödaValue obj = a.get(0);
 					      if (!obj.is(new Datatype(record.name))) {
-						      error("invalid argument for Field.get: "
+						      error("illegal argument for Field.get: "
 							    + record.name + " required, got " + obj.typeString());
 					      }
 					      o.push(obj.getField(field.name));
@@ -218,7 +218,7 @@ public class Interpreter {
 				      (ta, a, s, i, o) -> {
 					      RödaValue obj = a.get(0);
 					      if (!obj.is(new Datatype(record.name))) {
-						      error("invalid argument for Field.get: "
+						      error("illegal argument for Field.get: "
 							    + record.name + " required, got " + obj.typeString());
 					      }
 					      RödaValue val = a.get(1);
@@ -409,15 +409,21 @@ public class Interpreter {
 		} 
 	}
 	
-	private boolean isReferenceParameter(RödaValue function, int i) {
+	private Parameter getParameter(RödaValue function, int i) {
 		assert function.isFunction();
 		boolean isNative = function.isNativeFunction();
 		List<Parameter> parameters = isNative ? function.nfunction().parameters
 			: function.function().parameters;
 		boolean isVarargs = isNative ? function.nfunction().isVarargs : function.function().isVarargs;
-		if (isVarargs && i >= parameters.size()-1) return parameters.get(parameters.size()-1).reference;
-		else if (i >= parameters.size()) return false; // tästä tulee virhe myöhemmin
-		else return parameters.get(i).reference;
+		if (isVarargs && i >= parameters.size()-1) return parameters.get(parameters.size()-1);
+		else if (i >= parameters.size()) return null;
+		else return parameters.get(i);
+	}
+	
+	private boolean isReferenceParameter(RödaValue function, int i) {
+	        Parameter p = getParameter(function, i);
+		if (p == null) return false; // tästä tulee virhe myöhemmin
+		return p.reference;
 	}
 
 	static void checkReference(String function, RödaValue arg) {
@@ -486,6 +492,25 @@ public class Interpreter {
 	static void checkArgs(String function, int required, int got) {
 		if (got > required) argumentOverflow(function, required, got);
 		if (got < required) argumentUnderflow(function, required, got);
+	}
+	
+	private static void checkArgs(String name, boolean isVarargs,
+				      List<Parameter> parameters,
+				      List<RödaValue> args, RödaScope scope) {
+		if (!isVarargs) {
+			checkArgs(name, parameters.size(), args.size());
+		} else {
+			if (args.size() < parameters.size()-1)
+				argumentUnderflow(name, parameters.size()-1, args.size());
+		}
+
+		for (int i = 0; i < Math.min(args.size(), parameters.size()); i++) {
+			if (parameters.get(i).type == null) continue;
+			Datatype t = scope.substitute(parameters.get(i).type);
+			if (!args.get(i).is(t))
+				error("illegal argument for '"+name+"': " + t + " expected (got "
+				      + args.get(i).typeString() + ")");
+		}
 	}
 	
 	static void argumentOverflow(String function, int required, int got) {
@@ -565,20 +590,18 @@ public class Interpreter {
 			List<String> typeparams = value.function().typeparams;
 			List<Parameter> parameters = value.function().parameters;
 			String name = value.function().name;
-			if (!isVarargs) {
-				checkArgs(name, parameters.size(), args.size());
-			} else {
-				if (args.size() < parameters.size()-1)
-					argumentUnderflow(name, parameters.size()-1, args.size());
-			}
+			
 			// joko nimettömän funktion paikallinen scope tai ylätason scope
 			RödaScope newScope = value.localScope() == null ? new RödaScope(G) : new RödaScope(value.localScope());
 			if (typeparams.size() != typeargs.size())
-				error("invalid number of typearguments for '" + name + "': "
+				error("illegal number of typearguments for '" + name + "': "
 				      + typeparams.size() + " required, got " + typeargs.size());
 			for (int i = 0; i < typeparams.size(); i++) {
 				newScope.addTypearg(typeparams.get(i), typeargs.get(i));
 			}
+
+			checkArgs(name, isVarargs, parameters, args, newScope);
+
 			int j = 0;
 			for (Parameter p : parameters) {
 				if (isVarargs && j == parameters.size()-1) break;
@@ -603,9 +626,8 @@ public class Interpreter {
 			return;
 		}
 		if (value.isNativeFunction()) {
-			if (!value.nfunction().isVarargs) {
-				checkArgs(value.nfunction().name, value.nfunction().parameters.size(), args.size());
-			}
+			checkArgs(value.nfunction().name, value.nfunction().isVarargs,
+				  value.nfunction().parameters, args, scope);
 			value.nfunction().body.exec(typeargs, args, scope, in, out);
 			return;
 		}
@@ -842,7 +864,7 @@ public class Interpreter {
 						args.remove(0);
 						quoteMode = true;
 					}
-					if (args.size() % 2 != 0) error("invalid arguments for '~=': even number required (got " + (args.size()-1) + ")");
+					if (args.size() % 2 != 0) error("illegal arguments for '~=': even number required (got " + (args.size()-1) + ")");
 					String text = rval.str();
 					try {
 						for (int j = 0; j < args.size(); j+=2) {

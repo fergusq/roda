@@ -7,7 +7,7 @@ public class RödaFlag extends RödaValue {
 	private String flag;
 
 	private RödaFlag(String flag) {
-		assumeIdentity("flag");
+		assumeIdentity(FLAG);
 		this.flag = flag;
 	}
 

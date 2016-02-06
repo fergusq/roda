@@ -7,7 +7,7 @@ public class RödaNumber extends RödaValue {
 	private long number;
 
 	private RödaNumber(long number) {
-		assumeIdentity("number");
+		assumeIdentity(NUMBER);
 		this.number = number;
 	}
 

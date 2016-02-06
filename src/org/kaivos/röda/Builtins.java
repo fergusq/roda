@@ -56,6 +56,7 @@ import org.kaivos.röda.JSON.JSONList;
 import org.kaivos.röda.JSON.JSONMap;
 
 import org.kaivos.röda.RödaValue;
+import static org.kaivos.röda.RödaValue.*;
 import org.kaivos.röda.type.*;
 import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Interpreter.*;
@@ -141,12 +142,12 @@ class Builtins {
 											 filename);
 						I.loadFile(file, I.G);
 					}
-				}, Arrays.asList(new Parameter("files", false)), true));
+				}, Arrays.asList(new Parameter("files", false, STRING)), true));
 
                 S.setLocal("assign_global", RödaNativeFunction.of("assign_global", (typeargs, args, scope, in, out) -> {
                                         String variableName = args.get(0).str();
 					S.setLocal(variableName, args.get(1));
-                                }, Arrays.asList(new Parameter("variable", false),
+                                }, Arrays.asList(new Parameter("variable", false, STRING),
 						 new Parameter("value", false)), false));
 
 		/* Muut oleelliset kielen rakenteet */
@@ -192,7 +193,6 @@ class Builtins {
 						out.push(in.pull());
 					}
 					else {
-						checkNumber("head", args.get(0));
 						long num = args.get(0).num();
 						for (int i = 0; i < num; i++) {
 							RödaValue input = in.pull();
@@ -201,7 +201,7 @@ class Builtins {
 							out.push(in.pull());
 						}
 					}
-				}, Arrays.asList(new Parameter("number", false)), true));
+				}, Arrays.asList(new Parameter("number", false, NUMBER)), true));
 
 		S.setLocal("tail", RödaNativeFunction.of("tail", (typeargs, args, scope, in, out) -> {
 				        if (args.size() > 1) argumentOverflow("tail", 1, args.size());
@@ -210,7 +210,6 @@ class Builtins {
 
 					if (args.size() == 0) numl = 1;
 					else {
-						checkNumber("tail", args.get(0));
 						numl = args.get(0).num();
 						if (numl > Integer.MAX_VALUE)
 							error("tail: too large number: " + numl);
@@ -229,7 +228,7 @@ class Builtins {
 						out.push(values.get(i));
 					}
 					
-				}, Arrays.asList(new Parameter("number", false)), true));
+				}, Arrays.asList(new Parameter("number", false, NUMBER)), true));
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
@@ -249,11 +248,10 @@ class Builtins {
 							}
 						}
 					}
-				}, Arrays.asList(new Parameter("patterns", false)), true));
+				}, Arrays.asList(new Parameter("patterns", false, STRING)), true));
 
 		S.setLocal("match", RödaNativeFunction.of("match", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("match", 1, 0);
-					checkString("match", args.get(0));
 				        String regex = args.get(0).str(); args.remove(0);
 					Pattern pattern;
 					try {
@@ -265,7 +263,6 @@ class Builtins {
 
 					if (args.size() > 0) {
 						for (RödaValue arg : args) {
-							checkString("match", arg);
 							Matcher matcher = pattern.matcher(arg.str());
 							if (matcher.matches()) {
 								RödaValue[] results = new RödaValue[matcher.groupCount()+1];
@@ -299,7 +296,8 @@ class Builtins {
 							else out.push(RödaList.of());
 						}
 					}
-				}, Arrays.asList(new Parameter("pattern", false), new Parameter("strings", false)), true));
+				}, Arrays.asList(new Parameter("pattern", false, STRING),
+						 new Parameter("strings", false, STRING)), true));
 
 		S.setLocal("replace", RödaNativeFunction.of("replace", (typeargs, args, scope, in, out) -> {
 					if (args.size() % 2 != 0) error("invalid arguments for replace: even number required (got " + args.size() + ")");
@@ -310,8 +308,6 @@ class Builtins {
 							
 							String text = input.str();
 							for (int i = 0; i < args.size(); i+=2) {
-								checkString("replace", args.get(i));
-								checkString("replace", args.get(i+1));
 								String pattern = args.get(i).str();
 								String replacement = args.get(i+1).str();
 								text = text.replaceAll(pattern, replacement);
@@ -321,7 +317,7 @@ class Builtins {
 					} catch (PatternSyntaxException e) {
 						error("replace: pattern syntax exception: " + e.getMessage());
 					}
-				}, Arrays.asList(new Parameter("patterns_and_replacements", false)), true));
+				}, Arrays.asList(new Parameter("patterns_and_replacements", false, STRING)), true));
 
 		/* Parserit */
 
@@ -519,7 +515,7 @@ class Builtins {
 							convert.accept(v);
 						}
 					}
-				}, Arrays.asList(new Parameter("lists", false)), true));
+				}, Arrays.asList(new Parameter("lists", false, LIST)), true));
 		
 		S.setLocal("expr", RödaNativeFunction.of("expr", (typeargs, args, scope, in, out) -> {
 				        String expression = args.stream().map(RödaValue::str).collect(joining(" "));
@@ -527,7 +523,6 @@ class Builtins {
 				}, Arrays.asList(new Parameter("expressions", false)), true));
 
 		S.setLocal("test", RödaNativeFunction.of("test", (typeargs, args, scope, in, out) -> {
-					checkFlag("test", args.get(1));
 					String operator = args.get(1).str();
 					boolean not = false;
 					if (operator.startsWith("-not_")) {
@@ -576,7 +571,7 @@ class Builtins {
 					}
 				}, Arrays.asList(
 						 new Parameter("value1", false),
-						 new Parameter("operator", false),
+						 new Parameter("operator", false, FLAG),
 						 new Parameter("value2", false)
 						 ), false));
 
@@ -587,12 +582,11 @@ class Builtins {
 				}, Arrays.asList(new Parameter("values", false)), true));
 
 		S.setLocal("seq", RödaNativeFunction.of("seq", (typeargs, args, scope, in, out) -> {
-					checkNumber("seq", args.get(0));
-					checkNumber("seq", args.get(1));
 					long from = args.get(0).num();
 					long to = args.get(1).num();
 					for (long i = from; i <= to; i++) out.push(RödaNumber.of(i));
-				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false));
+				}, Arrays.asList(new Parameter("from", false, NUMBER),
+						 new Parameter("to", false, NUMBER)), false));
 
 		S.setLocal("true", RödaNativeFunction.of("list", (typeargs, args, scope, in, out) -> {
 				        out.push(RödaBoolean.of(true));
@@ -727,15 +721,13 @@ class Builtins {
 		/* Tiedosto-operaatiot */
 
 		S.setLocal("cd", RödaNativeFunction.of("cd", (typeargs, args, scope, in, out) -> {
-					checkArgs("cd", 1, args.size());
-					checkString("cd", args.get(0));
 					String dirname = args.get(0).str();
 					File dir = IOUtils.getMaybeRelativeFile(I.currentDir, dirname);
 					if (!dir.isDirectory()) {
 						error("cd: not a directory");
 					}
 				        I.currentDir = dir;
-				}, Arrays.asList(new Parameter("path", false)), false));
+				}, Arrays.asList(new Parameter("path", false, STRING)), false));
 
 		S.setLocal("pwd", RödaNativeFunction.of("pwd", (typeargs, args, scope, in, out) -> {
 					try {
@@ -746,7 +738,6 @@ class Builtins {
 				}, Arrays.asList(), false));
 
 		S.setLocal("write", RödaNativeFunction.of("write", (typeargs, args, scope, in, out) -> {
-					checkString("write", args.get(0));
 					String filename = args.get(0).str();
 					File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
 					try {
@@ -758,12 +749,11 @@ class Builtins {
 					} catch (IOException e) {
 						error(e);
 					}
-				}, Arrays.asList(new Parameter("file", false)), false));
+				}, Arrays.asList(new Parameter("file", false, STRING)), false));
 
 		S.setLocal("cat", RödaNativeFunction.of("cat", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("cat", 1, args.size());
 					for (RödaValue value : args) {
-						checkString("cat", value);
 						String filename = value.str();
 						File file = IOUtils.getMaybeRelativeFile(I.currentDir,
 											 filename);
@@ -771,7 +761,7 @@ class Builtins {
 							out.push(RödaString.of(line));
 						}
 					}
-				}, Arrays.asList(new Parameter("files", false)), true));
+				}, Arrays.asList(new Parameter("files", false, STRING)), true));
 
 		S.setLocal("file", RödaNativeFunction.of("file", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("file", 1, args.size());
@@ -871,8 +861,6 @@ class Builtins {
 		I.records.put("socket", socketRecord);
 
 		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, scope, in, out) -> {
-					checkArgs("server", 1, args.size());
-					checkNumber("server", args.get(0));
 					long port = args.get(0).num();
 					if (port > Integer.MAX_VALUE)
 						error("can't open port greater than " + Integer.MAX_VALUE);
@@ -973,7 +961,7 @@ class Builtins {
 					} catch (IOException e) {
 						error(e);
 					}
-				}, Arrays.asList(new Parameter("port", false)), false));
+				}, Arrays.asList(new Parameter("port", false, NUMBER)), false));
 
 		// Säikeet
 
@@ -987,9 +975,7 @@ class Builtins {
 		I.records.put("thread", threadRecord);
 
 		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, scope, in, out) -> {
-				        checkArgs("thread", 1, args.size());
 				        RödaValue function = args.get(0);
-					checkFunction("thread", function);
 
 					RödaScope newScope =
 						!function.isNativeFunction()
@@ -1033,7 +1019,7 @@ class Builtins {
 					threadObject.setField("pull",genericPull("Thread.pull", _out));
 					threadObject.setField("push",genericPush("Thread.push", _in));
 					out.push(threadObject);
-				}, Arrays.asList(new Parameter("runnable", false)), false));
+				}, Arrays.asList(new Parameter("runnable", false, FUNCTION)), false));
 	}
 
 	private static RödaValue genericPush(String name, RödaStream _out) {
