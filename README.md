@@ -584,16 +584,16 @@ Laskujärjestys:
 Reflektion avulla on mahdollista saada metatietoa olioiden tyypeistä. Rödassa on kaksi mekanismia reflektion
 käyttämiseen: `reflect`-avainsana ja `typeof`-avainsana.
 ```
-record type {
+record Type {
 	name : string
 	annotations : list
-	fields : list<field>
+	fields : list<Field>
 	new_instance : function
 }
-record field {
+record Field {
 	name : string
 	annotations : list
-	type : type
+	type : Type
 	get : function
 	set : function
 }
@@ -787,7 +787,7 @@ Palauttaa kokonaisluvut välillä `[alku, loppu]`.
 Käynnistää uuden palvelimen annetussa portissa. Palauttaa palvelinta kuvaavan tietueen:
 
 ```
-record server {
+record Server {
 	accept : function
 	close : function
 }
@@ -797,7 +797,7 @@ Funktio `accept` odottaa, kunnes palvelimeen otetaan yhteyttä ja palauttaa yhte
 `close` sammuttaa palvelimen.
 
 ```
-record socket {
+record Socket {
 	write : function
 	read : function
 	close : function
@@ -811,18 +811,18 @@ record socket {
 
 Metodit toimivat seuraavasti:
 
->`socket.write (-f tiedosto|arvo)*`
+>`Socket.write (-f tiedosto|arvo)*`
 
 Kirjoittaa annettujen merkkijonojen (joko argumentien tai sisääntulovirran arvojen) UTF-8-esitykset
 virtaan. Argumentin avulla virtaan voi kirjoittaa myös tiedoston sisällön.
 
->`socket.read ((-b n|-l) muuttuja)*`
+>`Socket.read ((-b n|-l) muuttuja)*`
 
 Ilman argumentteja työntää ulostulovirtaansa virrasta luettuja tavuja lukuina.
 Jos argumentteja on, asettaa jokaiseen annettuun muuttujaan joko `n` seuraavaa tavua tulkittuna UTF-8-merkkijonona
 tai seuraavan rivin (tavuja seuraavaan `\n`-tavuun asti) tulkittuja UTF-8-merkkijonona.
 
->`socket.close`
+>`Socket.close`
 
 Sulkee yhteyden.
 
@@ -834,6 +834,23 @@ Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **s**e
 oletuksena välilyöntien perusteella. Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
 
 Valitsin `-c` (**c**ollect) määrittää, että ulostulovirtaan työnnetään merkkijonojen osien sijasta lista merkkijonon osista.
+
+### stream
+
+>`stream muuttuja*`
+
+Alustaa kaikki annetut muuttujat uusina virtoina tai, jos muuttujia ei ole annettu, työntää ulostulovirtaan
+uuden virtaolion.
+
+```
+record Stream {
+	finish : function
+	pull : function
+	push : function
+}
+```
+
+`finish` sulkee virran.
 
 ### test
 
