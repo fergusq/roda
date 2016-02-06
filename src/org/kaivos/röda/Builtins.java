@@ -343,6 +343,8 @@ class Builtins {
 
 		S.setLocal("split", valueFromNativeFunction("split", (typeargs, args, scope, in, out) -> {
 					String separator = " ";
+					boolean streamInput = true;
+					boolean collect = false;
 					for (int i = 0; i < args.size(); i++) {
 						RödaValue value = args.get(i);
 						if (value.isFlag("-s")) {
@@ -351,10 +353,39 @@ class Builtins {
 							separator = newSep.str();
 							continue;
 						}
+						else if (value.isFlag("-c")) {
+							collect = true;
+							continue;
+						}
+						streamInput = false;
 						checkString("split", value);
 						String str = value.str();
-						for (String s : str.split(separator)) {
-							out.push(valueFromString(s));
+						if (!collect) {
+							for (String s : str.split(separator)) {
+								out.push(valueFromString(s));
+							}
+						}
+						else {
+							out.push(RödaList.of(Arrays.asList(str.split(separator))
+									     .stream().map(RödaString::of).collect(toList())));
+						}
+					}
+					if (streamInput) {
+						while (true) {
+							RödaValue value = in.pull();
+							if (value == null) break;
+							
+							checkString("split", value);
+							String str = value.str();
+							if (!collect) {
+								for (String s : str.split(separator)) {
+									out.push(valueFromString(s));
+								}
+							}
+							else {
+								out.push(RödaList.of(Arrays.asList(str.split(separator))
+									     .stream().map(RödaString::of).collect(toList())));
+							}
 						}
 					}
 				}, Arrays.asList(new Parameter("flags_and_strings", false)), true,
