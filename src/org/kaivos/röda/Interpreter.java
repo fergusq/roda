@@ -176,12 +176,12 @@ public class Interpreter {
 
 	{
 		Builtins.populate(this);
-		records.put("error", errorRecord);
-		records.put("type", typeRecord);
-		records.put("field", fieldRecord);
-		typeReflections.put("error", createRecordClassReflection(errorRecord));
-		typeReflections.put("type", createRecordClassReflection(typeRecord));
-		typeReflections.put("field", createRecordClassReflection(fieldRecord));
+		records.put("Error", errorRecord);
+		records.put("Type", typeRecord);
+		records.put("Field", fieldRecord);
+		typeReflections.put("Error", createRecordClassReflection(errorRecord));
+		typeReflections.put("Type", createRecordClassReflection(typeRecord));
+		typeReflections.put("Field", createRecordClassReflection(fieldRecord));
 	}
 
 	private RödaValue createRecordClassReflection(Record record) {
