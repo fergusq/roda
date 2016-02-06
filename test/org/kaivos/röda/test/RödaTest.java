@@ -13,6 +13,7 @@ import static org.kaivos.röda.Interpreter.RödaException;
 import org.kaivos.röda.RödaStream;
 import static org.kaivos.röda.RödaStream.*;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.type.RödaString;
 
 public class RödaTest {
 	private Interpreter interpreter;
@@ -506,8 +507,8 @@ public class RödaTest {
 	@Test
 	public void testArguments() {
 		interpreter.interpret("main a b{push b a}",
-				      Arrays.asList(RödaValue.valueFromString("Anne"),
-						    RödaValue.valueFromString("Sanna")),
+				      Arrays.asList(RödaString.of("Anne"),
+						    RödaString.of("Sanna")),
 				      "<test>");
 		assertEquals("Sanna,Anne", getResults());
 	}
@@ -520,8 +521,8 @@ public class RödaTest {
 	@Test
 	public void testArgumentList() {
 		interpreter.interpret("main a...{push a[1] a[0] #a}",
-				      Arrays.asList(RödaValue.valueFromString("Venla"),
-						    RödaValue.valueFromString("Eveliina")),
+				      Arrays.asList(RödaString.of("Venla"),
+						    RödaString.of("Eveliina")),
 				      "<test>");
 		assertEquals("Eveliina,Venla,2", getResults());
 	}

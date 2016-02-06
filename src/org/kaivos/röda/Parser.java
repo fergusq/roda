@@ -20,12 +20,6 @@ import org.kaivos.nept.parser.OperatorLibrary;
 import org.kaivos.nept.parser.OperatorPrecedenceParser;
 import org.kaivos.nept.parser.ParsingException;
 
-import static org.kaivos.röda.RödaStream.StreamType;
-import static org.kaivos.röda.RödaStream.ValueStream;
-import static org.kaivos.röda.RödaStream.ByteStream;
-import static org.kaivos.röda.RödaStream.LineStream;
-import static org.kaivos.röda.RödaStream.VoidStream;
-
 public class Parser {
 	public static final TokenScanner t = new TokenScanner()
 		.addOperatorRule("...")
@@ -93,10 +87,6 @@ public class Parser {
 		case "new":
 		case "reflect":
 		case "typeof":
-		case "_character":
-		case "_line":
-		case "_value":
-		case "void":
 		case "reference":
 			return false;
 		default:
@@ -251,7 +241,7 @@ public class Parser {
 			}
 			else if (tl.isNext("{")) {
 				blocks.add(new Function("<block>", Collections.emptyList(), Collections.emptyList(),
-							false, new VoidStream(), new VoidStream(), parseBody(tl)));
+							false, parseBody(tl)));
 			}
 			else {
 				functions.add(parseFunction(tl, true));
@@ -398,24 +388,18 @@ public class Parser {
 		public List<String> typeparams;
 		public List<Parameter> parameters;
 		public boolean isVarargs;
-		public StreamType input;
-		public StreamType output;
 		public List<Statement> body;
 
 		Function(String name,
 			 List<String> typeparams,
 			 List<Parameter> parameters,
 			 boolean isVarargs,
-			 StreamType input,
-			 StreamType output,
 			 List<Statement> body) {
 
 			this.name = name;
 			this.typeparams = typeparams;
 			this.parameters = parameters;
 			this.isVarargs = isVarargs;
-			this.input = input;
-			this.output = output;
 			this.body = body;
 		}
 	}
@@ -457,21 +441,9 @@ public class Parser {
 			maybeNewline(tl);
 		}
 
-		StreamType input, output;
-		if (tl.acceptIfNext(":")) {
-			maybeNewline(tl);
-			input = parseStreamType(tl);
-			tl.accept("->");
-			output = parseStreamType(tl);
-			maybeNewline(tl);
-		} else {
-			input = new ValueStream();
-			output = new ValueStream();
-		}
-
 		List<Statement> body = parseBody(tl);
 
-		return new Function(name, typeparams, parameters, isVarargs, input, output, body);
+		return new Function(name, typeparams, parameters, isVarargs, body);
 	}
 
 	static List<String> parseTypeparameters(TokenList tl) {
@@ -486,30 +458,6 @@ public class Parser {
 			tl.accept(">");
 		}
 		return typeparams;
-	}
-	
-	static StreamType parseStreamType(TokenList tl) {
-		if (tl.acceptIfNext("void")) {
-			return new VoidStream();
-		}
-		if (tl.acceptIfNext("_character")) {
-			return new ByteStream();
-		}
-		if (tl.acceptIfNext("_line")) {
-			if (tl.isNext("(")) {
-				tl.accept(")");
-				tl.accept("\"");
-				String sep = tl.nextString();
-				tl.accept("\"");
-				return new LineStream(sep);
-			}
-			return new LineStream();
-		}
-		if (tl.acceptIfNext("_value")) {
-			return new ValueStream();
-		}
-
-		throw new ParsingException(TokenList.expected("_character", "_line", "void", "_value"), tl.next());
 	}
 
 	static List<Statement> parseBody(TokenList tl) {
@@ -1212,8 +1160,6 @@ public class Parser {
 		else if (tl.isNext("{")) {
 			List<Parameter> parameters = new ArrayList<>();
 			boolean isVarargs = false;
-			StreamType input = new ValueStream();
-			StreamType output = new ValueStream();
 			tl.accept("{");
 			maybeNewline(tl);
 			if (tl.isNext("|")) {
@@ -1237,7 +1183,7 @@ public class Parser {
 			maybeNewline(tl);
 			tl.accept("}");
 			ans = expressionFunction(file, line, new Function("<block>", Collections.emptyList(), parameters,
-									  isVarargs, input, output, body));
+									  isVarargs, body));
 		}
 		else if (tl.acceptIfNext("\"")) {
 			String s = tl.nextString();

@@ -1,10 +1,10 @@
 package org.kaivos.röda;
 
 import org.kaivos.röda.Interpreter;
+import static org.kaivos.röda.RödaStream.ISLineStream;
+import static org.kaivos.röda.RödaStream.OSStream;
 import org.kaivos.röda.Parser.Parameter;
-import org.kaivos.röda.RödaStream.ISLineStream;
-import org.kaivos.röda.RödaStream.OSStream;
-import org.kaivos.röda.RödaStream.VoidStream;
+import org.kaivos.röda.type.RödaString;
 import org.kaivos.röda.type.RödaNativeFunction;
 
 import org.kaivos.nept.parser.ParsingException;
@@ -85,7 +85,7 @@ public class Röda {
 			in.close();
 			Interpreter c = new Interpreter();
 			List<RödaValue> valueArgs = argsForRöda.stream()
-				.map(RödaValue::valueFromString)
+				.map(RödaString::of)
 				.collect(Collectors.toList());
 			try {
 				c.interpret(code, valueArgs, file);
@@ -112,8 +112,7 @@ public class Röda {
 			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, s, i, o) -> {
 						Interpreter.checkString("prompt", a.get(0));
 						in.setPrompt(a.get(0).str());
-					}, Arrays.asList(new Parameter("prompt_string", false)), false,
-					new VoidStream(), new VoidStream()));
+					}, Arrays.asList(new Parameter("prompt_string", false)), false));
 			
 			in.addCompleter((b, k, l) -> {
 					if (b == null) l.addAll(c.G.map.keySet());

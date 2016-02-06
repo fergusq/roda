@@ -15,7 +15,8 @@ import java.io.PrintWriter;
 import java.io.IOException;
 
 import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.RödaValue.*;
+import org.kaivos.röda.type.RödaList;
+import org.kaivos.röda.type.RödaString;
 
 import static org.kaivos.röda.Interpreter.error;
 
@@ -27,9 +28,7 @@ import static org.kaivos.röda.Interpreter.error;
  * It can be used to iterate over all these values.
  */
 public abstract class RödaStream implements Iterable<RödaValue> {
-	StreamHandler inHandler;
-	StreamHandler outHandler;
-	private boolean paused = false;
+        private boolean paused = false;
 	
 	protected abstract RödaValue get();
 	protected abstract void put(RödaValue value);
@@ -77,7 +76,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	 * Pushes a new value to the stream.
 	 */
 	public final void push(RödaValue value) {
-		inHandler.handlePush(this::finished, this::put, value);
+		put(value);
 	}
 
 	/**
@@ -86,14 +85,20 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	 * @return the value, or null if the stream is closed.
 	 */
 	public final RödaValue pull() {
-		return outHandler.handlePull(this::finished, this::get);
+		return get();
 	}
 
 	/**
 	 * Returns a value that represents all current and future values in the stream.
 	 */
 	public final RödaValue readAll() {
-		return outHandler.handleReadAll(this::finished, this::get);
+		List<RödaValue> list = new ArrayList<>();
+		while (true) {
+			RödaValue val = get();
+			if (val == null) break;
+			list.add(val);
+		}
+		return RödaList.of(list);
 	}
 
 	/**
@@ -119,24 +124,14 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		};
 	}
 
-	public static RödaStream makeStream(StreamType in, StreamType out) {
-		RödaStream stream = new RödaStreamImpl();
-		stream.inHandler = in.newHandler();
-		stream.outHandler = out.newHandler();
-		return stream;
-	}
-
-	public static RödaStream makeStream(StreamHandler in, StreamHandler out) {
-		RödaStream stream = new RödaStreamImpl();
-		stream.inHandler = in;
-		stream.outHandler = out;
-		return stream;
-	}
-
 	public static RödaStream makeStream() {
 		RödaStream stream = new RödaStreamImpl();
-		stream.inHandler = ValueStream.HANDLER;
-		stream.outHandler = ValueStream.HANDLER;
+		return stream;
+	}
+
+	public static RödaStream makeEmptyStream() {
+		RödaStream stream = new RödaStreamImpl();
+		stream.finish();
 		return stream;
 	}
 
@@ -165,228 +160,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 					return hasFinished || finished.get();
 				}
 			};
-		stream.inHandler = ValueStream.HANDLER;
-		stream.outHandler = ValueStream.HANDLER;
 		return stream;
-	}
-
-	public static abstract class StreamType {
-		abstract StreamHandler newHandler();
-	}
-	private interface StreamHandler {
-		void handlePush(Supplier<Boolean> finished, Consumer<RödaValue> put, RödaValue value);
-		RödaValue handlePull(Supplier<Boolean> finished, Supplier<RödaValue> get);
-		RödaValue handleReadAll(Supplier<Boolean> finished, Supplier<RödaValue> get);
-	}
-	public static class LineStream extends StreamType {
-		String sep;
-		LineStream() { sep="\n"; }
-		LineStream(String sep) { this.sep=sep; }
-		StreamHandler newHandler() {
-			return new StreamHandler() {
-				StringBuffer buffer = new StringBuffer();
-				RödaValue valueBuffer;
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					if (!value.isString()) {
-						put.accept(value);
-						return;
-					}
-					for (String line : value.str().split(sep)) {
-						put.accept(valueFromString(line));
-					}
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					if (valueBuffer != null) {
-						RödaValue val = valueBuffer;
-						valueBuffer = null;
-						return val;
-					}
-					do {
-						RödaValue val = get.get();
-						if (!val.isString()) {
-							if (buffer.length() != 0) {
-								valueBuffer = val;
-								return valueFromString(buffer.toString());
-							}
-							return val;
-						}
-						String str = val.str();
-						if (str.indexOf(sep) >= 0) {
-							String ans = str.substring(0, str.indexOf(sep));
-							ans = buffer.toString() + ans;
-							buffer = new StringBuffer(str.substring(str.indexOf(sep)+1));
-							return valueFromString(ans);
-						}
-						buffer = buffer.append(str);
-					} while (true);
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							Supplier<RödaValue> get) {
-					StringBuilder all = new StringBuilder();
-					while (!finished.get()) {
-						RödaValue val = get.get();
-						if (val == null) break;
-						all = all.append(val.str());
-					}
-					return valueFromString(all.toString());
-				}
-				
-			};
-		}
-	}
-	public static class VoidStream extends StreamType {
-
-		static final StreamHandler HANDLER = new StreamHandler() {
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					// nop
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					return null;
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							       Supplier<RödaValue> get) {
-					return null;
-				}
-			};
-		StreamHandler newHandler() {
-			return HANDLER;
-		}
-
-		public static final RödaStream STREAM = makeStream(HANDLER, HANDLER);
-	}
-	public static class ByteStream extends StreamType {
-		StreamHandler newHandler() {
-			return new StreamHandler() {
-				List<Character> queue = new ArrayList<>();
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					if (!value.isString()) {
-						put.accept(value);
-						return;
-					}
-					for (char chr : value.str().toCharArray())
-						put.accept(valueFromString(String.valueOf(chr)));
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					if (queue.isEmpty()) {
-						RödaValue val = get.get();
-						if (!val.isString()) return val;
-						for (char chr : val.str().toCharArray())
-							queue.add(chr);
-					}
-					return valueFromString(String.valueOf(queue.remove(0)));
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							       Supplier<RödaValue> get) {
-					StringBuilder all = new StringBuilder();
-					while (!finished.get()) {
-						RödaValue val = get.get();
-						if (val == null) break;
-						all = all.append(val.str());
-					}
-					return valueFromString(all.toString());
-				}
-			};
-		}
-	}
-	public static class BooleanStream extends StreamType {
-		StreamHandler newHandler() {
-			return new StreamHandler() {
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					put.accept(value);
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					RödaValue value = get.get();
-					return valueFromBoolean(value.bool());
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							       Supplier<RödaValue> get) {
-					boolean all = true;
-					while (!finished.get()) {
-						RödaValue val = get.get();
-						if (val == null) break;
-						all &= val.bool();
-					}
-					return valueFromBoolean(all);
-				}
-			};
-		}
-	}
-	public static class ValueStream extends StreamType {
-		static final StreamHandler HANDLER = new StreamHandler() {
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					put.accept(value);
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					return get.get();
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							       Supplier<RödaValue> get) {
-				        List<RödaValue> list = new ArrayList<RödaValue>();
-					while (true) {
-						RödaValue val = get.get();
-						if (val == null) break;
-						list.add(val);
-					}
-					return valueFromList(list);
-				}
-			};
-
-		StreamHandler newHandler() {
-			return HANDLER;
-		}
-	}
-	// TODO mieti virrat uudestaan siten, että tämä toimii kunnolla
-	// Ongelmat:
-	// - Käytössä vain joko sisään- tai ulostulokäsittelijänä,
-	//   vaikka loogisesti sen pitäisi olla molemmat
-	// - Nykyinen virtajärjestelmä ei salli yhtäaikaisia
-	//   sisään- ja ulostulokäsittelijöitä
-	public static class SingleValueStream extends StreamType {
-		StreamHandler newHandler() {
-			return new StreamHandler() {
-				boolean full = false;
-				public void handlePush(Supplier<Boolean> finished,
-						       Consumer<RödaValue> put,
-						       RödaValue value) {
-					if (full) {
-						error("stream is full");
-					}
-					put.accept(value);
-					full = true;
-				}
-				public RödaValue handlePull(Supplier<Boolean> finished,
-							    Supplier<RödaValue> get) {
-					return get.get();
-				}
-				public RödaValue handleReadAll(Supplier<Boolean> finished,
-							       Supplier<RödaValue> get) {
-				        List<RödaValue> list = new ArrayList<RödaValue>();
-					while (true) {
-						RödaValue val = get.get();
-						if (val == null) break;
-						list.add(val);
-					}
-					if (list.size() > 1) error("stream is full");
-					if (list.size() < 1) error("stream is closed");
-					return list.get(0);
-				}
-			};
-		}
 	}
 
 	static class RödaStreamImpl extends RödaStream {
@@ -441,10 +215,6 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		public ISLineStream(BufferedReader in) {
 			this.in = in;
 		}
-		{
-			inHandler = ValueStream.HANDLER;
-			outHandler = ValueStream.HANDLER;
-		}
 		public RödaValue get() {
 			if (finished) return null;
 			try {
@@ -453,7 +223,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 				}
 				String line = in.readLine();
 				if (line == null) return null;
-				else return valueFromString(line + "\n");
+				else return RödaString.of(line + "\n");
 			} catch (IOException e) {
 				error(e);
 				return null;
@@ -483,10 +253,6 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		private PrintWriter out;
 		public OSStream(PrintWriter out) {
 			this.out = out;
-		}
-		{
-			inHandler = ValueStream.HANDLER;
-			outHandler = ValueStream.HANDLER;
 		}
 		public RödaValue get() {
 			error("no input from output");

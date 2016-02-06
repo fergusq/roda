@@ -101,7 +101,7 @@ public class RödaList extends RödaValue {
 			if (i++ != 0) text += separator;
 			text += val.str();
 		}
-		return valueFromString(text);
+		return RödaString.of(text);
 	}
 
 	@Override public void add(RödaValue value) {

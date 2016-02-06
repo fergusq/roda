@@ -57,7 +57,6 @@ import org.kaivos.röda.JSON.JSONMap;
 
 import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.type.*;
-import static org.kaivos.röda.RödaValue.*;
 import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Interpreter.*;
 import static org.kaivos.röda.Parser.*;
@@ -71,7 +70,7 @@ class Builtins {
 
 		/* Perusvirtaoperaatiot */
 
-		S.setLocal("print", valueFromNativeFunction("print", (typeargs, args, scope, in, out) -> {
+		S.setLocal("print", RödaNativeFunction.of("print", (typeargs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("print", 1, 0);
 						return;
@@ -79,10 +78,9 @@ class Builtins {
 					for (RödaValue value : args) {
 						out.push(value);
 					}
-					out.push(valueFromString("\n"));
-				}, Arrays.asList(new Parameter("values", false)), true,
-				new VoidStream(), new ValueStream()));
-		S.setLocal("push", valueFromNativeFunction("push", (typeargs, args, scope, in, out) -> {
+					out.push(RödaString.of("\n"));
+				}, Arrays.asList(new Parameter("values", false)), true));
+		S.setLocal("push", RödaNativeFunction.of("push", (typeargs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("push", 1, 0);
 						return;
@@ -90,10 +88,9 @@ class Builtins {
 					for (RödaValue value : args) {
 						out.push(value);
 					}
-				}, Arrays.asList(new Parameter("values", false)), true,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("values", false)), true));
 
-		S.setLocal("pull", valueFromNativeFunction("pull", (typeargs, args, scope, in, out) -> {
+		S.setLocal("pull", RödaNativeFunction.of("pull", (typeargs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("pull", 1, 0);
 						return;
@@ -108,38 +105,35 @@ class Builtins {
 					        
 					        RödaValue pulled = in.pull();
 						if (pulled == null) {
-							if (readMode) out.push(valueFromBoolean(false));
+							if (readMode) out.push(RödaBoolean.of(false));
 							continue;
 						}
 						value.assign(pulled);
-					        if (readMode) out.push(valueFromBoolean(true));
+					        if (readMode) out.push(RödaBoolean.of(true));
 					}
-				}, Arrays.asList(new Parameter("variables", true)), true,
-				new ValueStream(), new BooleanStream()));
+				}, Arrays.asList(new Parameter("variables", true)), true));
 
 		/* Muuttujaoperaatiot */
 
-		S.setLocal("undefine", valueFromNativeFunction("undefine", (typeargs, args, scope, in, out) -> {
+		S.setLocal("undefine", RödaNativeFunction.of("undefine", (typeargs, args, scope, in, out) -> {
 					for (RödaValue value : args) {
 						checkReference("undefine", value);
 
 						value.assign(null);
 					}
-				}, Arrays.asList(new Parameter("variables", true)), true,
-				new VoidStream(), new VoidStream()));
+				}, Arrays.asList(new Parameter("variables", true)), true));
 
-		S.setLocal("name", valueFromNativeFunction("name", (typeargs, args, scope, in, out) -> {
+		S.setLocal("name", RödaNativeFunction.of("name", (typeargs, args, scope, in, out) -> {
 					for (RödaValue value : args) {
 						if (!value.isReference())
 							error("invalid argument for undefine: "
 							      + "only references accepted");
 
-						out.push(valueFromString(value.target()));
+						out.push(RödaString.of(value.target()));
 					}
-				}, Arrays.asList(new Parameter("variables", true)), true,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("variables", true)), true));
 
-		S.setLocal("import", valueFromNativeFunction("import", (typeargs, args, scope, in, out) -> {
+		S.setLocal("import", RödaNativeFunction.of("import", (typeargs, args, scope, in, out) -> {
 				        for (RödaValue value : args) {
 						checkString("import", value);
 						String filename = value.str();
@@ -147,28 +141,25 @@ class Builtins {
 											 filename);
 						I.loadFile(file, I.G);
 					}
-				}, Arrays.asList(new Parameter("files", false)), true,
-				new VoidStream(), new VoidStream()));
+				}, Arrays.asList(new Parameter("files", false)), true));
 
-                S.setLocal("assign_global", valueFromNativeFunction("assign_global", (typeargs, args, scope, in, out) -> {
+                S.setLocal("assign_global", RödaNativeFunction.of("assign_global", (typeargs, args, scope, in, out) -> {
                                         String variableName = args.get(0).str();
 					S.setLocal(variableName, args.get(1));
                                 }, Arrays.asList(new Parameter("variable", false),
-						 new Parameter("value", false)), false,
-                                new VoidStream(), new VoidStream()));
+						 new Parameter("value", false)), false));
 
 		/* Muut oleelliset kielen rakenteet */
 
-		S.setLocal("identity", valueFromNativeFunction("identity", (typeargs, args, scope, in, out) -> {
+		S.setLocal("identity", RödaNativeFunction.of("identity", (typeargs, args, scope, in, out) -> {
 				        while (true) {
 						RödaValue input = in.pull();
 						if (input == null) break;
 						out.push(input);
 					}
-				}, Collections.emptyList(), false,
-				new ValueStream(), new ValueStream()));
+				}, Collections.emptyList(), false));
 
-		S.setLocal("error", valueFromNativeFunction("error", (typeargs, args, scope, in, out) -> {
+		S.setLocal("error", RödaNativeFunction.of("error", (typeargs, args, scope, in, out) -> {
 					checkArgs("error", 1, args.size());
 					if (args.get(0).isString()) {
 						error(args.get(0).str());
@@ -177,10 +168,9 @@ class Builtins {
 						error("error: can't cast a " + args.get(0).typeString() + " to an error");
 					}
 					else error(args.get(0));
-				}, Arrays.asList(new Parameter("errorObject", false)), false,
-				new VoidStream(), new VoidStream()));
+				}, Arrays.asList(new Parameter("errorObject", false)), false));
 
-		S.setLocal("errprint", valueFromNativeFunction("errprint", (typeargs, args, scope, in, out) -> {
+		S.setLocal("errprint", RödaNativeFunction.of("errprint", (typeargs, args, scope, in, out) -> {
 					if (args.isEmpty()) {
 						while (true) {
 							RödaValue input = in.pull();
@@ -190,14 +180,13 @@ class Builtins {
 					}
 					else for (RödaValue value : args) {
 						System.err.print(value.str());
-						out.push(valueFromString("\n"));
+						out.push(RödaString.of("\n"));
 					}
-				}, Arrays.asList(new Parameter("values", false)), true,
-				new ValueStream(), new VoidStream()));
+				}, Arrays.asList(new Parameter("values", false)), true));
 
 		/* Täydentävät virtaoperaatiot */
 
-		S.setLocal("head", valueFromNativeFunction("head", (typeargs, args, scope, in, out) -> {
+		S.setLocal("head", RödaNativeFunction.of("head", (typeargs, args, scope, in, out) -> {
 				        if (args.size() > 1) argumentOverflow("head", 1, args.size());
 					if (args.size() == 0) {
 						out.push(in.pull());
@@ -212,10 +201,9 @@ class Builtins {
 							out.push(in.pull());
 						}
 					}
-				}, Arrays.asList(new Parameter("number", false)), true,
-				new ValueStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("number", false)), true));
 
-		S.setLocal("tail", valueFromNativeFunction("tail", (typeargs, args, scope, in, out) -> {
+		S.setLocal("tail", RödaNativeFunction.of("tail", (typeargs, args, scope, in, out) -> {
 				        if (args.size() > 1) argumentOverflow("tail", 1, args.size());
 
 					long numl;
@@ -241,12 +229,11 @@ class Builtins {
 						out.push(values.get(i));
 					}
 					
-				}, Arrays.asList(new Parameter("number", false)), true,
-				new ValueStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("number", false)), true));
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
-		S.setLocal("search", valueFromNativeFunction("search", (typeargs, args, scope, in, out) -> {
+		S.setLocal("search", RödaNativeFunction.of("search", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("search", 1, 0);
 					while (true) {
 						RödaValue input = in.pull();
@@ -258,14 +245,13 @@ class Builtins {
 							Pattern pattern = Pattern.compile(value.str());
 							Matcher m = pattern.matcher(text);
 							while (m.find()) {
-								out.push(valueFromString(m.group()));
+								out.push(RödaString.of(m.group()));
 							}
 						}
 					}
-				}, Arrays.asList(new Parameter("patterns", false)), true,
-				new ValueStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("patterns", false)), true));
 
-		S.setLocal("match", valueFromNativeFunction("match", (typeargs, args, scope, in, out) -> {
+		S.setLocal("match", RödaNativeFunction.of("match", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("match", 1, 0);
 					checkString("match", args.get(0));
 				        String regex = args.get(0).str(); args.remove(0);
@@ -313,10 +299,9 @@ class Builtins {
 							else out.push(RödaList.of());
 						}
 					}
-				}, Arrays.asList(new Parameter("pattern", false), new Parameter("strings", false)), true,
-				new ValueStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("pattern", false), new Parameter("strings", false)), true));
 
-		S.setLocal("replace", valueFromNativeFunction("replace", (typeargs, args, scope, in, out) -> {
+		S.setLocal("replace", RödaNativeFunction.of("replace", (typeargs, args, scope, in, out) -> {
 					if (args.size() % 2 != 0) error("invalid arguments for replace: even number required (got " + args.size() + ")");
 					try {
 						while (true) {
@@ -331,17 +316,16 @@ class Builtins {
 								String replacement = args.get(i+1).str();
 								text = text.replaceAll(pattern, replacement);
 							}
-							out.push(valueFromString(text));
+							out.push(RödaString.of(text));
 						}
 					} catch (PatternSyntaxException e) {
 						error("replace: pattern syntax exception: " + e.getMessage());
 					}
-				}, Arrays.asList(new Parameter("patterns_and_replacements", false)), true,
-				new ValueStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("patterns_and_replacements", false)), true));
 
 		/* Parserit */
 
-		S.setLocal("split", valueFromNativeFunction("split", (typeargs, args, scope, in, out) -> {
+		S.setLocal("split", RödaNativeFunction.of("split", (typeargs, args, scope, in, out) -> {
 					String separator = " ";
 					boolean streamInput = true;
 					boolean collect = false;
@@ -362,7 +346,7 @@ class Builtins {
 						String str = value.str();
 						if (!collect) {
 							for (String s : str.split(separator)) {
-								out.push(valueFromString(s));
+								out.push(RödaString.of(s));
 							}
 						}
 						else {
@@ -379,7 +363,7 @@ class Builtins {
 							String str = value.str();
 							if (!collect) {
 								for (String s : str.split(separator)) {
-									out.push(valueFromString(s));
+									out.push(RödaString.of(s));
 								}
 							}
 							else {
@@ -388,10 +372,9 @@ class Builtins {
 							}
 						}
 					}
-				}, Arrays.asList(new Parameter("flags_and_strings", false)), true,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("flags_and_strings", false)), true));
 
-		S.setLocal("json", valueFromNativeFunction("json", (typeargs, args, scope, in, out) -> {
+		S.setLocal("json", RödaNativeFunction.of("json", (typeargs, args, scope, in, out) -> {
 					boolean _stringOutput = false;
 					boolean _iterativeOutput = false;
 					while (args.size() > 0
@@ -409,13 +392,13 @@ class Builtins {
 						if (iterativeOutput) {
 							for (JSONElement element : root) {
 								if (!stringOutput) {
-									RödaValue path = valueFromList(element.getPath().stream()
-												       .map(jk -> valueFromString(jk.toString()) )
+									RödaValue path = RödaList.of(element.getPath().stream()
+												       .map(jk -> RödaString.of(jk.toString()) )
 												       .collect(toList()));
-									RödaValue value = valueFromString(element.toString());
-									out.push(valueFromList(path, value));
+									RödaValue value = RödaString.of(element.toString());
+									out.push(RödaList.of(path, value));
 								} else {
-									out.push(valueFromString(element.getPath().toString() + " " + element.toString()));
+									out.push(RödaString.of(element.getPath().toString() + " " + element.toString()));
 								}
 							}
 						} else { // rekursiivinen ulostulo
@@ -424,31 +407,31 @@ class Builtins {
 							R<java.util.function.Function<JSONElement, RödaValue>>
 							makeRöda = new R<>();
 							makeRöda.i = json -> {
-								RödaValue elementName = valueFromString(json.getElementName());
+								RödaValue elementName = RödaString.of(json.getElementName());
 								RödaValue value;
 								if (json instanceof JSONInteger) {
 									value = RödaNumber.of(((JSONInteger) json).getValue());
 								}
 								else if (json instanceof JSONString) {
-									value = valueFromString(((JSONString) json).getValue());
+									value = RödaString.of(((JSONString) json).getValue());
 								}
 								else if (json instanceof JSONList) {
-									value = valueFromList(((JSONList) json).getElements()
+									value = RödaList.of(((JSONList) json).getElements()
 											      .stream()
 											      .map(j -> makeRöda.i.apply(j))
 											      .collect(toList()));
 								}
 								else if (json instanceof JSONMap) {
-									value = valueFromList(((JSONMap) json).getElements().entrySet()
+									value = RödaList.of(((JSONMap) json).getElements().entrySet()
 											      .stream()
-											      .map(e -> valueFromList(valueFromString(e.getKey().getKey()),
+											      .map(e -> RödaList.of(RödaString.of(e.getKey().getKey()),
 														      makeRöda.i.apply(e.getValue())))
 											      .collect(toList()));
 								}
 								else {
-									value = valueFromString(json.toString());
+									value = RödaString.of(json.toString());
 								}
-								return valueFromList(elementName, value);
+								return RödaList.of(elementName, value);
 							};
 							out.push(makeRöda.i.apply(root));
 							
@@ -468,9 +451,9 @@ class Builtins {
 							handler.accept(code);
 						}
 					}
-				}, Arrays.asList(new Parameter("flags_and_code", false)), true, new ValueStream(), new SingleValueStream()));
+				}, Arrays.asList(new Parameter("flags_and_code", false)), true));
 		
-		S.setLocal("parse_num", valueFromNativeFunction("parse_num", (typeargs, args, scope, in, out) -> {
+		S.setLocal("parse_num", RödaNativeFunction.of("parse_num", (typeargs, args, scope, in, out) -> {
 					int radix = 10;
 					boolean tochr = false;
 					while (args.size() > 0 && args.get(0).isFlag()) {
@@ -508,9 +491,9 @@ class Builtins {
 							else out.push(RödaNumber.of(lng));
 						}
 					}
-				}, Arrays.asList(new Parameter("strings", false)), true, new ValueStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("strings", false)), true));
 		
-		S.setLocal("btos", valueFromNativeFunction("btos", (typeargs, args, scope, in, out) -> {
+		S.setLocal("btos", RödaNativeFunction.of("btos", (typeargs, args, scope, in, out) -> {
 					Charset chrset = StandardCharsets.UTF_8;
 					Consumer<RödaValue> convert = v -> {
 							checkList("btos", v);
@@ -536,14 +519,14 @@ class Builtins {
 							convert.accept(v);
 						}
 					}
-				}, Arrays.asList(new Parameter("lists", false)), true, new ValueStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("lists", false)), true));
 		
-		S.setLocal("expr", valueFromNativeFunction("expr", (typeargs, args, scope, in, out) -> {
+		S.setLocal("expr", RödaNativeFunction.of("expr", (typeargs, args, scope, in, out) -> {
 				        String expression = args.stream().map(RödaValue::str).collect(joining(" "));
-					out.push(valueFromString(String.valueOf(Calculator.eval(expression))));
-				}, Arrays.asList(new Parameter("expressions", false)), true, new VoidStream(), new SingleValueStream()));
+					out.push(RödaString.of(String.valueOf(Calculator.eval(expression))));
+				}, Arrays.asList(new Parameter("expressions", false)), true));
 
-		S.setLocal("test", valueFromNativeFunction("test", (typeargs, args, scope, in, out) -> {
+		S.setLocal("test", RödaNativeFunction.of("test", (typeargs, args, scope, in, out) -> {
 					checkFlag("test", args.get(1));
 					String operator = args.get(1).str();
 					boolean not = false;
@@ -555,38 +538,38 @@ class Builtins {
 					RödaValue a2 = args.get(2);
 					switch (operator) {
 					case "-eq": {
-						out.push(valueFromBoolean(a1.halfEq(a2)^not));
+						out.push(RödaBoolean.of(a1.halfEq(a2)^not));
 					} break;
 					case "-strong_eq": {
-						out.push(valueFromBoolean(a1.strongEq(a2)^not));
+						out.push(RödaBoolean.of(a1.strongEq(a2)^not));
 					} break;
 					case "-weak_eq": {
-						out.push(valueFromBoolean(a1.weakEq(a2)^not));
+						out.push(RödaBoolean.of(a1.weakEq(a2)^not));
 					} break;
 					case "-matches": {
 						checkString("test -matches", a1);
 						checkString("test -matches", a2);
-						out.push(valueFromBoolean(a1.str().matches(a2.str())^not));
+						out.push(RödaBoolean.of(a1.str().matches(a2.str())^not));
 					} break;
 					case "-lt": {
 						checkNumber("test -lt", a1);
 						checkNumber("test -lt", a2);
-						out.push(valueFromBoolean((a1.num() < a2.num())^not));
+						out.push(RödaBoolean.of((a1.num() < a2.num())^not));
 					} break;
 					case "-le": {
 						checkNumber("test -le", a1);
 						checkNumber("test -le", a2);
-						out.push(valueFromBoolean((a1.num() <= a2.num())^not));
+						out.push(RödaBoolean.of((a1.num() <= a2.num())^not));
 					} break;
 					case "-gt": {
 						checkNumber("test -gt", a1);
 						checkNumber("test -gt", a2);
-						out.push(valueFromBoolean((a1.num() > a2.num())^not));
+						out.push(RödaBoolean.of((a1.num() > a2.num())^not));
 					} break;
 					case "-ge": {
 						checkNumber("test -ge", a1);
 						checkNumber("test -ge", a2);
-						out.push(valueFromBoolean((a1.num() >= a2.num())^not));
+						out.push(RödaBoolean.of((a1.num() >= a2.num())^not));
 					} break;
 					default:
 						error("test: unknown operator '" + operator + "'");
@@ -595,50 +578,47 @@ class Builtins {
 						 new Parameter("value1", false),
 						 new Parameter("operator", false),
 						 new Parameter("value2", false)
-						 ), false,
-			new VoidStream(), new SingleValueStream()));
+						 ), false));
 
 		/* Konstruktorit */
 		
-		S.setLocal("list", valueFromNativeFunction("list", (typeargs, args, scope, in, out) -> {
-				        out.push(valueFromList(args));
-				}, Arrays.asList(new Parameter("values", false)), true,
-				new VoidStream(), new SingleValueStream()));
+		S.setLocal("list", RödaNativeFunction.of("list", (typeargs, args, scope, in, out) -> {
+				        out.push(RödaList.of(args));
+				}, Arrays.asList(new Parameter("values", false)), true));
 
-		S.setLocal("seq", valueFromNativeFunction("seq", (typeargs, args, scope, in, out) -> {
+		S.setLocal("seq", RödaNativeFunction.of("seq", (typeargs, args, scope, in, out) -> {
 					checkNumber("seq", args.get(0));
 					checkNumber("seq", args.get(1));
 					long from = args.get(0).num();
 					long to = args.get(1).num();
 					for (long i = from; i <= to; i++) out.push(RödaNumber.of(i));
-				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("from", false), new Parameter("to", false)), false));
 
-		S.setLocal("true", valueFromNativeFunction("list", (typeargs, args, scope, in, out) -> {
-				        out.push(valueFromBoolean(true));
-				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
+		S.setLocal("true", RödaNativeFunction.of("list", (typeargs, args, scope, in, out) -> {
+				        out.push(RödaBoolean.of(true));
+				}, Arrays.asList(), false));
 
-		S.setLocal("false", valueFromNativeFunction("false", (typeargs, args, scope, in, out) -> {
-				        out.push(valueFromBoolean(false));
-				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
+		S.setLocal("false", RödaNativeFunction.of("false", (typeargs, args, scope, in, out) -> {
+				        out.push(RödaBoolean.of(false));
+				}, Arrays.asList(), false));
 
 		/* Apuoperaatiot */
 
-		S.setLocal("time", valueFromNativeFunction("time", (typeargs, args, scope, in, out) -> {
+		S.setLocal("time", RödaNativeFunction.of("time", (typeargs, args, scope, in, out) -> {
 				        out.push(RödaNumber.of((int) System.currentTimeMillis()));
-				}, Arrays.asList(), false, new VoidStream(), new SingleValueStream()));
+				}, Arrays.asList(), false));
 
 		Random rnd = new Random();
 		
-		S.setLocal("random", valueFromNativeFunction("random", (typeargs, args, scope, in, out) -> {
+		S.setLocal("random", RödaNativeFunction.of("random", (typeargs, args, scope, in, out) -> {
 					final int INTEGER=0,
 						FLOAT=1,
 						BOOLEAN=2;
 					java.util.function.Function<Integer, RödaValue> next = i -> {
 						switch (i) {
 						case INTEGER: return RödaNumber.of(rnd.nextInt());
-						case FLOAT: return valueFromString(rnd.nextDouble()+"");
-						case BOOLEAN: return valueFromBoolean(rnd.nextBoolean());
+						case FLOAT: return RödaString.of(rnd.nextDouble()+"");
+						case BOOLEAN: return RödaBoolean.of(rnd.nextBoolean());
 						}
 						return null;
 					};
@@ -660,10 +640,9 @@ class Builtins {
 						checkReference("random", variable);
 						variable.assign(next.apply(mode));
 					}
-				}, Arrays.asList(new Parameter("flags_and_variables", true)), true,
-				new VoidStream(), new SingleValueStream()));
+				}, Arrays.asList(new Parameter("flags_and_variables", true)), true));
 		
-		S.setLocal("exec", valueFromNativeFunction("exec", (typeargs, args, scope, in, out) -> {
+		S.setLocal("exec", RödaNativeFunction.of("exec", (typeargs, args, scope, in, out) -> {
 					HashMap<String, String> envVars = new HashMap<>();
 					class C{boolean c=false;}
 					C lineMode = new C();
@@ -743,12 +722,11 @@ class Builtins {
 						}
 						error(e.getCause());
 					}
-				}, Arrays.asList(new Parameter("flags_command_and_args", false)), true,
-				new ValueStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("flags_command_and_args", false)), true));
 
 		/* Tiedosto-operaatiot */
 
-		S.setLocal("cd", valueFromNativeFunction("cd", (typeargs, args, scope, in, out) -> {
+		S.setLocal("cd", RödaNativeFunction.of("cd", (typeargs, args, scope, in, out) -> {
 					checkArgs("cd", 1, args.size());
 					checkString("cd", args.get(0));
 					String dirname = args.get(0).str();
@@ -757,19 +735,17 @@ class Builtins {
 						error("cd: not a directory");
 					}
 				        I.currentDir = dir;
-				}, Arrays.asList(new Parameter("path", false)), false,
-				new VoidStream(), new VoidStream()));
+				}, Arrays.asList(new Parameter("path", false)), false));
 
-		S.setLocal("pwd", valueFromNativeFunction("pwd", (typeargs, args, scope, in, out) -> {
+		S.setLocal("pwd", RödaNativeFunction.of("pwd", (typeargs, args, scope, in, out) -> {
 					try {
-						out.push(valueFromString(I.currentDir.getCanonicalPath()));
+						out.push(RödaString.of(I.currentDir.getCanonicalPath()));
 					} catch (IOException e) {
 						error(e);
 					}
-				}, Arrays.asList(), false,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(), false));
 
-		S.setLocal("write", valueFromNativeFunction("write", (typeargs, args, scope, in, out) -> {
+		S.setLocal("write", RödaNativeFunction.of("write", (typeargs, args, scope, in, out) -> {
 					checkString("write", args.get(0));
 					String filename = args.get(0).str();
 					File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
@@ -782,10 +758,9 @@ class Builtins {
 					} catch (IOException e) {
 						error(e);
 					}
-				}, Arrays.asList(new Parameter("file", false)), false,
-				new ValueStream(), new VoidStream()));
+				}, Arrays.asList(new Parameter("file", false)), false));
 
-		S.setLocal("cat", valueFromNativeFunction("cat", (typeargs, args, scope, in, out) -> {
+		S.setLocal("cat", RödaNativeFunction.of("cat", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("cat", 1, args.size());
 					for (RödaValue value : args) {
 						checkString("cat", value);
@@ -796,10 +771,9 @@ class Builtins {
 							out.push(RödaString.of(line));
 						}
 					}
-				}, Arrays.asList(new Parameter("files", false)), true,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("files", false)), true));
 
-		S.setLocal("file", valueFromNativeFunction("file", (typeargs, args, scope, in, out) -> {
+		S.setLocal("file", RödaNativeFunction.of("file", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("file", 1, args.size());
 					for (int i = 0; i < args.size(); i++) {
 						RödaValue flag = args.get(i);
@@ -824,12 +798,11 @@ class Builtins {
 							} catch (IOException e) { error(e); }
 						else error("unknown command " + flag.str());
 					}
-				}, Arrays.asList(new Parameter("commands_and_files", false)), true,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("commands_and_files", false)), true));
 
 		/* Verkko-operaatiot */
 
-		S.setLocal("wcat", valueFromNativeFunction("wcat", (typeargs, args, scope, in, out) -> {
+		S.setLocal("wcat", RödaNativeFunction.of("wcat", (typeargs, args, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("wcat", 1, args.size());
 					try {
 						String useragent = "";
@@ -864,7 +837,7 @@ class Builtins {
 							}
 							else {
 								for (String line : IOUtils.streamLineIterator(input)) {
-									out.push(valueFromString(line));
+									out.push(RödaString.of(line));
 								}
 							}
 							input.close();
@@ -874,8 +847,7 @@ class Builtins {
 					} catch (IOException e) {
 						error(e);
 					}
-				}, Arrays.asList(new Parameter("urls", false)), true,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("urls", false)), true));
 
 		Record serverRecord = new Record("server",
 						 Collections.emptyList(),
@@ -898,7 +870,7 @@ class Builtins {
 						 false);
 		I.records.put("socket", socketRecord);
 
-		S.setLocal("server", valueFromNativeFunction("server", (typeargs, args, scope, in, out) -> {
+		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, scope, in, out) -> {
 					checkArgs("server", 1, args.size());
 					checkNumber("server", args.get(0));
 					long port = args.get(0).num();
@@ -958,9 +930,7 @@ class Builtins {
 												    },
 												    Collections
 												    .emptyList(),
-												    false,
-												    new VoidStream(),
-												    new VoidStream()
+												    false
 												    )
 												);
 									      socketObject
@@ -990,8 +960,7 @@ class Builtins {
 												    .getLocalPort()
 												    ));
 									      o.push(socketObject);
-									  }, Collections.emptyList(), false,
-								  new VoidStream(), new ValueStream()));
+									  }, Collections.emptyList(), false));
 						serverObject
 							.setField("close",
 							      RödaNativeFunction
@@ -999,14 +968,12 @@ class Builtins {
 								  (ra, a, s, i, o) -> {
 									  checkArgs("server.close", 0, a.size());
 									  
-								  }, Collections.emptyList(), false,
-								  new VoidStream(), new VoidStream()));
+								  }, Collections.emptyList(), false));
 						out.push(serverObject);
 					} catch (IOException e) {
 						error(e);
 					}
-				}, Arrays.asList(new Parameter("port", false)), false,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("port", false)), false));
 
 		// Säikeet
 
@@ -1019,7 +986,7 @@ class Builtins {
 						 false);
 		I.records.put("thread", threadRecord);
 
-		S.setLocal("thread", valueFromNativeFunction("thread", (typeargs, args, scope, in, out) -> {
+		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, scope, in, out) -> {
 				        checkArgs("thread", 1, args.size());
 				        RödaValue function = args.get(0);
 					checkFunction("thread", function);
@@ -1062,13 +1029,11 @@ class Builtins {
 											+ "been executed");
 									  p.started = true;
 									  I.executor.execute(task);
-								  }, Collections.emptyList(), false,
-								  new VoidStream(), new VoidStream()));
+								  }, Collections.emptyList(), false));
 					threadObject.setField("pull",genericPull("thread.pull", _out));
 					threadObject.setField("push",genericPush("thread.push", _in));
 					out.push(threadObject);
-				}, Arrays.asList(new Parameter("runnable", false)), false,
-				new VoidStream(), new ValueStream()));
+				}, Arrays.asList(new Parameter("runnable", false)), false));
 	}
 
 	private static RödaValue genericPush(String name, RödaStream _out) {
@@ -1087,8 +1052,7 @@ class Builtins {
 						    _out.push(v);
 					    }
 				    }
-			    }, Arrays.asList(new Parameter("values", false)), true,
-			    new ValueStream(), new VoidStream());
+			    }, Arrays.asList(new Parameter("values", false)), true);
 	}
 
 	private static RödaValue genericPull(String name, RödaStream _in) {
@@ -1124,9 +1088,7 @@ class Builtins {
 						    }
 					    }
 				    }
-			    }, Arrays.asList(new Parameter("variables", true)), true,
-			    new VoidStream(),
-			    new ValueStream());
+			    }, Arrays.asList(new Parameter("variables", true)), true);
 	}
 
 	private static RödaValue genericWrite(String name, OutputStream _out, Interpreter I) {
@@ -1177,8 +1139,7 @@ class Builtins {
 				    } catch (IOException e) {
 					    error(e);
 				    }
-			    }, Arrays.asList(new Parameter("values", false)), true,
-			    new ValueStream(), new VoidStream());
+			    }, Arrays.asList(new Parameter("values", false)), true);
 	}
 
 	private static RödaValue genericRead(String name, InputStream _in, Interpreter I) {
@@ -1238,8 +1199,6 @@ class Builtins {
 				    } catch (IOException e) {
 					    error(e);
 				    }
-			    }, Arrays.asList(new Parameter("variables", true)), true,
-			    new VoidStream(),
-			    new ValueStream());
+			    }, Arrays.asList(new Parameter("variables", true)), true);
 	}
 }

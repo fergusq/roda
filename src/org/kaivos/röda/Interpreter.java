@@ -34,17 +34,19 @@ import java.io.PrintWriter;
 import java.io.IOException;
 
 import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.RödaValue.*;
 import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
 import org.kaivos.röda.type.RödaString;
 import org.kaivos.röda.type.RödaFlag;
 import org.kaivos.röda.type.RödaNumber;
+import org.kaivos.röda.type.RödaBoolean;
 import org.kaivos.röda.type.RödaFunction;
 import org.kaivos.röda.type.RödaNativeFunction;
+import org.kaivos.röda.type.RödaReference;
 import org.kaivos.röda.RödaStream;
-import static org.kaivos.röda.RödaStream.*;
+import static org.kaivos.röda.RödaStream.ISLineStream;
+import static org.kaivos.röda.RödaStream.OSStream;
 import static org.kaivos.röda.Parser.*;
 
 import org.kaivos.nept.parser.ParsingException;
@@ -193,8 +195,7 @@ public class Interpreter {
 				 .of("type.new_instance",
 				     (ta, a, s, i, o) -> {
 					     o.push(newRecord(new Datatype(record.name), ta));
-				     }, Collections.emptyList(), false,
-				     new VoidStream(), new SingleValueStream()));
+				     }, Collections.emptyList(), false));
 		return typeObj;
 	}
 
@@ -211,8 +212,7 @@ public class Interpreter {
 							    + record.name + " required, got " + obj.typeString());
 					      }
 					      o.push(obj.getField(field.name));
-				      }, Arrays.asList(new Parameter("object", false)), false,
-				      new VoidStream(), new SingleValueStream()));
+				      }, Arrays.asList(new Parameter("object", false)), false));
 		fieldObj.setField("set", RödaNativeFunction
 				  .of("field.set",
 				      (ta, a, s, i, o) -> {
@@ -224,8 +224,7 @@ public class Interpreter {
 					      RödaValue val = a.get(1);
 					      obj.setField(field.name, val);
 				      }, Arrays.asList(new Parameter("object", false),
-						       new Parameter("value", false)), false,
-				      new VoidStream(), new VoidStream()));
+						       new Parameter("value", false)), false));
 		return fieldObj;
 	}
 
@@ -234,12 +233,12 @@ public class Interpreter {
 			.map(a -> {
 					RödaValue function = G.resolve(a.name);
 					List<RödaValue> args = flattenArguments(a.args, G,
-										VoidStream.STREAM,
-										VoidStream.STREAM,
+										RödaStream.makeEmptyStream(),
+										RödaStream.makeStream(),
 										false);
-					RödaStream _out = makeStream(ValueStream.HANDLER, ValueStream.HANDLER);
+					RödaStream _out = RödaStream.makeStream();
 					exec(a.file, a.line, function, Collections.emptyList(), args,
-					     G, VoidStream.STREAM, _out);
+					     G, RödaStream.makeEmptyStream(), _out);
 					_out.finish();
 					RödaValue list = _out.readAll();
 					return list.list();
@@ -366,7 +365,7 @@ public class Interpreter {
 			for (Function f : program.blocks) {
 				exec("<runtime>", 0, RödaFunction.of(f),
 				     Collections.emptyList(), Collections.emptyList(),
-				     G, VoidStream.STREAM, VoidStream.STREAM);
+				     G, RödaStream.makeEmptyStream(), RödaStream.makeStream());
 			}
 			for (Function f : program.functions) {
 				scope.setLocal(f.name, RödaFunction.of(f));
@@ -467,6 +466,13 @@ public class Interpreter {
 	        if (!arg.isNumber()) {
 			error("illegal argument for '" + function
 			      + "': number expected (got " + arg.typeString() + ")");
+		}
+	}
+
+	static void checkBoolean(String function, RödaValue arg) {
+	        if (!arg.isBoolean()) {
+			error("illegal argument for '" + function
+			      + "': boolean expected (got " + arg.typeString() + ")");
 		}
 	}
 
@@ -579,7 +585,7 @@ public class Interpreter {
 				newScope.setLocal(p.name, args.get(j++));
 			}
 			if (isVarargs) {
-				RödaValue argslist = valueFromList(new ArrayList<>());
+				RödaValue argslist = RödaList.of(new ArrayList<>());
 				if (args.size() >= parameters.size()) {
 					for (int k = parameters.size()-1; k < args.size(); k++) {
 						argslist.add(args.get(k));
@@ -613,23 +619,19 @@ public class Interpreter {
 		Runnable[] runnables = new Runnable[statement.commands.size()];
 		for (Command command : statement.commands) {
 			boolean last = i == statement.commands.size()-1;
-			RödaStream _out = last ? out : new RödaStreamImpl();
-			Trair<Runnable, StreamType, StreamType> tr = evalCommand(command, scope,
-										 in, out,
-										 _in, _out);
+			RödaStream _out = last ? out : RödaStream.makeStream();
+			Runnable tr = evalCommand(command, scope,
+						  in, out,
+						  _in, _out);
 			runnables[i] = () -> {
 				try {
-					tr.first().run();
+					tr.run();
 				} finally {
 					// sulje virta jos se on putki tai muulla tavalla uudelleenohjaus
 					if (!last || redirected)
 						_out.finish();
 				}
 			};
-			if (!last)
-				_out.inHandler = tr.third().newHandler();
-			if (i != 0)
-				_in.outHandler = tr.second().newHandler();
 			_in = _out;
 			i++;
 		}
@@ -662,41 +664,6 @@ public class Interpreter {
 		}
 	}
 
-	private static class Pair<T, U> {
-		private final T t;
-		private final U u;
-		public Pair(T t, U u) {
-			this.t = t;
-			this.u = u;
-		}
-		public T first() {
-			return t;
-		}
-		public U second() {
-			return u;
-		}
-	}
-	
-	private static class Trair<T, U, V> {
-		private final T t;
-		private final U u;
-		private final V v;
-		public Trair(T t, U u, V v) {
-			this.t = t;
-			this.u = u;
-			this.v = v;
-		}
-		public T first() {
-			return t;
-		}
-		public U second() {
-			return u;
-		}
-		public V third() {
-			return v;
-		}
-	}
-
 	@SuppressWarnings("serial")
 	private static class BreakOrContinueException extends RuntimeException {
 		private boolean isBreak;
@@ -720,10 +687,10 @@ public class Interpreter {
 		return args;
 	}
 	
-	public Trair<Runnable, StreamType, StreamType> evalCommand(Command cmd,
-								   RödaScope scope,
-								   RödaStream in, RödaStream out,
-								   RödaStream _in, RödaStream _out) {
+	public Runnable evalCommand(Command cmd,
+				    RödaScope scope,
+				    RödaStream in, RödaStream out,
+				    RödaStream _in, RödaStream _out) {
 		if (cmd.type == Command.Type.NORMAL) {
 			RödaValue function = evalExpression(cmd.name, scope, in, out);
 			List<Datatype> typeargs = cmd.typearguments.stream()
@@ -732,18 +699,7 @@ public class Interpreter {
 			Runnable r = () -> {
 				exec(cmd.file, cmd.line, function, typeargs, args, scope, _in, _out);
 			};
-			StreamType ins, outs;
-			if (function.isFunction() && !function.isNativeFunction()) {
-				ins = function.function().input;
-				outs = function.function().output;
-			} else if (function.isNativeFunction()) {
-				ins = function.nfunction().input;
-				outs = function.nfunction().output;
-			} else {
-				ins = new ValueStream();
-				outs = new ValueStream();
-			}
-			return new Trair<>(r, ins, outs);
+			return r;
 		}
 
 		if (cmd.type == Command.Type.VARIABLE) {
@@ -758,13 +714,13 @@ public class Interpreter {
 				assign = v -> {
 				        RödaValue value = scope.resolve(e.variable);
 					if (value == null || !value.isReference())
-						value = valueFromReference(scope, e.variable);
+						value = RödaReference.of(e.variable, scope);
 					value.assign(v);
 				};
 				assignLocal = v -> {
 				        RödaValue value = scope.resolve(e.variable);
 					if (value == null || !value.isReference())
-						value = valueFromReference(scope, e.variable);
+						value = RödaReference.of(e.variable, scope);
 					value.assignLocal(v);
 				};
 			}
@@ -869,11 +825,11 @@ public class Interpreter {
 						ArrayList<RödaValue> newList = new ArrayList<>();
 						newList.addAll(v.list());
 						newList.addAll(args.get(0).list());
-						assign.accept(valueFromList(newList));
+						assign.accept(RödaList.of(newList));
 					}
 					else {
 						checkString(".=", args.get(0));
-						assign.accept(valueFromString(v.str()+args.get(0).str()));
+						assign.accept(RödaString.of(v.str()+args.get(0).str()));
 					}
 				};
 			} break;
@@ -902,7 +858,7 @@ public class Interpreter {
 						error("'"+e.asString()+"~=': pattern syntax exception: "
 						      + ex.getMessage());
 					}
-					assign.accept(valueFromString(text));
+					assign.accept(RödaString.of(text));
 					return;
 				};
 			} break;
@@ -910,7 +866,7 @@ public class Interpreter {
 				r = () -> {
 					if (e.type != Expression.Type.VARIABLE)
 						error("bad lvalue for '?': " + e.asString());
-					_out.push(valueFromBoolean(scope.resolve(e.variable) != null));
+					_out.push(RödaBoolean.of(scope.resolve(e.variable) != null));
 				};
 			} break;
 			default:
@@ -930,7 +886,7 @@ public class Interpreter {
 					callStack.get().pop();
 				}
 			};
-			return new Trair<>(finalR, new ValueStream(), new ValueStream());
+			return finalR;
 		}
 		
 		if (cmd.type == Command.Type.WHILE || cmd.type == Command.Type.IF) {
@@ -939,9 +895,16 @@ public class Interpreter {
 				boolean goToElse = true;
 				do {
 					RödaScope newScope = new RödaScope(scope);
-					RödaStream condOut = makeStream(new ValueStream(), new BooleanStream());
+					RödaStream condOut = RödaStream.makeStream();
 					evalStatement(cmd.cond, scope, _in, condOut, true);
-					if (!condOut.pull().bool()) break;
+					boolean brk = false;
+					while (true) {
+						RödaValue val = condOut.pull();
+						if (val == null) break;
+						checkBoolean(isWhile?"while":"if", val);
+						brk = brk || !val.bool();
+					}
+					if (brk) break;
 					goToElse = false;
 					try {
 						for (Statement s : cmd.body) {
@@ -959,7 +922,7 @@ public class Interpreter {
 					}
 				}
 			};
-			return new Trair<>(r, new ValueStream(), new ValueStream());
+			return r;
 		}
 
 		if (cmd.type == Command.Type.FOR) {
@@ -998,7 +961,7 @@ public class Interpreter {
 					}
 				};
 			}
-			return new Trair<>(r, new ValueStream(), new ValueStream());
+			return r;
 		}
 
 		if (cmd.type == Command.Type.TRY_DO) {
@@ -1026,20 +989,20 @@ public class Interpreter {
 					}
 				}
 			};
-			return new Trair<>(r, new ValueStream(), new ValueStream());
+			return r;
 		}
 
 		if (cmd.type == Command.Type.TRY) {
-			Trair<Runnable, StreamType, StreamType> trair
+			Runnable tr
 				= evalCommand(cmd.cmd, scope, in, out, _in, _out);
 			Runnable r = () -> {
 				try {
-					trair.first().run();
+					tr.run();
 				} catch (ReturnException e) {
 					throw e;
 				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
 			};
-			return new Trair<>(r, trair.second(), trair.third());
+			return r;
 		}
 
 		if (cmd.type == Command.Type.RETURN) {
@@ -1048,7 +1011,7 @@ public class Interpreter {
 				for (RödaValue arg : args) out.push(arg);
 				throw new ReturnException();
 			};
-			return new Trair<>(r, new ValueStream(), new ValueStream());
+			return r;
 		}
 
 		if (cmd.type == Command.Type.BREAK
@@ -1056,7 +1019,7 @@ public class Interpreter {
 		        Runnable r = () -> {
 			        throw new BreakOrContinueException(cmd.type == Command.Type.BREAK);
 			};
-			return new Trair<>(r, new ValueStream(), new ValueStream());
+			return r;
 		}
 
 		error("unknown command");
@@ -1169,7 +1132,7 @@ public class Interpreter {
 			return list.join(separator);
 		}
 		if (exp.type == Expression.Type.STATEMENT_LIST) {
-			RödaStream _out = makeStream(ValueStream.HANDLER, ValueStream.HANDLER);
+			RödaStream _out = RödaStream.makeStream();
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
 			if (val == null)
@@ -1177,16 +1140,18 @@ public class Interpreter {
 			return val;
 		}
 		if (exp.type == Expression.Type.STATEMENT_SINGLE) {
-			RödaStream _out = makeStream(new ValueStream(), new SingleValueStream());
+			RödaStream _out = RödaStream.makeStream();
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
-			if (val == null)
+			if (val.list().isEmpty())
 				error("empty stream");
-			return val;
+			if (val.list().size() > 1)
+				error("stream is full");
+			return val.list().get(0);
 		}
 		if (exp.type == Expression.Type.VARIABLE) {
 			if (variablesAreReferences) {
-				return valueFromReference(scope, exp.variable);
+				return RödaReference.of(exp.variable, scope);
 			}
 			RödaValue v = scope.resolve(exp.variable);
 			if (v == null) error("variable '" + exp.variable + "' not found");
@@ -1198,7 +1163,7 @@ public class Interpreter {
 				switch (exp.ctype) {
 				case NOT:
 					if (!sub.isBoolean()) error("tried to NOT a " + sub.typeString());
-					return valueFromBoolean(!sub.bool());
+					return RödaBoolean.of(!sub.bool());
 				case NEG:
 					if (!sub.isNumber()) error("tried to NEG a " + sub.typeString());
 					return RödaNumber.of(-sub.num());
@@ -1215,32 +1180,32 @@ public class Interpreter {
 				switch (exp.ctype) {
 				case AND:
 					if (!val1.isBoolean()) error("tried to AND a " + val1.typeString());
-					if (val1.bool() == false) return valueFromBoolean(false);
+					if (val1.bool() == false) return RödaBoolean.of(false);
 				        val2 = getVal2.get();
 					if (!val2.isBoolean()) error("tried to AND a " + val2.typeString());
-					return valueFromBoolean(val2.bool());
+					return RödaBoolean.of(val2.bool());
 				case OR:
 					if (!val1.isBoolean()) error("tried to OR a " + val1.typeString());
-					if (val1.bool() == true) return valueFromBoolean(true);
+					if (val1.bool() == true) return RödaBoolean.of(true);
 					val2 = getVal2.get();
 					if (!val2.isBoolean()) error("tried to OR a " + val2.typeString());
-					return valueFromBoolean(val1.bool() || val2.bool());
+					return RödaBoolean.of(val1.bool() || val2.bool());
 				case XOR:
 					if (!val1.isBoolean()) error("tried to XOR a " + val1.typeString());
 					val2 = getVal2.get();
 					if (!val2.isBoolean()) error("tried to XOR a " + val2.typeString());
-					return valueFromBoolean(val1.bool() ^ val2.bool());
+					return RödaBoolean.of(val1.bool() ^ val2.bool());
 				}
 				val2 = getVal2.get();
 				switch (exp.ctype) {
 				case EQ:
-					return valueFromBoolean(val1.halfEq(val2));
+					return RödaBoolean.of(val1.halfEq(val2));
 				case NEQ:
-					return valueFromBoolean(!val1.halfEq(val2));
+					return RödaBoolean.of(!val1.halfEq(val2));
 				case MATCHES:
 					if (!val1.isString()) error("tried to MATCH a " + val1.typeString());
 					if (!val2.isString()) error("tried to MATCH a " + val2.typeString());
-					return valueFromBoolean(val1.str().matches(val2.str()));
+					return RödaBoolean.of(val1.str().matches(val2.str()));
 				}
 				if (!val1.isNumber()) error("tried to " + exp.ctype + " a " + val1.typeString());
 				if (!val2.isNumber()) error("tried to " + exp.ctype + " a " + val2.typeString());
@@ -1268,13 +1233,13 @@ public class Interpreter {
 				case BRRSHIFT:
 					return RödaNumber.of(val1.num()>>>val2.num());
 				case LT:
-					return valueFromBoolean(val1.num()<val2.num());
+					return RödaBoolean.of(val1.num()<val2.num());
 				case GT:
-					return valueFromBoolean(val1.num()>val2.num());
+					return RödaBoolean.of(val1.num()>val2.num());
 				case LE:
-					return valueFromBoolean(val1.num()<=val2.num());
+					return RödaBoolean.of(val1.num()<=val2.num());
 				case GE:
-					return valueFromBoolean(val1.num()>=val2.num());
+					return RödaBoolean.of(val1.num()>=val2.num());
 				}
 			}
 			error("unknown expression type " + exp.ctype);
@@ -1316,7 +1281,7 @@ public class Interpreter {
 		}
 		for (Record.Field f : r.fields) {
 			if (f.defaultValue != null) {
-				value.setField(f.name, evalExpression(f.defaultValue, recordScope, VoidStream.STREAM, VoidStream.STREAM, false));
+				value.setField(f.name, evalExpression(f.defaultValue, recordScope, RödaStream.makeEmptyStream(), RödaStream.makeStream(), false));
 			}
 		}
 		return value;
@@ -1330,22 +1295,22 @@ public class Interpreter {
 					newList.add(concat(valA, valB));
 				}
 			}
-			return valueFromList(newList);
+			return RödaList.of(newList);
 		}
 		if (val1.isList()) {
 			List<RödaValue> newList = new ArrayList<>();
 			for (RödaValue val : val1.list()) {
 				newList.add(concat(val, val2));
 			}
-			return valueFromList(newList);
+			return RödaList.of(newList);
 		}
 		if (val2.isList()) {
 			List<RödaValue> newList = new ArrayList<>();
 			for (RödaValue val : val2.list()) {
 				newList.add(concat(val1, val));
 			}
-			return valueFromList(newList);
+			return RödaList.of(newList);
 		}
-		return valueFromString(val1.str()+val2.str());
+		return RödaString.of(val1.str()+val2.str());
 	}
 }

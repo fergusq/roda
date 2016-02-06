@@ -5,12 +5,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 
-import static org.kaivos.röda.RödaStream.StreamType;
-import static org.kaivos.röda.RödaStream.ValueStream;
-
-import org.kaivos.röda.type.*;
 import static org.kaivos.röda.type.RödaNativeFunction.NativeFunction;
-import static org.kaivos.röda.type.RödaNativeFunction.NativeFunctionBody;
 import static org.kaivos.röda.Parser.Function;
 import static org.kaivos.röda.Parser.Parameter;
 import static org.kaivos.röda.Parser.Datatype;
@@ -235,49 +230,5 @@ public abstract class RödaValue {
 	@Override
 	public String toString() {
 			return "RödaValue{str=" + str() + "}";
-	}
-
-	public static RödaValue valueFromString(String text) {
-		return RödaString.of(text);
-	}
-
-	public static RödaValue valueFromLong(long number) {
-	        return RödaNumber.of(number);
-	}
-
-	public static RödaValue valueFromBoolean(boolean bool) {
-	        return RödaBoolean.of(bool);
-	}
-
-	public static RödaValue valueFromList(List<RödaValue> list) {
-		return RödaList.of(list);
-	}
-
-	public static RödaValue valueFromList(RödaValue... elements) {
-		return RödaList.of(elements);
-	}
-	
-	public static RödaValue valueFromFunction(Function function) {
-	        return RödaFunction.of(function);
-	}
-	
-	public static RödaValue valueFromFunction(Function function, RödaScope localScope) {
-	        return RödaFunction.of(function, localScope);
-	}
-
-	public static RödaValue valueFromNativeFunction(String name, NativeFunctionBody body,
-							List<Parameter> parameters, boolean isVarargs) {
-		return valueFromNativeFunction(name, body, parameters, isVarargs,
-					       new ValueStream(), new ValueStream());
-	}
-
-	public static RödaValue valueFromNativeFunction(String name, NativeFunctionBody body,
-							List<Parameter> parameters, boolean isVarargs,
-							StreamType input, StreamType output) {
-	        return RödaNativeFunction.of(name, body, parameters, isVarargs, input, output);
-	}
-
-	public static RödaValue valueFromReference(RödaScope scope, String name) {
-		return RödaReference.of(name, scope);
 	}
 }
