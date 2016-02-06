@@ -1,8 +1,11 @@
 package org.kaivos.röda;
 
 import org.kaivos.röda.Interpreter;
+import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaStream.ISLineStream;
 import org.kaivos.röda.RödaStream.OSStream;
+import org.kaivos.röda.RödaStream.VoidStream;
+import org.kaivos.röda.type.RödaNativeFunction;
 
 import org.kaivos.nept.parser.ParsingException;
 
@@ -15,6 +18,7 @@ import java.io.FileInputStream;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.TreeSet;
+import java.util.Arrays;
 
 import java.util.stream.Collectors;
 
@@ -104,13 +108,23 @@ public class Röda {
 
 			Interpreter c = new Interpreter(new ISLineStream(new BufferedReader(new InputStreamReader(in.getInput()))),
 							new OSStream(out));
+
+			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, s, i, o) -> {
+						Interpreter.checkString("prompt", a.get(0));
+						in.setPrompt(a.get(0).str());
+					}, Arrays.asList(new Parameter("prompt_string", false)), false,
+					new VoidStream(), new VoidStream()));
+			
 			in.addCompleter((b, k, l) -> {
 					if (b == null) l.addAll(c.G.map.keySet());
 					else {
+						int i = Math.max(b.lastIndexOf(" "), Math.max(b.lastIndexOf("|"), Math.max(b.lastIndexOf("{"), b.lastIndexOf(";"))))+1;
+						String a = b.substring(0, i);
+						b = b.substring(i);
 						TreeSet<String> vars = new TreeSet<>(c.G.map.keySet());
 						for (String match : vars.tailSet(b)) {
 							if (!match.startsWith(b)) break;
-							l.add(match + " ");
+							l.add(a + match + " ");
 						}
 					}
 					return l.isEmpty() ? -1 : 0;
