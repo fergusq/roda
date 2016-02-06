@@ -215,6 +215,19 @@ public class RödaTest {
 		     + "l:=![f<string>];l+=();push l[0]}");
 	}
 
+	@Test
+	public void testParameterTypeChecking() {
+		assertEquals("4451,(1 2 3),Lilli,Meri",
+			     eval("give (a : number) (b : list) (c : string)...{return a b *c}"
+				  + "main{give 4451 (1 2 3) \"Lilli\" \"Meri\"}"));
+	}
+
+	@Test(expected=RödaException.class)
+	public void testParameterTypeCheckingWithWrongTypes() {
+		eval("give (a : number) (b : list) (c : string)...{return a b *c}"
+		     + "main{give \"aasi\" new map 11111 ()}");
+	}
+
 	// Viittaukset
 
 	@Test
