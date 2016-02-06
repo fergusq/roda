@@ -13,6 +13,7 @@ import java.io.BufferedReader;
 import java.io.PrintWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.File;
 import java.io.FileInputStream;
 
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import jline.console.ConsoleReader;
+import jline.console.history.FileHistory;
 
 /**
  * A simple stream language
@@ -100,8 +102,13 @@ public class Röda {
 			}
 		} else if (interactive && System.console() != null) {
 
+			File historyFile = new File(System.getProperty("user.home") + "/.rödahist");
+
+			FileHistory history = new FileHistory(historyFile);
+
 			ConsoleReader in = new ConsoleReader();
 			in.setExpandEvents(false);
+			in.setHistory(history);
 			in.setPrompt(prompt);
 
 			PrintWriter out = new PrintWriter(in.getOutput());
@@ -145,6 +152,9 @@ public class Röda {
 					}
 				}
 			}
+
+			history.flush();
+
 		} else {
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
