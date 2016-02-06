@@ -74,6 +74,7 @@ public class Parser {
 	}
 
 	private static boolean validTypename(String applicant) {
+		if (applicant.matches("[<>()\\[\\]{}|&.,:;=#%!?\n+\\-*/~@%$]|[:~.+\\-*/!]=|\\+\\+|&&|\\|\\||^^|=~|<=|>=|<<|>>|>>>")) return false;
 		switch (applicant) {
 		case "if":
 		case "while":
