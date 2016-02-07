@@ -644,6 +644,13 @@ reflect R.fields /* palauttaa listan, jossa on kaksi field oliota, yksi a:lle ja
 
 `typeof` toimii samoin, mutta ottaa tyyppinimen sijasta arvon ja palauttaa sen tyypin.
 
+## Esimerkkejä
+
+>`push env["PATH"] | split -s ":" | exec -I -l "ls" dir for dir | assign_global -n komento { |a...|; exec komento *a } for komento`
+
+Etsii kaikki komentorivikomennot ja tekee jokaisesta funktion. Tämän jälkeen komentoja voi käyttää suoraan ilman
+`exec`iä.
+
 ## Lista sisäänrakennetuista funktioista
 
 Tässä listassa sulkuja `()` käytetään ryhmittelemiseen, `[]` valinnaisuuteen ja merkkiä `|` vaihtoehtoon.
@@ -651,9 +658,10 @@ Merkki `*` tarkoittaa "nolla tai useampi" ja `+` yksi tai useampi.
 
 ### assign_global
 
->`assign_global nimi arvo`
+>`assign_global [-n] nimi arvo`
 
-Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan.
+Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan. Valitsin `-n` (**n**ew)
+määrittää, että muuttuja luodaan vain, jos luominen ei tuhoa vanhaa samannimistä muuttujaa.
 
 ### cat
 
@@ -757,7 +765,8 @@ Työntää annettujen muuttujien nimet ulostulovirtaan merkkijonoina.
 
 >`parse_num [-c] [-r radix] merkkijono+`
 
-Parsii luvun merkkijonosta. Jos valitsin `-c` on annettu, tulkitsee luvun UTF-8-merkkinä ja palauttaa merkkijonon.
+Parsii luvun merkkijonosta. Jos valitsin `-c` (**c**haracter) on annettu, tulkitsee luvun UTF-8-merkkinä
+ja palauttaa merkkijonon.
 
 ### print
 
@@ -769,14 +778,14 @@ Työntää annettut arvot ja rivinvaihdon ulostulovirtaan.
 
 >`pull [-r] muuttuja+`
 
+Lukee muuttujaan arvon sisääntulovirrasta. Jos valitsin `-r` on käytössä, palautetaan jokaista onnistunutta
+lukua kohti ulostulovirtaan arvo `true` ja jokaista epäonnistunutta lukua kohti arvo `false`.
+
 ### push
 
 >`push arvo+`
 
 Työntää arvot ulostulovirtaan.
-
-Lukee muuttujaan arvon sisääntulovirrasta. Jos valitsin `-r` on käytössä, palautetaan jokaista onnistunutta
-lukua kohti ulostulovirtaan arvo `true` ja jokaista epäonnistunutta lukua kohti arvo `false`.
 
 ### pwd
 
@@ -851,7 +860,7 @@ virtaan. Argumentin avulla virtaan voi kirjoittaa myös tiedoston sisällön.
 
 Ilman argumentteja työntää ulostulovirtaansa virrasta luettuja tavuja lukuina.
 Jos argumentteja on, asettaa jokaiseen annettuun muuttujaan joko `n` seuraavaa tavua tulkittuna UTF-8-merkkijonona
-tai seuraavan rivin (tavuja seuraavaan `\n`-tavuun asti) tulkittuja UTF-8-merkkijonona.
+(-b, **b**ytes) tai seuraavan rivin (-l, **l**ine) (tavuja seuraavaan `\n`-tavuun asti) tulkittuja UTF-8-merkkijonona.
 
 >`Socket.close`
 
