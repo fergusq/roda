@@ -351,7 +351,38 @@ Jos `for`ille ei anna listaa, lukee se arvoja syötteestä:
 done
 ```
 
+`for if` -rakenteen avulla voi käydä läpi vain osan arvoista:
+
+```
+määrä := 0
+summa := 0
+for tyttö in tytöt if test tyttö.ikä -gt 14; do
+	määrä ++
+	summa += tyttö.pituus
+done
+push "Yli neljätoistavuotiaiden tyttöjen pituuksien keskiarvo: "..$(summa/määrä).."\n"
+```
+
 **`break`**ia ja **`continue`**a voi käyttää silmukasta poistumiseen tai vuoron yli hyppäämiseen.
+
+`if`ille, `while`lle ja `for`ille on olemassa myös ns. suffiksimuoto:
+
+```
+push tyttö.nimi.." on paikalla.\n" for tyttö in tytöt
+push tyttö.nimi.." ei ole kiireinen.\n" for tyttö in tytöt if test tyttö.kiire -eq 0
+
+hinta /= 2 if push alennus
+
+tyttö = ![hae_seuraava] while tarkista tyttö
+```
+
+Suffiksit ovat laskujärjestyksessä korkeammalla kuin putket. Sulkuja `{}` voi käyttää tämän kiertämiseksi:
+
+```
+hae_viestit | split -s "\\b" | { hae_tytöt | push tyttö for tyttö if test tyttö.nimi -eq sana } for sana | for tyttö do
+	push tyttö.." mainittiin keskustelussa.\n"
+done
+```
 
 **`try`** suorittaa annetun komennon tai lohkon ja ohittaa hiljaisesti kaikki vastaan tulleet virheet.
 Aion ehkä tehdä jonkinlaisen virheenkäsittelytoiminnon siihen tulevaisuudessa. Tällä hetkellä tätä
