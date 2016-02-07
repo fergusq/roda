@@ -155,6 +155,8 @@ public class Röda {
 
 			history.flush();
 
+			System.out.println();
+
 		} else {
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
