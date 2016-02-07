@@ -583,13 +583,14 @@ public class Parser {
 	}
 	
 	static Command _makeForCommand(String file, int line, String variable,
-				       Expression list, List<Statement> body) {
+				       Expression list, Statement cond, List<Statement> body) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.FOR;
 		cmd.file = file;
 		cmd.line = line;
 		cmd.variable = variable;
 		cmd.list = list;
+		cmd.cond = cond;
 		cmd.body = body;
 		return cmd;
 	}
@@ -639,14 +640,42 @@ public class Parser {
 		cmd.line = line;
 		return cmd;
 	}
-	
+
 	static Command parseCommand(TokenList tl, boolean acceptNewlines) {
+		Command cmd = parsePrefixCommand(tl, acceptNewlines);
+		if (acceptNewlines) maybeNewline(tl);
+		if (tl.isNext("while") || tl.isNext("if")) {
+			boolean isWhile = tl.nextString().equals("while");
+			Statement cond = parseStatement(tl, acceptNewlines);
+			return _makeIfOrWhileCommand(cmd.file, cmd.line, isWhile, cond,
+						     Arrays.asList(new Statement(Arrays.asList(cmd))), null);
+		}
+		else if (tl.acceptIfNext("for")) {
+			String variable = tl.nextString();
+			if (acceptNewlines) maybeNewline(tl);
+			Expression list = null;
+			Statement cond = null;
+			if (tl.acceptIfNext("in")) {
+				list = parseExpression(tl);
+				maybeNewline(tl);
+			}
+			if (tl.acceptIfNext("if")) {
+				cond = parseStatement(tl, true);
+				maybeNewline(tl);
+			}
+			return _makeForCommand(cmd.file, cmd.line, variable, list, cond,
+					       Arrays.asList(new Statement(Arrays.asList(cmd))));
+		}
+		else return cmd;
+	}
+	
+	static Command parsePrefixCommand(TokenList tl, boolean acceptNewlines) {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
 		if (tl.isNext("while") || tl.isNext("if")) {
 			boolean isWhile = tl.nextString().equals("while");
 			Statement cond = parseStatement(tl, true);
-			newline(tl);
+			maybeNewline(tl);
 			tl.accept("do");
 			maybeNewline(tl);
 			List<Statement> body = new ArrayList<>(), elseBody = null;
@@ -671,8 +700,13 @@ public class Parser {
 			String variable = tl.nextString();
 			maybeNewline(tl);
 			Expression list = null;
+			Statement cond = null;
 			if (tl.acceptIfNext("in")) {
 				list = parseExpression(tl);
+				maybeNewline(tl);
+			}
+			if (tl.acceptIfNext("if")) {
+				cond = parseStatement(tl, true);
 				maybeNewline(tl);
 			}
 			tl.accept("do");
@@ -683,7 +717,7 @@ public class Parser {
 				newline(tl);
 			}
 			tl.accept("done");
-			return _makeForCommand(file, line, variable, list, body);
+			return _makeForCommand(file, line, variable, list, cond, body);
 		}
 
 		if (tl.acceptIfNext("try")) {
@@ -751,14 +785,12 @@ public class Parser {
 
 	private static List<Argument> parseArguments(TokenList tl, boolean acceptNewlines) {
 		List<Argument> arguments = new ArrayList<>();
-		if (acceptNewlines
-			    && !(tl.isNext("\n", ";") && tl.seekString(1).equals("do"))) maybeNewline(tl);
-		while (!tl.isNext("|", ";", "\n", ")", "]", "}", "in", "<EOF>")) {
+		if (acceptNewlines) maybeNewline(tl);
+		while (!tl.isNext("|", ";", "\n", ")", "]", "}", "in", "do", "if", "while", "for", "<EOF>")) {
 			boolean flattened = tl.acceptIfNext("*");
 			arguments.add(_makeArgument(flattened,
 						    parseExpression(tl)));
-			if (acceptNewlines
-			    && !(tl.isNext("\n", ";") && tl.seekString(1).equals("do"))) maybeNewline(tl);
+			if (acceptNewlines) maybeNewline(tl);
 		}
 		return arguments;
 	}

@@ -113,7 +113,7 @@ public class Röda {
 
 			PrintWriter out = new PrintWriter(in.getOutput());
 
-			Interpreter c = new Interpreter(new ISLineStream(new BufferedReader(new InputStreamReader(in.getInput()))),
+			Interpreter c = new Interpreter(RödaStream.makeEmptyStream(),
 							new OSStream(out));
 
 			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, s, i, o) -> {

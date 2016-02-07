@@ -917,16 +917,7 @@ public class Interpreter {
 				boolean goToElse = true;
 				do {
 					RödaScope newScope = new RödaScope(scope);
-					RödaStream condOut = RödaStream.makeStream();
-					evalStatement(cmd.cond, scope, _in, condOut, true);
-					boolean brk = false;
-					while (true) {
-						RödaValue val = condOut.pull();
-						if (val == null) break;
-						checkBoolean(isWhile?"while":"if", val);
-						brk = brk || !val.bool();
-					}
-					if (brk) break;
+					if (evalCond(isWhile?"while":"if", cmd.cond, scope, _in)) break;
 					goToElse = false;
 					try {
 						for (Statement s : cmd.body) {
@@ -956,6 +947,9 @@ public class Interpreter {
 					for (RödaValue val : list.list()) {
 						RödaScope newScope = new RödaScope(scope);
 						newScope.setLocal(cmd.variable, val);
+						if (cmd.cond != null
+						    && evalCond("for if", cmd.cond, newScope, _in))
+							continue;
 						try {
 							for (Statement s : cmd.body) {
 								evalStatement(s, newScope, _in, _out, false);
@@ -973,6 +967,9 @@ public class Interpreter {
 
 						RödaScope newScope = new RödaScope(scope);
 						newScope.setLocal(cmd.variable, val);
+						if (cmd.cond != null
+						    && evalCond("for if", cmd.cond, newScope, _in))
+							continue;
 						try {
 							for (Statement s : cmd.body) {
 								evalStatement(s, newScope, _in, _out, false);
@@ -1046,6 +1043,19 @@ public class Interpreter {
 
 		error("unknown command");
 		return null;
+	}
+
+	private boolean evalCond(String cmd, Statement cond, RödaScope scope, RödaStream in) {
+		RödaStream condOut = RödaStream.makeStream();
+		evalStatement(cond, scope, in, condOut, true);
+		boolean brk = false;
+		while (true) {
+			RödaValue val = condOut.pull();
+			if (val == null) break;
+			checkBoolean(cmd, val);
+			brk = brk || !val.bool();
+		}
+		return brk;
 	}
 	
 	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
