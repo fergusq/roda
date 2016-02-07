@@ -11,10 +11,14 @@ Neptin ja Rödan kääntäminen Gradlella:
 ```sh
 $ git clone --recursive https://github.com/fergusq/roda.git
 $ cd roda
-roda $ gradle build
+roda $ gradle fatJar
 ```
 
 Rödan mukana tulee interaktiivinen tulkki, jota voi käyttää valitsimella `-i`.
+
+```sh
+$ java -jar röda.jar -i
+```
 
 ## Perustietoja
 
@@ -108,6 +112,15 @@ pull_twice &variable {
 	pull value1
 	pull value2
 	variable = (value1 value2)
+}
+```
+
+Parametrille voi määritellä tyypin, joka tarkistetaan aina funktiota kutsuttaessa. Viittausparametreille
+ei voi kuitenkaan vielä määritellä tyyppiä.
+
+```
+kappale (sisältö : string) {
+	push "<p>"..sisältö.."</p>"
 }
 ```
 
