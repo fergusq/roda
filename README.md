@@ -30,7 +30,7 @@ arvoista. Funktio voi lukea sisääntuloaan `pull`-komennolla ja työntää ulos
 
 Alla on yksinkertainen duplicate-funktio, joka lukee yhden arvon ja palauttaa kaksi arvoa. Koska sitä
 kutsutaan `main`-funktiosta, lukee se syötettä suoraan standardisyötteestä.
-```
+```sh
 duplicate {
 	pull value
 	push value
@@ -46,14 +46,14 @@ main {
 Funktioita voi putkittaa `|`-operaattorilla, jolloin niiden sisään- ja ulostulovirrat kytketään toisiinsa.
 Seuraava ohjelma tulostaa kahtena tiedoston "tieto.txt" ensimmäisen rivin:
 
-```
+```sh
 cat "tieto.txt" | duplicate
 ```
 
 Jos kaikki rivit haluttaisiin kahdentaa, olisi tehtävä uusi versio duplicate-funktiosta, joka lukee
 kaiken mahdollisen syötteen:
 
-```
+```sh
 duplicate {
 	while pull -r value; do
 		push value
@@ -83,7 +83,7 @@ Röda käyttää C-tyylisiä `/* ... */`-kommentteja.
 ### Funktiot
 
 Röda-ohjelma on joukko määritelmiä, usein funktioita:
-```
+```sh
 funktio1 parametrit {
 
 }
@@ -96,7 +96,7 @@ funktio2 parametrit {
 Funktiolla voi ottaa vaihtelevan määrän argumentteja, jolloin viimeiselle parametrille pitää antaa
 `...`-määrite:
 
-```
+```sh
 duplicate_files files... {
 	for file in files; do
 		cat file | duplicate
@@ -107,7 +107,7 @@ duplicate_files files... {
 Funktio voi ottaa myös muuttujaviittauksen, jolloin ko. parametrille pitää antaa `&`-määrite. Seuraava funktio
 lukee kaksi arvoa, tekee niistä listan ja asettaa sen muuttujaan.
 
-```
+```sh
 pull_twice &variable {
 	pull value1
 	pull value2
@@ -118,7 +118,7 @@ pull_twice &variable {
 Parametrille voi määritellä tyypin, joka tarkistetaan aina funktiota kutsuttaessa. Viittausparametreille
 ei voi kuitenkaan vielä määritellä tyyppiä.
 
-```
+```sh
 kappale (sisältö : string) {
 	push "<p>"..sisältö.."</p>"
 }
@@ -127,7 +127,7 @@ kappale (sisältö : string) {
 Muuttujaparametrien lisäksi funktiolla voi olla tyyppiparametreja, joille pitää antaa funktiokutsussa
 arvot muiden parametrien tapaan:
 
-```
+```sh
 init_list<T> &variable {
 	variable := new list<T>
 }
@@ -152,7 +152,7 @@ record Perhe {
 Kun tietue luodaan, sen kentät ovat oletuksena määrittelemättömiä. Niihin on asetettava arvo ennen, kuin niitä
 voi kunnolla käyttää.
 
-```
+```sh
 perhe := new Perhe
 perhe.nimi = "Harakka"
 perhe.osoite = "Lumipolku 41 A 7"
@@ -185,7 +185,7 @@ Funktioiden sisällä on lauseita, jotka koostuvat yhdestä tai useammasta putki
 Putki yhdistää komentojen ulos- ja sisääntulot toisiinsa. Lauseen ensimmäisen ja viimeisen komennon
 sisään- ja ulostulo on kytketty isäntäfunktion sisään- ja ulostuloon.
 
-```
+```sh
 komento1 argumentit | komento2 argumentit | komento3 argumentit
 ```
 
@@ -208,7 +208,7 @@ Argumentit annetaan funktiolle siinä järjestyksessä, missä ne ovat kutsussa.
 parametrissa on valitsin `...`, asetetaan kaikki yli menevät argumentit siihen listana. Lista voi olla
 myös tyhjä.
 
-```
+```sh
 tulosta_perheenjäsenet sukunimi etunimet... {
 	for etunimi in etunimet; do
 		push etunimi " " sukunimi "\n"
@@ -223,7 +223,7 @@ main {
 Jos argumentin edessä on tähti `*`, oletetaan, että se on lista. Tällöin listan alkiot annetaan
 argumentteina funktiolle, eikä itse listaa.
 
-```
+```c
 väli := (1 10)
 seq *väli /* sama kuin seq 1 10 */
 ```
@@ -231,7 +231,7 @@ seq *väli /* sama kuin seq 1 10 */
 Tätä ominaisuutta on mahdollista käyttää yhdessä `...`-määrittimen kanssa,
 jos halutaan antaa arvot olemassa olevasta listasta.
 
-```
+```sh
 sisarukset := ("Joonas" "Amelie")
 tulosta_perheenjäsenet "Mikkola" *sisarukset
 ```
@@ -239,7 +239,7 @@ tulosta_perheenjäsenet "Mikkola" *sisarukset
 Jos funktiolle on määritelty tyyppiparametreja, sille on annettava kutsun yhteydessä vastaava määrä
 tyyppiargumentteja:
 
-```
+```sh
 init_list<string> sisarukset
 sisarukset += "Joonas"
 sisarukset += "Amelie"
@@ -250,50 +250,50 @@ sisarukset += "Amelie"
 ##### Listat
 
 Listan "kutsuminen" työntää kaikki listan alkiot ulostulovirtaan:
-```
+```sh
 ("rivi1\n" "rivi2\n" "rivi3\n") | write tiedosto
 ```
 
 #### Muuttujat
 
 Uuden muuttujan voi luoda operaattorilla **`:=`**:
-```
+```sh
 tiedosto := "tieto.txt"
 ikä := 73
 tytöt := ("Annamari" "Reetta" "Vilma")
 ```
 
 Muuttujalle voi asettaa uuden arvon operaattorilla **`=`**:
-```
+```sh
 ikä = 74
 tytöt[1] = "Liisa"
 ```
 
 Listaan voi lisätä arvon operaattorilla **`+=`**:
-```
+```sh
 tytöt += "Maija"
 ```
 
 Merkkijonon perään voi lisätä tekstiä operaattorilla **`.=`**:
-```
+```sh
 nimi := etunimi
 nimi .= " "..sukunimi
 ```
 
 Lukua voi kasvattaa tai vähentää operaattoreilla **`++`** ja **`--`**:
-```
+```sh
 ikä ++
 voimat --
 ```
 
 Muuttujan voi tuhota käyttämällä komentoa `undefine`.
 Normaalisti muuttujia ei kuitenkaan tarvitse tuhota erikseen.
-```
+```sh
 undefine nimi
 ```
 Muuttujan tuhoaminen ei poista muuttujaa varmasti, sillä se saattaa olla määritelty jollakin toisella ohjelman
 tasolla.
-```
+```c
 nimi := "Lissu"
 {
 	nimi := "Emilia"
@@ -304,7 +304,7 @@ nimi := "Lissu"
 push nimi /* tulostaa Lissun */
 ```
 Muuttujan voi tuhota kokonaan käyttäen silmukkaa ja `?`-operaattoria, joka kertoo, onko muuttuja olemassa.
-```
+```sh
 while nimi?; do
 	undefine nimi
 done
@@ -334,13 +334,13 @@ Muut arvot tulkitaan aina samoin kuin `true`. Vain yksi arvo luetaan.
 Sisäänrakennetuista funktioista vain `true`, `false`, `test`, `random`, `file` (ks. alempana)
 ja `pull -r` palauttavat totuusarvon.
 
-```
+```sh
 if test ikä -lt 18; do
 	push "Olet liian nuori!\n"
 done
 ```
 
-```
+```sh
 while test vastaus -not_matches "kyllä|ei"; do
 	push "Vastaa kyllä tai ei: "
 	pull vastaus
@@ -349,7 +349,7 @@ done
 
 **`for`** käy läpi annetun listan kaikki arvot:
 
-```
+```sh
 tytöt := (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
 for tyttö in tytöt do
 	push "Hänen nimensä on "..tyttö[0].." ja hän on syntynyt vuonna "..tyttö[1].."\n"
@@ -358,7 +358,7 @@ done
 
 Jos `for`ille ei anna listaa, lukee se arvoja syötteestä:
 
-```
+```sh
 ("Isabella" "Meeri" "Taina") | for tyttö do
 	push tyttö.." on paikalla.\n"
 done
@@ -366,7 +366,7 @@ done
 
 `for if` -rakenteen avulla voi käydä läpi vain osan arvoista:
 
-```
+```sh
 määrä := 0
 summa := 0
 for tyttö in tytöt if test tyttö.ikä -gt 14; do
@@ -380,7 +380,7 @@ push "Yli neljätoistavuotiaiden tyttöjen pituuksien keskiarvo: "..$(summa/mä�
 
 `if`ille, `while`lle ja `for`ille on olemassa myös ns. suffiksimuoto:
 
-```
+```sh
 push tyttö.nimi.." on paikalla.\n" for tyttö in tytöt
 push tyttö.nimi.." ei ole kiireinen.\n" for tyttö in tytöt if test tyttö.kiire -eq 0
 
@@ -391,7 +391,7 @@ tyttö = ![hae_seuraava] while tarkista tyttö
 
 Suffiksit ovat laskujärjestyksessä korkeammalla kuin putket. Sulkuja `{}` voi käyttää tämän kiertämiseksi:
 
-```
+```sh
 hae_viestit | split -s "\\b" | { hae_tytöt | push tyttö for tyttö if test tyttö.nimi -eq sana } for sana | for tyttö do
 	push tyttö.." mainittiin keskustelussa.\n"
 done
@@ -401,7 +401,7 @@ done
 Aion ehkä tehdä jonkinlaisen virheenkäsittelytoiminnon siihen tulevaisuudessa. Tällä hetkellä tätä
 kannattaa käyttää vain palvelimissa ym. joissa prosessin on pysyttävä virheistä huolimatta päällä.
 
-```
+```sh
 while true; do
 	try do
 		hae viestit
@@ -412,7 +412,7 @@ done
 
 **`return`** työntää sille annetut argumentit ulostulovirtaan ja lopettaa nykyisen funktion suorittamisen.
 
-```
+```sh
 hae_syntymävuodella_yksi_tyttö vuosi {
 	for tyttö in tytöt; do
 		if test tyttö[1] -eq vuosi; do
@@ -438,7 +438,7 @@ Viiva-merkki (`-`) aloittaa lippuliteraalin. Lippuja käytetään lisäohjeiden 
 
 Merkkijonoja voi yhdistellä `..`-operaattorilla ja niiden pituuden voi saada `#`-operaattorilla.
 
-```
+```sh
 nimi := etunimi.." "..sukunimi
 push "Nimesi pituus on " #nimi "\n"
 ```
@@ -453,7 +453,7 @@ Kuten merkkijonoillakin, `#` palauttaa listan koon.
 Kaikki listan alkiot voi yhdistää merkkijonoksi `&`-operaattorilla, jonka toinen operandi on merkkijono, joka
 pistetään alkioiden väleihin.
 
-```
+```sh
 tytöt := ("Annamari" "Reetta" "Vilma" "Susanna")
 push "Tyttöjä on " #tytöt " kpl.\n"
 push "Ensimmäinen tyttö on " tytöt[0] " ja viimeinen " tytöt[-1] ". "
@@ -462,7 +462,7 @@ push "Välissä ovat " tytöt[1:-1]&" ja " ".\n"
 
 Jos listaan yhdistää merkkijonon, yhdistetään se kaikkiin listan alkioihin:
 
-```
+```sh
 sukunimi := "Kivinen"
 sisarukset := ("Maija" "Ilmari")
 kokonimet := sisarukset.." "..sukunimi
@@ -471,7 +471,7 @@ push "Sisarusten koko nimet ovat " kokonimet&" ja " ".\n"
 
 Listan alkioille voi määritellä tyypin, jos se luodaan `new`-avainsanan avulla:
 
-```
+```sh
 tytöt := new list<string>
 tytöt .= ("Eveliina" "Lilja" "Nea")
 ```
@@ -484,7 +484,7 @@ virheen.
 Uuden kartan voi luoda samaan tapaan kuten tietueolion.
 Kuten listoille, myös tauluille voi määritellä erikseen alkion tyypin. Tätä ei kuitenkaan ole pakko tehdä.
 
-```
+```sh
 iät := new map<number>
 iät["Maija"] = 13
 iät["Ilmari"] = 19
@@ -492,7 +492,7 @@ iät["Ilmari"] = 19
 
 `?`-operaattorilla voi tarkastaa, onko kartassa tietty alkio:
 
-```
+```sh
 if push $(!iät["Maija"]?); do
 	push "Maijan ikää ei löydy!\n"
 done
@@ -528,7 +528,7 @@ joka on muodostettu kaikista viimeisen komennon ulostulon antamista arvoista.
 
 Seuraava ohjelma tulostaa tiedoston rivinumeroiden kera.
 
-```
+```sh
 rivit := !(cat tiedosto)
 i := 1
 for rivi in rivit; do
@@ -540,7 +540,7 @@ done
 Jos on varmaa, että funktio antaa vain yhden arvon, voidaan käyttää hakasulkeita. Tällöin arvoksi
 tulee listan ainoa arvo. Tämä heittää virheen, jos funktio palauttaa useampia arvoja (tai ei yhtään).
 
-```
+```sh
 A := ![expr "PI*"r"**2"]
 ```
 
@@ -550,7 +550,7 @@ Nimetön funktio toimii kuten tavallinenkin funktio. Syntaksi on `{ |parametrit|
 
 Seuraavassa koodissa määritellään `filter`-funktio, joka lukee arvoja ja palauttaa osan niistä.
 
-```
+```sh
 filter cond_function {
 	while pull -r value; do
 		if cond_function value; do
@@ -563,7 +563,7 @@ filter cond_function {
 Funktiota käytetään antamalla sille nimetön funktio (tai tavallinenkin funktio käy), joka palauttaa
 `true`n tai `false`n.
 
-```
+```sh
 tytöt := (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
 tytöt | filter { |tyttö|; test tyttö[1] -gt 1995 } | while pull -r tyttö; do
 	push tyttö[0] " on vielä nuori.\n"
@@ -575,7 +575,7 @@ done
 Koska Rödan muu syntaksi varaa jo sulut `( )` ja miinusmerkin `-`, ei niitä voi käyttää laskutoimituksiin.
 Tämän rajoituksen kiertämiseksi Rödassa on aritmetiikkatila, jossa tavallinen syntaksi ei enää päde.
 Tilaan pääsee dollarimerkillä: `$(...)`.
-```
+```sh
 p := $(i/2+7)
 k := $((p-10)*2)
 ```
@@ -643,8 +643,8 @@ record Field {
 }
 ```
 
-`reflect` palauttaa annetun tyypin metaluokan, joka on tyyppiä `type`.
-```
+`reflect` palauttaa annetun tyypin metaluokan, joka on tyyppiä `Type`.
+```c
 record R {
 	a : string
 	b : number
@@ -659,7 +659,9 @@ reflect R.fields /* palauttaa listan, jossa on kaksi field oliota, yksi a:lle ja
 
 ## Esimerkkejä
 
->`push env["PATH"] | split -s ":" | exec -I -l "ls" dir for dir | assign_global -n komento { |a...|; exec komento *a } for komento`
+```sh
+push env["PATH"] | split -s ":" | exec -I -l "ls" dir for dir | assign_global -n komento { |a...|; exec komento *a } for komento
+```
 
 Etsii kaikki komentorivikomennot ja tekee jokaisesta funktion. Tämän jälkeen komentoja voi käyttää suoraan ilman
 `exec`iä.
