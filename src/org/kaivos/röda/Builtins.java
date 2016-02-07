@@ -146,10 +146,16 @@ class Builtins {
 				}, Arrays.asList(new Parameter("files", false, STRING)), true));
 
                 S.setLocal("assign_global", RödaNativeFunction.of("assign_global", (typeargs, args, scope, in, out) -> {
+					boolean isNew = false;
+					if (args.get(0).isFlag("-n")) {
+						args.remove(0);
+						isNew = true;
+					}
+					checkString("assign_global", args.get(0));
                                         String variableName = args.get(0).str();
-					S.setLocal(variableName, args.get(1));
-                                }, Arrays.asList(new Parameter("variable", false, STRING),
-						 new Parameter("value", false)), false));
+					if (!isNew || S.resolve(variableName) == null)
+						S.setLocal(variableName, args.get(1));
+                                }, Arrays.asList(new Parameter("flags_variable_and_value", false)), true));
 
 		/* Muut oleelliset kielen rakenteet */
 
@@ -191,6 +197,9 @@ class Builtins {
 		S.setLocal("head", RödaNativeFunction.of("head", (typeargs, args, scope, in, out) -> {
 				        if (args.size() > 1) argumentOverflow("head", 1, args.size());
 					if (args.size() == 0) {
+						RödaValue input = in.pull();
+						if (input == null)
+							error("head: input stream is closed");
 						out.push(in.pull());
 					}
 					else {
@@ -672,8 +681,8 @@ class Builtins {
 		
 		S.setLocal("exec", RödaNativeFunction.of("exec", (typeargs, args, scope, in, out) -> {
 					HashMap<String, String> envVars = new HashMap<>();
-					class C{boolean c=false;}
-					C lineMode = new C();
+					class C{boolean lineMode=false,enableInput=true;}
+					C c = new C();
 					while (args.size() > 0 && args.get(0).isFlag()) {
 					        RödaValue flag = args.remove(0);
 						if (flag.isFlag("-E")) {
@@ -685,9 +694,13 @@ class Builtins {
 							args.remove(0);
 							args.remove(0);
 						} else if (flag.isFlag("-l")) {
-							lineMode.c = true;
+							c.lineMode = true;
 						} else if (flag.isFlag("-c")) {
-							lineMode.c = false;
+							c.lineMode = false;
+						} else if (flag.isFlag("-i")) {
+							c.enableInput = true;
+						} else if (flag.isFlag("-I")) {
+							c.enableInput = false;
 						}
 					}
 					if (args.size() < 1) argumentUnderflow("exec", 1, args.size());
@@ -701,18 +714,20 @@ class Builtins {
 						InputStream pout = p.getInputStream();
 						PrintWriter pin = new PrintWriter(p.getOutputStream());
 						Runnable input = () -> {
-							while (true) {
-								RödaValue value = in.pull();
-								if (value == null) break;
-								pin.print(value.str());
-								pin.flush();
+							if (c.enableInput) {
+								while (true) {
+									RödaValue value = in.pull();
+									if (value == null) break;
+									pin.print(value.str());
+									pin.flush();
+								}
 							}
 							pin.close();
 						};
 						Runnable output = () -> {
 							InputStreamReader reader = new InputStreamReader(pout);
 							try {
-								if (lineMode.c) {
+								if (c.lineMode) {
 									BufferedReader br = new BufferedReader(reader);
 									while (true) {
 										String str = br.readLine();
@@ -751,6 +766,10 @@ class Builtins {
 						error(e.getCause());
 					}
 				}, Arrays.asList(new Parameter("flags_command_and_args", false)), true));
+
+		S.setLocal("getenv", RödaNativeFunction.of("getenv", (typeargs, args, scope, in, out) -> {
+				        out.push(RödaString.of(System.getenv(args.get(0).str())));
+				}, Arrays.asList(new Parameter("name", false, STRING)), false));
 
 		/* Tiedosto-operaatiot */
 

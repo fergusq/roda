@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.joining;
 
 import java.util.concurrent.ExecutorService;
@@ -182,6 +183,10 @@ public class Interpreter {
 		typeReflections.put("Error", createRecordClassReflection(errorRecord));
 		typeReflections.put("Type", createRecordClassReflection(typeRecord));
 		typeReflections.put("Field", createRecordClassReflection(fieldRecord));
+
+		G.setLocal("env", RödaMap.of(System.getenv().entrySet().stream()
+					     .collect(toMap(e -> e.getKey(),
+							    e -> RödaString.of(e.getValue())))));
 	}
 
 	private RödaValue createRecordClassReflection(Record record) {
