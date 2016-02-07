@@ -349,6 +349,39 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testForIf() {
+		assertEquals("nimi Annamari; syntynyt 1996,nimi Vilma; syntynyt 1999",
+			     eval("main{tytöt:=((\"Annamari\" 1996) (\"Reetta\" 1992) (\"Vilma\" 1999));"
+				  + "for tyttö in tytöt if test tyttö[1] -gt 1995;"
+				  + "do push\"nimi \"..tyttö[0]..\"; syntynyt \"..tyttö[1];"
+				  + "done}"));
+	}
+
+	@Test
+	public void testSuffixFor() {
+		assertEquals("Reetta on paikalla,Vilma on paikalla,Annamari on paikalla",
+			     eval("main{tytöt:=(\"Reetta\" \"Vilma\" \"Annamari\");"
+				  + "push tyttö..\" on paikalla\" for tyttö in tytöt}"));
+	}
+
+	@Test
+	public void testSuffixForIf() {
+		assertEquals("Reetta on kiireinen,Vilma on kiireinen",
+			     eval("main{tytöt:=((\"Reetta\" 1) (\"Vilma\" 1) (\"Annamari\" 0));"
+				  + "push tyttö[0]..\" on kiireinen\" for tyttö in tytöt"
+				  + " if test tyttö[1] -eq 1}"));
+	}
+
+	@Test
+	public void testSuffixIf() {
+		assertEquals("5",
+			     eval("main{hinta:=10;alennus=![true];korotus=![false];"
+				  + "hinta /= 2 if push alennus;"
+				  + "hinta += 10 if push korotus;"
+				  + "push hinta}"));
+	}
+
+	@Test
 	public void testTrivialReturn() {
 		assertEquals("a",
 			     eval("main{push\"a\";return;push\"b\"}"));
