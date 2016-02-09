@@ -175,7 +175,18 @@ record Request {
 		else
 			push "303 See Other"
 		done | pull status_code
-		response := ![self.create_headers "Location: "..target.."\r\n" status_code]
+		data := [[<html>
+		<head><title>]]..status_code..[[</title></head>
+		<body><h1>]]..status_code..[[</h1>
+		<p>The document is <a href="]]..target..[[">here</a>.</p>
+		</body>
+		</html>
+		]]
+		headers := ![self.content_headers "text/html; charset=utf-8" #data].."Location: "..target.."\r\n"
+		response := ![self.create_headers headers status_code]
+		if test self.command -not_eq "HEAD"; do
+			response .= data
+		done
 		self.connection.write response
 	}
 	
