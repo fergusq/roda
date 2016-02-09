@@ -657,11 +657,11 @@ public class Parser {
 			Statement cond = null;
 			if (tl.acceptIfNext("in")) {
 				list = parseExpression(tl);
-				maybeNewline(tl);
+				if (acceptNewlines) maybeNewline(tl);
 			}
 			if (tl.acceptIfNext("if")) {
-				cond = parseStatement(tl, true);
-				maybeNewline(tl);
+				cond = parseStatement(tl, acceptNewlines);
+				if (acceptNewlines) maybeNewline(tl);
 			}
 			return _makeForCommand(cmd.file, cmd.line, variable, list, cond,
 					       Arrays.asList(new Statement(Arrays.asList(cmd))));
