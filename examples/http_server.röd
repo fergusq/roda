@@ -24,9 +24,6 @@ record HttpServer {
 			return
 		done
 		request.path ~= "^([a-z0-9]+://)?[^/]+" ""
-		if test request.protocol -not_eq "HTTP/1.0"; do
-			self.send_continue connection
-		done
 		length := 0
 		request.headers = new map<string>
 		request.as_text = ""
@@ -61,7 +58,7 @@ record HttpServer {
 						key := kv[0]
 						val := kv[1]
 						val ~= "\\+" " "
-						push val | search "(%[0-9A-F]{2})+" | while pull -r escape_code; do
+						push val | search "(%[0-9a-zA-F]{2})+" | while pull -r escape_code; do
 							code := new list<number>
 							for num in !(split -s "%" escape_code)[1:] do
 								code += ![parse_num -r 16 num]
@@ -170,6 +167,25 @@ record Request {
 		if test self.command -not_eq "HEAD"; do
 			self.connection.write -f name
 		done
+	}
+	
+	function redirect target {
+		if test self.protocol -eq "HTTP/1.0"; do
+			push "302 Found"
+		else
+			push "303 See Other"
+		done | pull status_code
+		response := ![self.create_headers "Location: "..target.."\r\n" status_code]
+		self.connection.write response
+	}
+	
+	function send403 {
+		self.send "403 Forbidden" [[<html>
+		<head><title>403 Forbidden</title></head>
+		<body><h1>403 Forbidden</h1>
+		<hr/>
+		<p><i>http_server.röd</i></p></body>
+		</html>]]
 	}
 	
 	function send404 {
