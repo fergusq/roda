@@ -907,6 +907,12 @@ record Stream {
 
 `finish` sulkee virran.
 
+### strsize
+
+>`strsize merkkijono*`
+
+Palauttaa merkkijonojen (argumentteina tai virrasta) koot UTF-8-enkoodattuina.
+
 ### test
 
 >`test arvo -[not_](eq|strong_eq|weak_eq|matches|lt|le|gt|ge) arvo`

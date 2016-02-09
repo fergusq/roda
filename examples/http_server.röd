@@ -58,7 +58,7 @@ record HttpServer {
 						key := kv[0]
 						val := kv[1]
 						val ~= "\\+" " "
-						push val | search "(%[0-9a-zA-F]{2})+" | while pull -r escape_code; do
+						push val | search "(%[0-9a-fA-F]{2})+" | while pull -r escape_code; do
 							code := new list<number>
 							for num in !(split -s "%" escape_code)[1:] do
 								code += ![parse_num -r 16 num]
@@ -154,7 +154,7 @@ record Request {
 	}
 	
 	function send status data {
-		response := ![self.create_headers ![self.content_headers "text/html; charset=utf-8" #data] status]
+		response := ![self.create_headers ![self.content_headers "text/html; charset=utf-8" ![strsize data]] status]
 		if test self.command -not_eq "HEAD"; do
 			response .= data
 		done
@@ -182,7 +182,7 @@ record Request {
 		</body>
 		</html>
 		]]
-		headers := ![self.content_headers "text/html; charset=utf-8" #data].."Location: "..target.."\r\n"
+		headers := ![self.content_headers "text/html; charset=utf-8" ![strsize data]].."Location: "..target.."\r\n"
 		response := ![self.create_headers headers status_code]
 		if test self.command -not_eq "HEAD"; do
 			response .= data
