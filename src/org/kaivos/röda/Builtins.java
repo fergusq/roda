@@ -527,6 +527,28 @@ class Builtins {
 					}
 				}, Arrays.asList(new Parameter("lists", false, LIST)), true));
 		
+		S.setLocal("stob", RödaNativeFunction.of("stob", (typeargs, args, scope, in, out) -> {
+					Charset chrset = StandardCharsets.UTF_8;
+					Consumer<RödaValue> convert = v -> {
+							checkString("stob", v);
+							byte[] arr = v.str().getBytes(chrset);
+							List<RödaValue> bytes = new ArrayList<>();
+							for (byte b : arr) bytes.add(RödaNumber.of(b));
+							out.push(RödaList.of(bytes));
+					};
+				        if (args.size() > 0) {
+						for (RödaValue v : args) {
+							convert.accept(v);
+						}
+					} else {
+						while (true) {
+							RödaValue v = in.pull();
+							if (v == null) break;
+							convert.accept(v);
+						}
+					}
+				}, Arrays.asList(new Parameter("strings", false, STRING)), true));
+		
 		S.setLocal("strsize", RödaNativeFunction.of("strsize", (typeargs, args, scope, in, out) -> {
 					Charset chrset = StandardCharsets.UTF_8;
 					Consumer<RödaValue> convert = v -> {

@@ -58,14 +58,18 @@ record HttpServer {
 						key := kv[0]
 						val := kv[1]
 						val ~= "\\+" " "
-						push val | search "(%[0-9a-fA-F]{2})+" | while pull -r escape_code; do
-							code := new list<number>
-							for num in !(split -s "%" escape_code)[1:] do
-								code += ![parse_num -r 16 num]
+						code := new list<number>
+						i := 0
+						while test i -lt #val do
+							if push $(val[i:i+1] = "%" && i < #val-2); do
+								code += ![parse_num -r 16 $(val[i+1:i+3])]
+								i += 3
+							else
+								code .= ![stob $(val[i:i+1])]
+								i += 1
 							done
-							val ~= -q escape_code ![btos code]
 						done
-						request.form[key] = val
+						request.form[key] = ![btos code]
 					done
 				done
 			done
