@@ -18,16 +18,17 @@ tee_pilakuva nettikuvat ylä ala tiedosto {
 	<text x='50%' y='14%'>"..ylä.."</text>
 	<text x='50%' y='98%'>"..ala.."</text>
 	</svg>" | write "kuha.svg"
-        {} | exec "rsvg-convert" -o tiedosto "kuha.svg"
+	{} | exec "rsvg-convert" -o tiedosto "kuha.svg"
 }
 
 /* ohjaa kuvan luomista: käsittelee viestin, lataa kuvat, tekee kuhakuvan ja lähettää sen */
-käsittele_kuhaviesti ketju viesti {
+käsittele_kuhaviesti botti ketju viesti {
 	/* esikäsitellään viesti */
 	viesti ~= "kunhan" "kuha" "Kunhan" "Kuha" "&" "&amp;" "<" "&lt;"
 
 	push "käsitellään viesti '" viesti "'\n"
-	
+	botti.send_action ketju "upload_photo"
+
 	/* jaetaan viesti sanoihin */
 	sanat := !(split viesti)
 	montako := #sanat
@@ -65,96 +66,26 @@ käsittele_kuhaviesti ketju viesti {
 	tee_pilakuva nettikuvat sanat[:puoliväli]&" " sanat[puoliväli:]&" " "kuhaonmeemi.png"
 
 	/* lähetetään kuva ketjuun */
-	lähetä_kuva ketju "kuhaonmeemi.png"
+	botti.send_photo ketju "kuhaonmeemi.png"
 }
 
-/* lähettää viesti telegramissa annettuun ketjuun */
-lähetä_viesti ketju viesti {
-	{} | exec "curl" --silent tg_message -F "chat_id="..ketju -F "text="..viesti | {}
-}
-
-/* lähettää kuvan telegramissa annettuun ketjuun */
-lähetä_kuva ketju kuva {
-	{} | exec "curl" --silent tg_photo -F "chat_id="..ketju -F "photo=@"..kuva | {}
-}
-
-hae_tiedot kartta haut... {
-	for noodi in kartta[1]; do
-		for haku in haut; do
-			if test noodi[0] -eq haku[0]; do
-				haku[1] noodi[1]
-			done
-		done
-	done
+{
+	import "kuvahaku.röd"
 }
 
 /* pääfunktio */
 main {
-	import "kuvahaku.röd"
-	
-	/* alustetaan botti */  
+	import "telegram.röd"
 	token := !(cat "token.txt")[0]
-	base_url := "https://api.telegram.org/bot"..token
-	tg_update := base_url.."/getUpdates?offset="
-	tg_message := base_url.."/sendMessage"
-	tg_photo := base_url.."/sendPhoto"
-	
-	offset := 0
-	
-	aika_viimeksi := !(time)[0]
-	tiheitä_viestejä := 0
-	
-	/* pääsilmukka */
+	bot := ![tg_init token]
+	bot.on_message = { |ketju teksti|
+		if test teksti -matches ".*\\b[Kk][Uu][Hh][Aa].*"; do
+			käsittele_kuhaviesti bot ketju teksti
+		done
+	}
+	print "Started."
 	while true; do
-		/*try do*/
-			/* haetaan uusimmat päivitykset */
-			koodi := !(wcat tg_update..offset)&" "
-			parsittu := !(json koodi)[0]
-			
-			hae_tiedot parsittu ("result" { |päivitykset|
-				for päivitys in päivitykset[1]; do
-					ketju := 0
-					teksti := ""
-					hae_tiedot päivitys ("update_id" { |id|
-						offset = id[1]
-					}) ("message" { |viesti|
-						hae_tiedot viesti ("chat" { |chat|
-							hae_tiedot chat ("id" { |id|
-								ketju = id[1]
-							})
-						}) ("text" { |text|
-							teksti = text[1]
-						}) ("caption" { |text|
-							teksti = text[1]
-						})
-						if test tiheitä_viestejä -gt 3; do
-							hae_tiedot viesti ("from" { |user|
-								hae_tiedot user ("id" { |id|
-									ketju = id[1]
-								})	
-							})
-						done
-					})
-					if test teksti -matches ".*\\b[Kk][Uu][Hh][Aa].*"; do
-						käsittele_kuhaviesti ketju teksti
-						aika := !(time)[0]
-						aikaa_kulunut := 'aika - aika_viimeksi'
-						if test aikaa_kulunut -lt 10000; do
-							tiheitä_viestejä ++
-							if test tiheitä_viestejä -eq 4; do
-								lähetä_viesti ketju "Rauhoittukaa, kuha on nyt hetken tauolla"
-							done
-						else
-							tiheitä_viestejä = 0
-						done
-						aika_viimeksi = aika
-					done
-				done
-			})
-			
-			{} | exec "sleep" 10 | {}
-			
-			offset ++
-		/*done*/
+		try do bot.update; catch e; print "VIRHE: "..e.message; done
 	done
 }
+
