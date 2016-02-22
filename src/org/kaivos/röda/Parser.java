@@ -1132,12 +1132,15 @@ public class Parser {
 			if (tl.acceptIfNext("$")) {
 				tl.accept("(");
 				ans = parseCalculatorExpression(tl);
+				maybeNewline(tl);
 				tl.accept(")");
 			}
 			else if (tl.acceptIfNext("(")) {
 				List<Expression> list = new ArrayList<>();
+				maybeNewline(tl);
 				while (!tl.isNext(")")) {
 					list.add(parseExpression(tl));
+					maybeNewline(tl);
 				}
 				tl.accept(")");
 				ans = expressionList(file, line, list);
@@ -1350,6 +1353,7 @@ public class Parser {
 			}
 			if (tl.acceptIfNext("(")) {
 				Expression e = parseCalculatorExpression(tl);
+				maybeNewline(tl);
 				tl.accept(")");
 				ans = e;
 			}
