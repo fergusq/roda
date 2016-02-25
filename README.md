@@ -678,6 +678,13 @@ Merkki `*` tarkoittaa "nolla tai useampi" ja `+` yksi tai useampi.
 Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan. Valitsin `-n` (**n**ew)
 määrittää, että muuttuja luodaan vain, jos luominen ei tuhoa vanhaa samannimistä muuttujaa.
 
+### btos
+
+>`btos lista*`
+
+Muuntaa argumentteina annetut tai sisääntulovirrasta luetut listat merkkijonoiksi. Listojen on sisällettävä vain lukuja ja niiden oletetaan
+koodaavan UTF-8-merkkijonoja.
+
 ### cat
 
 >`cat tiedosto*`
@@ -889,6 +896,12 @@ Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **s**e
 oletuksena välilyöntien perusteella. Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
 
 Valitsin `-c` (**c**ollect) määrittää, että ulostulovirtaan työnnetään merkkijonojen osien sijasta lista merkkijonon osista.
+
+### stob
+
+>`stob merkkijono*`
+
+Muuntaa annetut merkkijonot (argumentit tai sisääntulovirta) listoiksi, jotka sisältävät lukuina merkkijonon UTF-8-esityksen.
 
 ### stream
 
