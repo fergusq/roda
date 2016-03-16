@@ -1045,6 +1045,12 @@ public class Interpreter {
 			};
 			return r;
 		}
+		
+		if (cmd.type == Command.Type.EXPRESSION) {
+			return () -> {
+				_out.push(evalExpression(cmd.name, scope, _in, _out));
+			};
+		}
 
 		error("unknown command");
 		return null;

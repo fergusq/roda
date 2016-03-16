@@ -516,7 +516,8 @@ public class Parser {
 			VARIABLE,
 			RETURN,
 			BREAK,
-			CONTINUE
+			CONTINUE,
+			EXPRESSION
 		}
 		Type type;
 		Expression name;
@@ -640,6 +641,15 @@ public class Parser {
 		cmd.line = line;
 		return cmd;
 	}
+	
+	static Command _makeExpressionCommand(String file, int line, Expression expr) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.EXPRESSION;
+		cmd.file = file;
+		cmd.line = line;
+		cmd.name = expr;
+		return cmd;
+	}
 
 	static Command parseCommand(TokenList tl, boolean acceptNewlines) {
 		Command cmd = parsePrefixCommand(tl, acceptNewlines);
@@ -759,6 +769,12 @@ public class Parser {
 
 		if (tl.acceptIfNext("continue")) {
 			return _makeContinueCommand(file, line);
+		}
+		
+		if (tl.acceptIfNext("[")) {
+			Expression name = parseCalculatorExpression(tl);
+			tl.accept("]");
+			return _makeExpressionCommand(file, line, name);
 		}
 
 		Expression name = parseExpression(tl);
