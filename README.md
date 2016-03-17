@@ -398,8 +398,6 @@ done
 ```
 
 **`try`** suorittaa annetun komennon tai lohkon ja ohittaa hiljaisesti kaikki vastaan tulleet virheet.
-Aion ehkä tehdä jonkinlaisen virheenkäsittelytoiminnon siihen tulevaisuudessa. Tällä hetkellä tätä
-kannattaa käyttää vain palvelimissa ym. joissa prosessin on pysyttävä virheistä huolimatta päällä.
 
 ```sh
 while true; do
@@ -407,6 +405,18 @@ while true; do
 		hae viestit
 		käsittele viestit
 	done
+done
+```
+
+Suorituksen keskeyttänyt virhe asetetaan `catch`-osion muuttujaan, mikäli se on määritelty.
+
+```sh
+try do
+	lähetä_viesti
+catch virhe
+	errprint "Viestiä ei voitu lähettää!"
+	errprint virhe.message
+	errprint kohta for kohta in virhe.stack
 done
 ```
 
@@ -952,7 +962,7 @@ Lukee kaikki arvot sisääntulovirrasta ja palauttaa viimeisen arvon (tai viimei
 Palauttaa tietueen, joka kuvaa funktiosta muodostettua säiettä:
 
 ```
-record thread {
+record Thread {
 	start : function
 	push : function
 	pull : function
