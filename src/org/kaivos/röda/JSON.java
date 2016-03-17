@@ -289,8 +289,8 @@ public class JSON {
 			return escape(value);
 		}
 	}
-	public static class JSONInteger extends JSONAtomic<Integer> {
-		private JSONInteger(List<JSONKey> path, int value) {
+	public static class JSONInteger extends JSONAtomic<Long> {
+		private JSONInteger(List<JSONKey> path, long value) {
 			super("NUMBER", path, value);
 		}
 	}
@@ -352,7 +352,7 @@ public class JSON {
 			return new JSONString(new ArrayList<>(path), text);
 		}
 		if (tl.seekString().matches("-?[0-9]+")) {
-			int integer = Integer.parseInt(tl.nextString());
+			long integer = Long.parseLong(tl.nextString());
 			return new JSONInteger(new ArrayList<>(path), integer);
 		}
 		if (tl.seekString().matches(NUMBER_REGEX)) {
