@@ -647,6 +647,9 @@ class Builtins {
 		S.setLocal("false", RödaNativeFunction.of("false", (typeargs, args, scope, in, out) -> {
 				        out.push(RödaBoolean.of(false));
 				}, Arrays.asList(), false));
+		
+		S.setLocal("TRUE", RödaBoolean.of(true));
+		S.setLocal("FALSE", RödaBoolean.of(false));
 
 		Record streamRecord = new Record("Stream",
 						 Collections.emptyList(),
@@ -655,7 +658,7 @@ class Builtins {
 							       new Record.Field("push", new Datatype("function")),
 							       new Record.Field("finish", new Datatype("function"))),
 						 false);
-		I.records.put("Stream", streamRecord);
+		I.registerRecord(streamRecord);
 
 		Supplier<RödaValue> getStreamObj = () -> {
 			RödaStream stream = RödaStream.makeStream();
@@ -940,7 +943,7 @@ class Builtins {
 						 Arrays.asList(new Record.Field("accept", new Datatype("function")),
 							       new Record.Field("close", new Datatype("function"))),
 						 false);
-		I.records.put("Server", serverRecord);
+		I.registerRecord(serverRecord);
 
 		Record socketRecord = new Record("Socket",
 						 Collections.emptyList(),
@@ -953,7 +956,7 @@ class Builtins {
 							       new Record.Field("port", new Datatype("number")),
 							       new Record.Field("localport", new Datatype("number"))),
 						 false);
-		I.records.put("Socket", socketRecord);
+		I.registerRecord(socketRecord);
 
 		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, scope, in, out) -> {
 					long port = args.get(0).num();
@@ -1067,7 +1070,7 @@ class Builtins {
 							       new Record.Field("pull", new Datatype("function")),
 							       new Record.Field("push", new Datatype("function"))),
 						 false);
-		I.records.put("Thread", threadRecord);
+		I.registerRecord(threadRecord);
 
 		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, scope, in, out) -> {
 				        RödaValue function = args.get(0);

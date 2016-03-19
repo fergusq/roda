@@ -177,16 +177,18 @@ public class Interpreter {
 
 	{
 		Builtins.populate(this);
-		records.put("Error", errorRecord);
-		records.put("Type", typeRecord);
-		records.put("Field", fieldRecord);
-		typeReflections.put("Error", createRecordClassReflection(errorRecord));
-		typeReflections.put("Type", createRecordClassReflection(typeRecord));
-		typeReflections.put("Field", createRecordClassReflection(fieldRecord));
+		registerRecord(errorRecord);
+		registerRecord(typeRecord);
+		registerRecord(fieldRecord);
 
 		G.setLocal("env", RödaMap.of(System.getenv().entrySet().stream()
 					     .collect(toMap(e -> e.getKey(),
 							    e -> RödaString.of(e.getValue())))));
+	}
+	
+	public void registerRecord(Record record) {
+		records.put(record.name, record);
+		typeReflections.put(record.name, createRecordClassReflection(record));
 	}
 
 	private RödaValue createRecordClassReflection(Record record) {
