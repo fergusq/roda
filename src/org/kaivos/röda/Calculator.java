@@ -1,5 +1,7 @@
 package org.kaivos.röda;
 
+import java.util.regex.Pattern;
+
 import org.kaivos.nept.parser.OperatorPrecedenceParser;
 import org.kaivos.nept.parser.OperatorLibrary;
 import org.kaivos.nept.parser.TokenList;
@@ -8,7 +10,10 @@ import org.kaivos.nept.parser.Token;
 import org.kaivos.nept.parser.ParsingException;
 
 public class Calculator {
+	private static final String NUMBER_REGEX = "-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE](\\+|-)?[0-9]+)";
+	
 	private static TokenScanner t = new TokenScanner()
+		.addPatternRule(Pattern.compile(NUMBER_REGEX))
 		.addOperatorRule("&&")
 		.addOperatorRule("||")
 		.addOperatorRule("^^")
@@ -16,7 +21,7 @@ public class Calculator {
 		.addOperatorRule("<=")
 		.addOperatorRule(">=")
 		.addOperatorRule("**")
-		.addOperators("+-*/%^&|~=<>()E")
+		.addOperators("+-*/%^&|~=<>()")
 		.addOperatorRule("abs")
 		.addOperatorRule("exp")
 		.addOperatorRule("ln")
@@ -25,7 +30,8 @@ public class Calculator {
 		.addOperatorRule("tan")
 		.addOperatorRule("sqrt")
 		.addOperatorRule("cbrt")
-		.addOperatorRule("PI")
+		.addOperatorRule("_PI")
+		.addOperatorRule("_E")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
 		.appendOnEOF("<EOF>");
@@ -95,12 +101,12 @@ public class Calculator {
 			tl.accept(")");
 			return i;
 		}
-		if (tl.isNext("E")) {
-			tl.accept("E");
+		if (tl.isNext("_E")) {
+			tl.accept("_E");
 			return Math.E;
 		}
-		if (tl.isNext("PI")) {
-			tl.accept("PI");
+		if (tl.isNext("_PI")) {
+			tl.accept("_PI");
 			return Math.PI;
 		}
 		Token t = tl.seek();
@@ -113,7 +119,7 @@ public class Calculator {
 								      "exp", "ln",
 								      "sin", "cos", "tan",
 								      "sqrt", "cbrt",
-								      "E", "PI", "<number>"), t);
+								      "_E", "_PI", "<number>"), t);
 		}
 	}
 
