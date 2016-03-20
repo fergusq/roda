@@ -682,7 +682,7 @@ public class Parser {
 	static Command parsePrefixCommand(TokenList tl, boolean acceptNewlines) {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
-		if (tl.isNext("while") || tl.isNext("if")) {
+		if (tl.isNext("while", "if")) {
 			boolean isWhile = tl.nextString().equals("while");
 			Statement cond = parseStatement(tl, true);
 			maybeNewline(tl);
@@ -691,6 +691,7 @@ public class Parser {
 			List<Statement> body = new ArrayList<>(), elseBody = null;
 			while (!tl.isNext("done") && !tl.isNext("else")) {
 				body.add(parseStatement(tl, false));
+				if (tl.isNext("done")) break;
 				newline(tl);
 			}
 			if (tl.isNext("else")) {
@@ -699,6 +700,7 @@ public class Parser {
 				elseBody = new ArrayList<>();
 				while (!tl.isNext("done")) {
 					elseBody.add(parseStatement(tl, false));
+					if (tl.isNext("done")) break;
 					newline(tl);
 				}
 			}
@@ -724,6 +726,7 @@ public class Parser {
 			List<Statement> body = new ArrayList<>();
 			while (!tl.isNext("done")) {
 				body.add(parseStatement(tl, false));
+				if (tl.isNext("done")) break;
 				newline(tl);
 			}
 			tl.accept("done");
@@ -738,6 +741,7 @@ public class Parser {
 				List<Statement> body = new ArrayList<>();
 				while (!tl.isNext("catch", "done")) {
 					body.add(parseStatement(tl, false));
+					if (tl.isNext("done")) break;
 					newline(tl);
 				}
 				String catchVar = null;
@@ -748,6 +752,7 @@ public class Parser {
 					elseBody = new ArrayList<>();
 					while (!tl.isNext("done")) {
 						elseBody.add(parseStatement(tl, false));
+						if (tl.isNext("done")) break;
 						newline(tl);
 					}
 				}
@@ -802,7 +807,7 @@ public class Parser {
 	private static List<Argument> parseArguments(TokenList tl, boolean acceptNewlines) {
 		List<Argument> arguments = new ArrayList<>();
 		if (acceptNewlines) maybeNewline(tl);
-		while (!tl.isNext("|", ";", "\n", ")", "]", "}", "in", "do", "if", "while", "for", "<EOF>")) {
+		while (!tl.isNext("|", ";", "\n", ")", "]", "}", "in", "do", "if", "while", "for", "done", "<EOF>")) {
 			boolean flattened = tl.acceptIfNext("*");
 			arguments.add(_makeArgument(flattened,
 						    parseExpression(tl)));
