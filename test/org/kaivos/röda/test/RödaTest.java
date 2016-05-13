@@ -496,6 +496,14 @@ public class RödaTest {
 			     eval("main{push \"[\"..(1 2 3)..\"]\"}"));
 	}
 
+	@Test
+	public void testListInOperator() {
+		assertEquals("joo,ei",
+			     eval("main{l:=(\"Aino\" \"Anne\" \"Alina\");"
+				  + "if [ \"Anne\" in l ]; do push \"joo\"; else push \"ei\"; done;"
+				  + "if [ \"Henna\" in l ]; do push \"joo\"; else push \"ei\"; done}"));
+	}
+
 	// Karttaoperaatiot
 
 	@Test

@@ -52,7 +52,7 @@ public class RödaString extends RödaValue {
 	}
 
 	@Override public boolean strongEq(RödaValue value) {
-		return value.isString() && value.str().equals(value);
+		return value.isString() && value.str().equals(text);
 	}
 
 	public static RödaString of(String text) {
