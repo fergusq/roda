@@ -547,6 +547,17 @@ public class RödaTest {
 				  + "push tyttö[0]..\" on vielä nuori.\";done"
 				  + "}"));
 	}
+	
+	// Lausekekomennot
+
+	@Test
+	public void testExpressionCommandInIf() {
+		assertEquals("Vilma on vielä nuori.",
+			     eval("main{"
+				  + "tytöt:=((\"Annamari\" 1996) (\"Reetta\" 1992) (\"Vilma\" 1999));"
+				  + "for tyttö in tytöt; do if [ tyttö[1] > 1996 ]; do push tyttö[0]..\" on vielä nuori.\""
+				  + ";done;done}"));
+	}
 
 	// Argumentit
 

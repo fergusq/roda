@@ -432,6 +432,23 @@ hae_syntymävuodella_yksi_tyttö vuosi {
 }
 ```
 
+### Lausekekomento
+
+Komento `[ ... ]` työntää sisällään olevan aritmetiikkatilassa (ks. alla) suoritetun lausekkeen arvon ulostulovirtaan. Sitä voi
+käyttää `test`-komennon tilalla ehdoissa.
+
+```sh
+if [ tyttö.nimi = nimi ]; do
+	push "Tytön " nimi " ikä on " tyttö.ikä ".\n"
+done
+
+tytöt | filter { |tyttö|; [ tyttö.ikä >= 16 ] } | for tyttö; do
+	push tyttö.nimi " on yli 16.\n"
+done
+```
+
+`[ lauseke ]` on siis syntaksisokeria komennolle `push $( lauseke )`.
+
 ### Lausekkeet
 
 Funktion argumentit (ja kutsuttava funktio itsekin) ovat lausekkeita. Lauseke voi olla joko muuttuja,
