@@ -538,15 +538,18 @@ vai kartta):
 | `[]`        | Palauttaa listan alkion     | Listan tai kartan ja tunnisteen   | Alkion                 |
 | `[:]`       | Palauttaa listan osalistan  | Listan tai merkkijonon ja nollasta kahteen kokonaislukua | Listan tai merkkijonon |
 | `[]?`       | Kertoo, onko alkio olemassa | Listan tai kartan ja tunnisteen   | Totuusarvon            |
+| `in`        | Kertoo, onko listassa arvo  | Minkä tahansa arvon               | Totuusarvon            |
+| `is`        | Kertoo, onko arvo tiettyä tyyppiä | Minkä tahansa arvon ja tyypin | Totuusarvon          |
 
 Laskujärjestys:
 
-| Sija | Operaattorit       |
-|:----:| ------------------ |
-| 1.   | `[]`, `[:]`, `[]?` |
-| 2.   | `#`                |
-| 3.   | `&`                |
-| 4.   | `..`               |
+| Sija | Operaattorit             |
+|:----:| ------------------------ |
+| 1.   | `[]`, `[:]`, `[]?`, `is` |
+| 2.   | `#`                      |
+| 3.   | `in`                     |
+| 4.   | `&`                      |
+| 5.   | `..`                     |
 
 #### Komento
 
@@ -602,7 +605,7 @@ done
 Koska Rödan muu syntaksi varaa jo sulut `( )` ja miinusmerkin `-`, ei niitä voi käyttää laskutoimituksiin.
 Tämän rajoituksen kiertämiseksi Rödassa on aritmetiikkatila, jossa tavallinen syntaksi ei enää päde.
 Tilaan pääsee dollarimerkillä: `$(...)`.
-```sh
+```c
 p := $(i/2+7)
 k := $((p-10)*2)
 ```
@@ -640,12 +643,12 @@ Laskujärjestys:
 
 | Sija | Operaattorit                                               |
 |:----:| ---------------------------------------------------------- |
-| 1.   | `[]`, `[:]`, `[]?`                                         |
+| 1.   | `[]`, `[:]`, `[]?`, `is`                                   |
 | 2.   | Unäärinen `-`, unäärinen `~`, unäärinen `!`, unäärinen `#` |
 | 3.   | `*`, `/`, `%`                                              |
 | 4.   | `+`, binäärinen `-`                                        |
 | 5.   | `&`, `|`, `^`, `<<`, `>>`, `>>>`                           |
-| 6.   | `<`, `>`, `<=`, `>=`                                       |
+| 6.   | `<`, `>`, `<=`, `>=`, `in`                                 |
 | 7.   | `=`, `!=`                                                  |
 | 8.   | `&&`, `||`, `^^`                                           |
 | 9.   | `..`                                                       |
