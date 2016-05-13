@@ -999,6 +999,8 @@ public class Interpreter {
 					}
 				} catch (ReturnException e) {
 			        	throw e;
+				} catch (BreakOrContinueException e) {
+					throw e;
 				} catch (Exception e) {
 					if (cmd.variable != null) {
 						RödaScope newScope = new RödaScope(scope);
@@ -1025,6 +1027,8 @@ public class Interpreter {
 				try {
 					tr.run();
 				} catch (ReturnException e) {
+					throw e;
+				} catch (BreakOrContinueException e) {
 					throw e;
 				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
 			};
@@ -1175,6 +1179,16 @@ public class Interpreter {
 			RödaValue list = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue separator = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			return list.join(separator);
+		}
+		if (exp.type == Expression.Type.IS) {
+			Datatype type = scope.substitute(exp.datatype);
+			RödaValue value = evalExpression(exp.sub, scope, in, out).impliciteResolve();
+			return RödaBoolean.of(value.is(type));
+		}
+		if (exp.type == Expression.Type.IN) {
+			RödaValue value = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
+			RödaValue list = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
+			return list.containsValue(value);
 		}
 		if (exp.type == Expression.Type.STATEMENT_LIST) {
 			RödaStream _out = RödaStream.makeStream();

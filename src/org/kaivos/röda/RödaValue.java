@@ -82,6 +82,11 @@ public abstract class RödaValue {
 		return null;
 	}
 
+	public RödaValue containsValue(RödaValue value) {
+		error("a " + typeString() + " doesn't have elements");
+		return null;
+	}
+
 	public RödaValue length() {
 		error("a " + typeString() + " doesn't have length");
 		return null;

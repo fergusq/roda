@@ -79,6 +79,15 @@ public class RödaList extends RödaValue {
 		return RödaBoolean.of(index < list.size());
 	}
 
+	@Override public RödaValue containsValue(RödaValue value) {
+		for (RödaValue element : list) {
+			if (element.strongEq(value)) {
+				return RödaBoolean.of(true);
+			}
+		}
+		return RödaBoolean.of(false);
+	}
+
 	@Override public RödaValue length() {
 		return RödaNumber.of(list.size());
 	}

@@ -836,7 +836,9 @@ public class Parser {
 			CALCULATOR,
 			NEW,
 			REFLECT,
-			TYPEOF
+			TYPEOF,
+			IS,
+			IN
 		}
 		enum CType {
 			MUL,
@@ -924,6 +926,10 @@ public class Parser {
 				return "reflect " + datatype.toString();
 			case TYPEOF:
 				return "typeof " + sub.asString();
+			case IS:
+				return sub.asString() + " is " + datatype.toString();
+			case IN:
+				return exprA.asString() + " in " + exprB.asString();
 			default:
 				return "<" + type + ">";
 			}
@@ -1124,6 +1130,26 @@ public class Parser {
 		e.sub = sub;
 		return e;
 	}
+
+	private static Expression expressionIs(String file, int line, Expression sub, Datatype datatype) {
+		Expression e = new Expression();
+		e.type = Expression.Type.IS;
+		e.file = file;
+		e.line = line;
+		e.sub = sub;
+		e.datatype = datatype;
+		return e;
+	}
+
+	private static Expression expressionIn(String file, int line, Expression a, Expression b) {
+		Expression e = new Expression();
+		e.type = Expression.Type.IN;
+		e.file = file;
+		e.line = line;
+		e.exprA = a;
+		e.exprB = b;
+		return e;
+	}
 	
 	private static Expression parseExpression(TokenList tl) {
 		Expression ans = parseExpressionJoin(tl);
@@ -1274,7 +1300,7 @@ public class Parser {
 	private static Expression parseArrayAccessIfPossible(TokenList tl, Expression ans,
 							     java.util.function.
 							     Function<TokenList, Expression> expressionParser) {
-		while (tl.isNext("[", ".")) {
+		while (tl.isNext("[", ".", "is", "in")) {
 			String file = tl.seek().getFile();
 			int line = tl.seek().getLine();
 			if (tl.acceptIfNext("[")) {
@@ -1298,6 +1324,14 @@ public class Parser {
 			else if (tl.acceptIfNext(".")) {
 				String field = identifier(tl);
 				ans = expressionField(file, line, ans, field);
+			}
+			else if (tl.acceptIfNext("is")) {
+				Datatype dt = parseType(tl);
+				ans = expressionIs(file, line, ans, dt);
+			}
+			else if (tl.acceptIfNext("in")) {
+				Expression right = expressionParser.apply(tl);
+				ans = expressionIn(file, line, ans, right);
 			}
 			else assert false;
 		}
