@@ -3,7 +3,7 @@
 ## English
 
 Röda is a homemade scripting language inspired by Bourne shell, Ruby and others. While not being a real shell language, Röda
-still makes an extensive use of concurrency and streams (pipes).
+still makes an extensive use of concurrency and streams (pipes). For more documentation, see GUIDE.md.
 
 ### Building
 
