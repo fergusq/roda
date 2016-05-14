@@ -1,31 +1,52 @@
 # Röda
 
-*English:*
+## English
 
 Röda is a homemade scripting language inspired by Bourne shell, Ruby and others. While not being a real shell language, Röda
 still makes an extensive use of concurrency and streams (pipes).
 
-An example:
+### Building
+
+Using Gradle:
+
+```sh
+$ git clone --recursive https://github.com/fergusq/roda.git
+$ cd roda
+roda $ gradle fatJar
+```
+
+### Example
+
+Prime generator:
+
+```sh
+#!/home/iikka/bin/röda
+
+main {
+	primes := (2)
+	seq 3 10000 | { primes += i if [ i % p != 0 ] for p in primes } for i
+	print p for p in primes
+}
+```
+
+HTTP server:
 
 ```sh
 #!/usr/bin/röda
 
 main {
-	import "telegram.röd"
-	token := "<bot identifier>"
-	bot := ![tg_init token]
-	bot.on_message = { |chat msg|
-		if [ msg =~ "/time(@TimeBot)?" ]; do
-			bot.send_message chat !(exec -l "date")[0]
-		done
-	}
+	import "http_server.röd"
+	server := ![http_server 8080]
+	server.controllers["/"] = ![controller { |request|
+		request.send "200 OK" "<html><head><title>Hello world!</title></head><body>Hello world!</body></html>"
+	}]
 	while true; do
-		try bot.update
+		server.update
 	done
 }
 ```
 
-*Suomeksi:*
+## Suomeksi
 
 Röda on uusi ohjelmointikieleni, joka on saanut vaikutteensa lähinnä Bourne shellistä.
-Dokumentaatio on saatavilla tällä hetkellä vain suomeksi tiedostossa OHJEET.md.
+Dokumentaatio on tällä hetkellä saatavilla suomeksi tiedostossa OHJEET.md.
