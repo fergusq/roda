@@ -1,9 +1,9 @@
 # Röda
 
-Röda is a homemade scripting language inspired by Bourne shell, Ruby and others.
+*English:*
 
-Röda on uusi ohjelmointikieleni, joka on saanut vaikutteensa lähinnä Bourne shellistä.
-Dokumentaatio on saatavilla tällä hetkellä vain suomeksi tiedostossa OHJEET.md.
+Röda is a homemade scripting language inspired by Bourne shell, Ruby and others. While not being a real shell language, Röda
+still makes an extensive use of concurrency and streams (pipes).
 
 An example:
 
@@ -24,3 +24,8 @@ main {
 	done
 }
 ```
+
+*Suomeksi:*
+
+Röda on uusi ohjelmointikieleni, joka on saanut vaikutteensa lähinnä Bourne shellistä.
+Dokumentaatio on saatavilla tällä hetkellä vain suomeksi tiedostossa OHJEET.md.
