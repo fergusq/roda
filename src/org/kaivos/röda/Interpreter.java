@@ -920,11 +920,13 @@ public class Interpreter {
 		
 		if (cmd.type == Command.Type.WHILE || cmd.type == Command.Type.IF) {
 			boolean isWhile = cmd.type == Command.Type.WHILE;
+			boolean neg = cmd.negation;
+			String commandName = isWhile?(neg?"until":"while"):(neg?"unless":"if");
 			Runnable r = () -> {
 				boolean goToElse = true;
 				do {
 					RödaScope newScope = new RödaScope(scope);
-					if (evalCond(isWhile?"while":"if", cmd.cond, scope, _in)) break;
+					if (evalCond(commandName, cmd.cond, scope, _in) ^ neg) break;
 					goToElse = false;
 					try {
 						for (Statement s : cmd.body) {

@@ -77,7 +77,9 @@ public class Parser {
 		if (applicant.matches("[<>()\\[\\]{}|&.,:;=#%!?\n+\\-*/~@%$]|[:~.+\\-*/!]=|\\+\\+|&&|\\|\\||^^|=~|<=|>=|<<|>>|>>>")) return false;
 		switch (applicant) {
 		case "if":
+		case "unless":
 		case "while":
+		case "until":
 		case "else":
 		case "for":
 		case "in":
@@ -525,6 +527,7 @@ public class Parser {
 		String operator;
 		List<Datatype> typearguments;
 		List<Argument> arguments;
+		boolean negation;
 		Statement cond;
 		String variable;
 		Expression list;
@@ -572,12 +575,13 @@ public class Parser {
 		return cmd;
 	}
 
-	static Command _makeIfOrWhileCommand(String file, int line, boolean isWhile,
+	static Command _makeIfOrWhileCommand(String file, int line, boolean isWhile, boolean isNegated,
 					     Statement cond, List<Statement> body, List<Statement> elseBody) {
 		Command cmd = new Command();
 		cmd.type = isWhile ? Command.Type.WHILE : Command.Type.IF;
 		cmd.file = file;
 		cmd.line = line;
+		cmd.negation = isNegated;
 		cmd.cond = cond;
 		cmd.body = body;
 		cmd.elseBody = elseBody;
@@ -655,10 +659,12 @@ public class Parser {
 	static Command parseCommand(TokenList tl, boolean acceptNewlines) {
 		Command cmd = parsePrefixCommand(tl, acceptNewlines);
 		if (acceptNewlines) maybeNewline(tl);
-		if (tl.isNext("while") || tl.isNext("if")) {
-			boolean isWhile = tl.nextString().equals("while");
+		if (tl.isNext("while", "if", "unless", "until")) {
+			String commandName = tl.nextString();
+			boolean isWhile = commandName.equals("while") || commandName.equals("until");
+			boolean isUnless = commandName.equals("unless") || commandName.equals("until");
 			Statement cond = parseStatement(tl, acceptNewlines);
-			return _makeIfOrWhileCommand(cmd.file, cmd.line, isWhile, cond,
+			return _makeIfOrWhileCommand(cmd.file, cmd.line, isWhile, isUnless, cond,
 						     Arrays.asList(new Statement(Arrays.asList(cmd))), null);
 		}
 		else if (tl.acceptIfNext("for")) {
@@ -683,8 +689,10 @@ public class Parser {
 	static Command parsePrefixCommand(TokenList tl, boolean acceptNewlines) {
 		String file = tl.seek().getFile();
 		int line = tl.seek().getLine();
-		if (tl.isNext("while", "if")) {
-			boolean isWhile = tl.nextString().equals("while");
+		if (tl.isNext("while", "until", "if", "unless")) {
+			String commandName = tl.nextString();
+			boolean isWhile = commandName.equals("while") || commandName.equals("until");
+			boolean isUnless = commandName.equals("unless") || commandName.equals("until");
 			Statement cond = parseStatement(tl, true);
 			maybeNewline(tl);
 			tl.accept("do");
@@ -706,7 +714,7 @@ public class Parser {
 				}
 			}
 			tl.accept("done");
-			return _makeIfOrWhileCommand(file, line, isWhile, cond, body, elseBody);
+			return _makeIfOrWhileCommand(file, line, isWhile, isUnless, cond, body, elseBody);
 		}
 
 		if (tl.acceptIfNext("for")) {
@@ -808,7 +816,7 @@ public class Parser {
 	private static List<Argument> parseArguments(TokenList tl, boolean acceptNewlines) {
 		List<Argument> arguments = new ArrayList<>();
 		if (acceptNewlines) maybeNewline(tl);
-		while (!tl.isNext("|", ";", "\n", ")", "]", "}", "in", "do", "if", "while", "for", "done", "<EOF>")) {
+		while (!tl.isNext("|", ";", "\n", ")", "]", "}", "in", "do", "if", "unless", "while", "until", "for", "done", "<EOF>")) {
 			boolean flattened = tl.acceptIfNext("*");
 			arguments.add(_makeArgument(flattened,
 						    parseExpression(tl)));
