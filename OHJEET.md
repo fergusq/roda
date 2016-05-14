@@ -326,10 +326,10 @@ Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
 
 #### Ohjausrakenteet
 
-Ohjausrakenteita ovat `if`, `while`, `for`, `break`, `continue`, `try` ja `return`.
+Ohjausrakenteita ovat `if`, `unless`, `while`, `until`, `for`, `break`, `continue`, `try` ja `return`.
 
-**`if`** ja **`while`** suorittavat annetun lauseen ja olettavat sen palauttavan joko arvon `true` tai arvon `false`.
-Muut arvot tulkitaan aina samoin kuin `true`. Vain yksi arvo luetaan.
+**`if`**, **`unless`**, **`while`** ja **`until`** suorittavat annetun lauseen ja olettavat sen palauttavan joko arvon `true` tai arvon `false`.
+Muut arvot tulkitaan aina samoin kuin `true`. Jos lause palauttaa useita arvoja, pitää niiden kaikkien olla `true`, jotta ehto toteutuisi.
 
 Sisäänrakennetuista funktioista vain `true`, `false`, `test`, `random`, `file` (ks. alempana)
 ja `pull -r` palauttavat totuusarvon.
