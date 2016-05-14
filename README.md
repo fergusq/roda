@@ -20,7 +20,7 @@ roda $ gradle fatJar
 Prime generator:
 
 ```sh
-#!/home/iikka/bin/röda
+#!/usr/bin/röda
 
 main {
 	primes := (2)
