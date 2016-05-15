@@ -81,6 +81,16 @@ public class RödaTest {
 		assertEquals("8", eval("main{a:=4;push$(20-a*3);}"));
 	}
 
+	@Test
+	public void testCalculatorAbbreviation() {
+		assertEquals("37", eval("main{a:=9;push$1+a*4;}"));
+	}
+
+	@Test
+	public void testMultipleCalculatorAbbreviations() {
+		assertEquals("35,8", eval("main{a:=9;push$a*4-1$a-1;}"));
+	}
+
 	// Tietueet
 
 	@Test
@@ -535,6 +545,17 @@ public class RödaTest {
 	public void testStatementSingleExpression() {
 		assertEquals("Lilja",
 			     eval("t{push\"Lilja\"}main{push ![t]}"));
+	}
+
+	@Test
+	public void testStatementSingleExpressionAbbreviation() {
+		assertEquals("Elina",
+			     eval("t{push\"Elina\"}main{push !t}"));
+	}
+
+	@Test(expected=RödaException.class)
+	public void testStatementSingleExpressionAbbreviationWithMultipleReturnValues() {
+		eval("t{push\"Elina\"\"Lilja\"}main{push !t}");
 	}
 
 	@Test

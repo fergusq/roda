@@ -1196,10 +1196,13 @@ public class Parser {
 		Expression ans = parseCommonPrimary(file, line, tl);
 		if (ans == null) {
 			if (tl.acceptIfNext("$")) {
-				tl.accept("(");
-				ans = parseCalculatorExpression(tl);
-				maybeNewline(tl);
-				tl.accept(")");
+				if (tl.acceptIfNext("(")) {
+					ans = parseCalculatorExpression(tl);
+					maybeNewline(tl);
+					tl.accept(")");
+				} else {
+					ans = parseCalculatorExpression(tl);
+				}
 			}
 			else if (tl.acceptIfNext("(")) {
 				List<Expression> list = new ArrayList<>();
@@ -1227,8 +1230,8 @@ public class Parser {
 					ans = expressionStatementSingle(file, line, s);
 				}
 				else {
-					ans = null;
-					assert false;
+					Statement s = parseStatement(tl, true);
+					ans = expressionStatementSingle(file, line, s);
 				}
 			}
 			else if (tl.acceptIfNext("-")) {
