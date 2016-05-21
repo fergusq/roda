@@ -11,7 +11,7 @@ record HttpServer {
 		request.connection = connection
 		connection.read -l line
 		things := !(split line)
-		if test #things -ge 3; do
+		if [ #things >= 3 ]; do
 			request.command = things[0]
 			request.path = things[1]
 			request.protocol = things[2]
@@ -19,7 +19,7 @@ record HttpServer {
 		else
 			/* kysely on väärän muotoinen */
 			/* TODO: virheenkäsittely */
-			request.valid = ![false]
+			request.valid = FALSE
 			connection.close
 			return
 		done
@@ -27,49 +27,49 @@ record HttpServer {
 		length := 0
 		request.headers = new map<string>
 		request.as_text = ""
-		while test line -not_matches "\r?\n"; do
+		while [ ! (line =~ "\r?\n") ]; do
 			request.as_text .= line
 			connection.read -l line
-			if test line -matches "[A-Za-z\\-]+:[ \t]*.*\r?\n"; do
+			if [ line =~ "[A-Za-z\\-]+:[ \t]*.*\r?\n" ]; do
 				header_name := line
 				header_name ~= ":[ \t]*.*\r?\n$" ""
 				header_value := line
 				header_value ~= "^[A-Za-z\\-]+:[ \t]*" "" "\r?\n$" ""
 				request.headers[header_name] = header_value
 			done
-			if test line -matches "Content-Length: .*\r?\n"; do
+			if [ line =~ "Content-Length: .*\r?\n" ]; do
 				cl := line
 				cl ~= "^Content-Length: " "" "\r?\n$" ""
 				length = cl
 			done
 		done
 		request.content = ""
-		if test length -gt 0; do
+		if [ length > 0 ]; do
 			content := ""
 			connection.read -b length content
 			request.content = content
 		done
 		request.form = new map<string>
 		if push request.headers["Content-Type"]?; do
-			if test request.headers["Content-Type"] -eq "application/x-www-form-urlencoded"; do
+			if [ request.headers["Content-Type"] = "application/x-www-form-urlencoded" ]; do
 				for param in !(split -s "&" request.content) do
 					kv := !(split -s "=" param)
-					if test #kv -eq 2; do
+					if [ #kv = 2 ]; do
 						key := kv[0]
 						val := kv[1]
 						val ~= "\\+" " "
 						code := new list<number>
 						i := 0
-						while test i -lt #val do
-							if push $(val[i:i+1] = "%" && i < #val-2); do
-								code += ![parse_num -r 16 $(val[i+1:i+3])]
+						while [ i < #val ] do
+							if [ val[i:i+1] = "%" && i < #val-2 ]; do
+								code += !parse_num -r 16 $val[i+1:i+3]
 								i += 3
 							else
-								code .= ![stob $(val[i:i+1])]
+								code .= !stob $val[i:i+1]
 								i += 1
 							done
 						done
-						request.form[key] = ![btos code]
+						request.form[key] = !btos code
 					done
 				done
 			done
@@ -101,10 +101,10 @@ record HttpServer {
 	}
 	
 	function update {
-		connection := ![self.socket.accept]
+		connection := !self.socket.accept
 		date := "["..!(exec -l "date" "+%d.%m.%Y/%H:%M")[0].."]"
 		print date.." Connection from "..connection.hostname.." ("..connection.ip..":"..connection.port..")."
-		handler := ![thread { self.handle connection }]
+		handler := !thread { self.handle connection }
 		handler.start
 	}
 }
@@ -112,12 +112,12 @@ record HttpServer {
 http_server port {
 	http := new HttpServer
 	http.port = port
-	http.socket := ![server port]
+	http.socket := !server port
 	push http
 }
 
 record Request {
-	valid : boolean = ![true]
+	valid : boolean = TRUE
 	command : string
 	path : string
 	protocol : string
@@ -130,17 +130,17 @@ record Request {
 	
 	function content_headers type length {
 		content_headers := ""
-		if test length -not_eq 0; do
+		if [ length != 0 ]; do
 			content_headers = "Content-Type: "..type.."\r\n"
 			content_headers .= "Content-Length: "..length.."\r\n"
 			content_headers .= "Accept-Ranges: bytes\r\n"
 		done
-		push content_headers
+		return content_headers
 	}
 	
 	function create_headers content_headers status {
 		headers := ""
-		if test self.protocol -not_eq "HTTP/1.0"; do
+		if [ self.protocol != "HTTP/1.0" ]; do
 			headers = "HTTP/1.1 "..status.."\r\n"
 			headers .= "Server: http_server.roed\r\n"
 			headers .= "Date: "
@@ -154,12 +154,12 @@ record Request {
 			headers .= content_headers
 			headers .= "\r\n"
 		done
-		push headers
+		return headers
 	}
 	
 	function send status data {
 		response := ![self.create_headers ![self.content_headers "text/html; charset=utf-8" ![strsize data]] status]
-		if test self.command -not_eq "HEAD"; do
+		if [ self.command != "HEAD" ]; do
 			response .= data
 		done
 		self.connection.write response
@@ -168,13 +168,13 @@ record Request {
 	function send_file mime name {
 		response := ![self.create_headers ![self.content_headers mime ![file -l name]] "200 OK"]
 		self.connection.write response
-		if test self.command -not_eq "HEAD"; do
+		if [ self.command != "HEAD" ]; do
 			self.connection.write -f name
 		done
 	}
 	
 	function redirect target {
-		if test self.protocol -eq "HTTP/1.0"; do
+		if [ self.protocol = "HTTP/1.0" ]; do
 			push "302 Found"
 		else
 			push "303 See Other"
@@ -188,7 +188,7 @@ record Request {
 		]]
 		headers := ![self.content_headers "text/html; charset=utf-8" ![strsize data]].."Location: "..target.."\r\n"
 		response := ![self.create_headers headers status_code]
-		if test self.command -not_eq "HEAD"; do
+		if [ self.command != "HEAD" ]; do
 			response .= data
 		done
 		self.connection.write response
@@ -233,13 +233,13 @@ record Request {
 			return
 		done
 		path := ![match "(/[^/]*)(/[^/]*)*" self.path]
-		if test #path -eq 0; do path = ("/" "/" ""); done
+		if [ #path = 0 ]; do path = ("/" "/" ""); done
 		if push self.server.controllers[path[1]]?; do
 			ctrl := self.server.controllers[path[1]]
 			type := typeof ctrl
 			for f in type.fields do
 				for a in f.annotations do
-					if push $(#a = 2 && a[0] = "HANDLE" && self.path =~ a[1]); do
+					if [ #a = 2 && a[0] = "HANDLE" && self.path =~ a[1] ]; do
 						handler := ![f.get ctrl]
 						handler self
 						return
