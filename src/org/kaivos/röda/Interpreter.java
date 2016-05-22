@@ -1273,7 +1273,7 @@ public class Interpreter {
 				switch (exp.ctype) {
 				case MUL:
 					return RödaNumber.of(val1.num()*val2.num());
-				case DIV:
+				case IDIV:
 					return RödaNumber.of(val1.num()/val2.num());
 				case MOD:
 					return RödaNumber.of(val1.num()%val2.num());

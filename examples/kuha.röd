@@ -1,7 +1,7 @@
 hae_kuva_ja_tee_koodi sana mones montako {
 	hae_kuva sana mones
-	x_koordinaatti := $(mones*500/montako)
-	leveys := $(500/montako)
+	x_koordinaatti := $(mones*500//montako)
+	leveys := $(500//montako)
 	push "<image xlink:href='"..mones.."' preserveAspectRatio='none' x='"..x_koordinaatti.."' y='50' width='"..leveys.."' height='150' style='opacity:0.4;'/>"
 }
 
@@ -62,7 +62,7 @@ käsittele_kuhaviesti botti ketju viesti {
 	done
 
 	/* jaetaan sanat kahtia ja tehdään kuva */
-	puoliväli := $(montako/2)
+	puoliväli := $(montako//2)
 	tee_pilakuva nettikuvat sanat[:puoliväli]&" " sanat[puoliväli:]&" " "kuhaonmeemi.png"
 
 	/* lähetetään kuva ketjuun */

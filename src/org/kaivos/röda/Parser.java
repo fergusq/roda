@@ -33,6 +33,7 @@ public class Parser {
 		.addOperatorRule("*=")
 		.addOperatorRule("/=")
 		.addOperatorRule("++")
+		.addOperatorRule("//")
 		.addOperatorRule("&&")
 		.addOperatorRule("||")
 		.addOperatorRule("^^")
@@ -852,6 +853,7 @@ public class Parser {
 		enum CType {
 			MUL,
 			DIV,
+			IDIV,
 			MOD,
 			ADD,
 			SUB,
@@ -1396,6 +1398,7 @@ public class Parser {
 		library.increaseLevel();
 		library.add("*", op(Expression.CType.MUL));
 		library.add("/", op(Expression.CType.DIV));
+		library.add("//", op(Expression.CType.IDIV));
 		library.add("%", op(Expression.CType.MOD));
 		
 		/* Declares the OPP */

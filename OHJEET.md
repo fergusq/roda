@@ -606,7 +606,7 @@ Koska Rödan muu syntaksi varaa jo sulut `( )` ja miinusmerkin `-`, ei niitä vo
 Tämän rajoituksen kiertämiseksi Rödassa on aritmetiikkatila, jossa tavallinen syntaksi ei enää päde.
 Tilaan pääsee dollarimerkillä: `$(...)`.
 ```c
-p := $(i/2+7)
+p := $(i//2+7)
 k := $((p-10)*2)
 ```
 
@@ -633,7 +633,7 @@ Lisäksi seuraavat operaattorit ovat käytössä:
 | `+`         | Yhteenlasku                 | 2 kokonaislukua   | Kokonaisluvun |
 | `-`         | Vähennyslasku               | 2 kokonaislukua   | Kokonaisluvun |
 | `*`         | Kertolasku                  | 2 kokonaislukua   | Kokonaisluvun |
-| `/`         | Jakolasku                   | 2 kokonaislukua   | Kokonaisluvun |
+| `//`        | Jakolasku                   | 2 kokonaislukua   | Kokonaisluvun |
 | `%`         | Jakojäännös                 | 2 kokonaislukua   | Kokonaisluvun |
 | Unäärinen `-` | Vastaluku                 | Kokonaisluvun     | Kokonaisluvun |
 | Unäärinen `~` | Bittitason EI             | Kokonaisluvun     | Kokonaisluvun |
@@ -645,7 +645,7 @@ Laskujärjestys:
 |:----:| ---------------------------------------------------------- |
 | 1.   | `[]`, `[:]`, `[]?`, `is`                                   |
 | 2.   | Unäärinen `-`, unäärinen `~`, unäärinen `!`, unäärinen `#` |
-| 3.   | `*`, `/`, `%`                                              |
+| 3.   | `*`, `//`, `%`                                             |
 | 4.   | `+`, binäärinen `-`                                        |
 | 5.   | `&`, `|`, `^`, `<<`, `>>`, `>>>`                           |
 | 6.   | `<`, `>`, `<=`, `>=`, `in`                                 |
