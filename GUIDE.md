@@ -1,5 +1,62 @@
 # A guide to Röda programming
 
+## The basics
+
+### Hello world -example
+
+```sh
+main {
+	print "Hello world!"
+}
+```
+
+Every Röda program consists of a list of function declarations.
+When the program is run, the interpreter executes the `main` function (defined by lines 1 and 3).
+At line 2 there is the body of the function that happens to be a single function call.
+
+For the rest of this guide I will omit the signature of the main program.
+
+### Commands and variables
+
+In Röda statements are also called _commands_. We have already seen a function call, which is the most used command type,
+but there are also many others like `if`, `while` and `for`.
+
+The maybe second most used command is variable assignment. Below is a basic example of that.
+
+```sh
+name := "Caroline"
+age := 31
+print name ", " age " years"
+age = 32
+print name ", " age " years"
+```
+
+Here we declare two variables, `name` and `age` and use them to print an introductive text of a person: `Caroline, 31 years`.
+Then we change the age variable and print to same text again. In Röda `:=` is used to create a new variable and `=` to edit an old.
+
+Using variables and a while loop we can print the first even numbers:
+
+```sh
+i := 0
+while [ i < 10 ] do
+	print $ i*2
+	i++
+done
+```
+
+In Röda all arithmetics must be prefixed with `$`, which enables the _arithmetic expression context_.
+
+Like in Bourne shell, condition is a command. It can be an arithmetic command `[]` or a normal function call like below.
+`file -e` is used to check if the file exists.
+
+```sh
+if file -e "log.txt" do
+	exec "rm" "log.txt"
+done
+```
+
+Unlike Bourne shell, `if` statements have `do` and `done`, not `then` and `fi`.
+
 ## Prime generator explained
 
 In this section we're going to review some syntactic features of Röda which may be confusing to beginners.
@@ -35,5 +92,79 @@ In this case the loop pushes more than one boolean to the stream and the body of
 The condition can in other words be read _a number is a prime if none of the previous primes divide it_.
 
 So are these suffix commands really required? It seems that one must read the code backwards to understand them!
-Still, they can be handy sometimes: they provide a more natural syntax to do many things like list comprehension and looped conditions.
-It is advisable not to nest these more than two levels, thought.
+Still, they can be handy sometimes: they provide a more natural syntax to do many things like list comprehension and looped conditions (see below).
+It is advisable not to nest these more than two levels, though.
+
+## Syntactic features
+
+### Suffix commands
+
+The suffix syntax is a generalization of many other features like list comprehension, `map`- and `filter`-functions, looped conditionals, etc.
+
+#### List comprehension
+
+```sh
+new_list := !(statement for variable in list if statement)
+```
+
+Examples:
+```sh
+names := !(get_name client for client in clients)
+adults := !([ client ] for client in clients if [ client.age >= 18 ])
+pwdir := !pwd
+directories := !([ pwdir.."/"..f ] for f in files if file -d f)
+```
+
+#### Mapping and filtering
+
+`for` can also used in pipes. `if` and `unless` are right-associative, so braces `{}` should be used around them.
+
+```ruby
+("Pictures/" "Music/") | exec -l "ls" dir for dir | { [ f ] for f unless file -d f } | for f do
+	print f.." "..![file -m f]
+done
+
+#### Looped conditionals
+
+```sh
+if [ condition ] for element in list do
+
+done
+```
+
+Ensures that the condition is true for all elements in list.
+
+```sh
+if file -d f for f in !(exec -l "ls") do
+	print "All files are directories!"
+done
+```
+
+### Possibly confusing syntaxes
+
+In Röda there are many ways to do the same thing, which is purely a side effect of the different levels of syntax:
+statement-level (S), expression-level (E) and arithmetic expression-level (AE).
+
+#### Assigning a value of a function to a variable
+
+* `var = ![f p1 p2]` (E)
+* `var = ! f p1 p2` (E)
+* `var = $[f p1 p2]` (AE)
+* `var = !(f p1 p2)[0]` (E, no error if more than one return value)
+* `f p1 p2 | pull var` (S, no error if more than one return value)
+
+How to decide which one to use? In this situation I'd recommend the second syntax, but in general it is best to use the first.
+The fourth way should be used to avoid errors and the last when there are more than one return value. One should never use the
+third syntax, that is just bad style and confuses people.
+
+#### Pushing a variable to the output stream
+
+* `push var`
+* `push $var`
+* `(var)` (`($var)`)
+* `[var]`
+
+The first syntax is recommended in all situations except in condition statements, where the last should be used.
+The third way is useful when pushing a list (as list literals are forbidden in aritmetic expressions).
+_Never_ prefix a variable with a dollar.
+Note that in the last syntax the dollar would be a syntax error, as `[` and `]` already introduce an arithmetic expression context.
