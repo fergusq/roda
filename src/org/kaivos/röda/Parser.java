@@ -1159,8 +1159,18 @@ public class Parser {
 		e.exprB = b;
 		return e;
 	}
-	
+
 	private static Expression parseExpression(TokenList tl) {
+		Expression ans = parseExpressionConcat(tl);
+		while (tl.acceptIfNext("in")) {
+			String file = tl.seek().getFile();
+			int line = tl.seek().getLine();
+			ans = expressionIn(file, line, ans, parseExpressionConcat(tl));
+		}
+		return ans;
+	}
+	
+	private static Expression parseExpressionConcat(TokenList tl) {
 		Expression ans = parseExpressionJoin(tl);
 		while (tl.acceptIfNext("..")) {
 			String file = tl.seek().getFile();
@@ -1171,21 +1181,11 @@ public class Parser {
 	}
 	
 	private static Expression parseExpressionJoin(TokenList tl) {
-		Expression ans = parseExpressionIn(tl);
+		Expression ans = parseExpressionPrimary(tl);
 		while (tl.acceptIfNext("&")) {
 			String file = tl.seek().getFile();
 			int line = tl.seek().getLine();
-			ans = expressionJoin(file, line, ans, parseExpressionIn(tl));
-		}
-		return ans;
-	}
-
-	private static Expression parseExpressionIn(TokenList tl) {
-		Expression ans = parseExpressionPrimary(tl);
-		while (tl.acceptIfNext("in")) {
-			String file = tl.seek().getFile();
-			int line = tl.seek().getLine();
-			ans = expressionIn(file, line, ans, parseExpressionPrimary(tl));
+			ans = expressionJoin(file, line, ans, parseExpressionPrimary(tl));
 		}
 		return ans;
 	}
@@ -1368,8 +1368,6 @@ public class Parser {
 		library = new OperatorLibrary<>(tl -> parseCalculatorPrimary(tl));
 		
 		/* Declares the operators */
-		library.add("..", (a, b) -> expressionConcat(a.file, a.line, a, b));
-		library.increaseLevel();
 		library.add("&&", op(Expression.CType.AND));
 		library.add("||", op(Expression.CType.OR));
 		library.add("^^", op(Expression.CType.XOR));
@@ -1377,6 +1375,8 @@ public class Parser {
 		library.add("=", op(Expression.CType.EQ));
 		library.add("=~", op(Expression.CType.MATCHES));
 		library.add("!=", op(Expression.CType.NEQ));
+		library.increaseLevel();
+		library.add("..", (a, b) -> expressionConcat(a.file, a.line, a, b));
 		library.increaseLevel();
 		library.add("<", op(Expression.CType.LT));
 		library.add(">", op(Expression.CType.GT));
