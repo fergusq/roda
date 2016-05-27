@@ -1,7 +1,6 @@
 package org.kaivos.röda;
 
 import org.kaivos.röda.Interpreter;
-import static org.kaivos.röda.RödaStream.ISLineStream;
 import static org.kaivos.röda.RödaStream.OSStream;
 import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.type.RödaString;

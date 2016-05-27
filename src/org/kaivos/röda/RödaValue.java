@@ -1,13 +1,11 @@
 package org.kaivos.röda;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 
 import static org.kaivos.röda.type.RödaNativeFunction.NativeFunction;
 import static org.kaivos.röda.Parser.Function;
-import static org.kaivos.röda.Parser.Parameter;
 import static org.kaivos.röda.Parser.Datatype;
 import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Interpreter.error;

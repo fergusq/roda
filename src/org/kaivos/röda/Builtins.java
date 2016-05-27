@@ -19,9 +19,6 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.regex.PatternSyntaxException;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
 
@@ -59,7 +56,6 @@ import org.kaivos.röda.JSON.JSONMap;
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.RödaValue.*;
 import org.kaivos.röda.type.*;
-import static org.kaivos.röda.RödaStream.*;
 import static org.kaivos.röda.Interpreter.*;
 import static org.kaivos.röda.Parser.*;
 
@@ -553,7 +549,6 @@ class Builtins {
 					Charset chrset = StandardCharsets.UTF_8;
 					Consumer<RödaValue> convert = v -> {
 							checkString("strsize", v);
-							String s;
 							out.push(RödaNumber.of(v.str().getBytes(chrset).length));
 					};
 				        if (args.size() > 0) {
@@ -1053,7 +1048,11 @@ class Builtins {
 							      .of("Server.close",
 								  (ra, a, s, i, o) -> {
 									  checkArgs("Server.close", 0, a.size());
-									  
+									  try {
+										server.close();
+									} catch (Exception e) {
+										error(e);
+									}
 								  }, Collections.emptyList(), false));
 						out.push(serverObject);
 					} catch (IOException e) {
@@ -1112,7 +1111,7 @@ class Builtins {
 										  error("Thread has already "
 											+ "been executed");
 									  p.started = true;
-									  I.executor.execute(task);
+									  Interpreter.executor.execute(task);
 								  }, Collections.emptyList(), false));
 					threadObject.setField("pull",genericPull("Thread.pull", _out));
 					threadObject.setField("push",genericPush("Thread.push", _in));
@@ -1239,7 +1238,6 @@ class Builtins {
 						    }
 					    }
 					    else {
-						    boolean byteMode = false;
 						    Iterator<RödaValue> it = args.iterator();
 						    while (it.hasNext()) {
 							    RödaValue v = it.next();

@@ -20,7 +20,6 @@ import static java.util.stream.Collectors.joining;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
 
@@ -774,14 +773,14 @@ public class Interpreter {
 			switch (cmd.operator) {
 			case ":=": {
 				r = () -> {
-					boolean quoteMode = false;
-                                        if (args.size() > 0 && args.get(0).isFlag("-G")) {
-                                                args.remove(0);
-                                                if (e.type != Expression.Type.VARIABLE)
-                                                	error("bad lvalue for ':=': " + e.asString());
-						if (args.size() > 1) argumentOverflow(":=", 1, args.size());
+					if (args.size() > 0 && args.get(0).isFlag("-G")) {
+						args.remove(0);
+						if (e.type != Expression.Type.VARIABLE)
+							error("bad lvalue for ':=': " + e.asString());
+						if (args.size() > 1)
+							argumentOverflow(":=", 1, args.size());
 						G.setLocal(e.variable, args.get(0));
-                                        }
+                    }
 					else {
 						if (args.size() > 1) argumentOverflow(":=", 1, args.size());
 						assignLocal.accept(args.get(0));
