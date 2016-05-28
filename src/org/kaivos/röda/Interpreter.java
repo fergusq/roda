@@ -404,7 +404,7 @@ public class Interpreter {
 
 	public void interpretStatement(String code, String filename) {
 		try {
-			Statement statement = parseStatement(t.tokenize(code, filename), false);
+			Statement statement = parseStatementWithoutEnd(t.tokenize(code, filename));
 			evalStatement(statement, G, STDIN, STDOUT, false);
 		} catch (RödaException e) {
 			throw e;

@@ -196,7 +196,7 @@ class Builtins {
 						RödaValue input = in.pull();
 						if (input == null)
 							error("head: input stream is closed");
-						out.push(in.pull());
+						out.push(input);
 					}
 					else {
 						long num = args.get(0).num();
@@ -204,7 +204,7 @@ class Builtins {
 							RödaValue input = in.pull();
 							if (input == null)
 								error("head: input stream is closed");
-							out.push(in.pull());
+							out.push(input);
 						}
 					}
 				}, Arrays.asList(new Parameter("number", false, NUMBER)), true));
