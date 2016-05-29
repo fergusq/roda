@@ -19,7 +19,7 @@ public class RödaString extends RödaValue {
 		return text;
 	}
 
-	@Override public long num() {
+	@Override public long integer() {
 		try {
 			return Long.parseLong(text);
 		} catch (NumberFormatException e) {
@@ -29,12 +29,12 @@ public class RödaString extends RödaValue {
 	}
 
 	@Override public RödaValue length() {
-		return RödaNumber.of(text.length());
+		return RödaInteger.of(text.length());
 	}
 
 	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal) {
-		long start = startVal == null ? 0 : startVal.num();
-		long end = endVal == null ? text.length() : endVal.num();
+		long start = startVal == null ? 0 : startVal.integer();
+		long end = endVal == null ? text.length() : endVal.integer();
 		if (start < 0) start = text.length()+start;
 		if (end < 0) end = text.length()+end;
 		if (end == 0 && start > 0) end = text.length();
@@ -43,16 +43,8 @@ public class RödaString extends RödaValue {
 		return of(text.substring((int) start, (int) end));
 	}
 
-	@Override public boolean isString() {
-		return true;
-	}
-
-	@Override public boolean isNumber() {
-		return true;
-	}
-
 	@Override public boolean strongEq(RödaValue value) {
-		return value.isString() && value.str().equals(text);
+		return value.is(STRING) && value.str().equals(text);
 	}
 
 	public static RödaString of(String text) {

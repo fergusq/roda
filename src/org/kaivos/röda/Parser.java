@@ -814,7 +814,7 @@ public class Parser {
 		return arguments;
 	}
 	
-	static class Expression {
+	public static class Expression {
 		enum Type {
 			VARIABLE,
 			STRING,
@@ -838,7 +838,7 @@ public class Parser {
 			IS,
 			IN
 		}
-		enum CType {
+		public enum CType {
 			MUL,
 			DIV,
 			IDIV,
@@ -1214,18 +1214,20 @@ public class Parser {
 		library.increaseLevel();
 		library.add("..", (a, b) -> expressionConcat(a.file, a.line, a, b));
 		library.increaseLevel();
+		library.add("&", (a, b) -> expressionJoin(a.file, a.line, a, b));
+		library.increaseLevel();
 		library.add("<", op(Expression.CType.LT));
 		library.add(">", op(Expression.CType.GT));
 		library.add("<=", op(Expression.CType.LE));
 		library.add(">=", op(Expression.CType.GE));
 		library.add("in", (a, b) -> expressionIn(a.file, a.line, a, b));
 		library.increaseLevel();
-		library.add("&", op(Expression.CType.BAND));
-		library.add("|", op(Expression.CType.BOR));
-		library.add("^", op(Expression.CType.BXOR));
-		library.add("<<", op(Expression.CType.BLSHIFT));
-		library.add(">>", op(Expression.CType.BRSHIFT));
-		library.add(">>>", op(Expression.CType.BRRSHIFT));
+		library.add("b_and", op(Expression.CType.BAND));
+		library.add("b_or", op(Expression.CType.BOR));
+		library.add("b_xor", op(Expression.CType.BXOR));
+		library.add("b_shiftl", op(Expression.CType.BLSHIFT));
+		library.add("b_shiftr", op(Expression.CType.BRSHIFT));
+		library.add("b_shiftrr", op(Expression.CType.BRRSHIFT));
 		library.increaseLevel();
 		library.add("+", op(Expression.CType.ADD));
 		library.add("-", op(Expression.CType.SUB));
@@ -1327,6 +1329,10 @@ public class Parser {
 		else if (isNext(tl, "if", "while", "unless", "until", "for", "try")) {
 			Statement s = parseStatement(tl);
 			ans = expressionStatementSingle(file, line, s);
+		}
+		else if (acceptIfNext(tl, ":")) {
+			String flag = nextString(tl);
+			ans = expressionFlag(file, line, "-"+flag);
 		}
 		else {
 			String name = identifier(tl);

@@ -1,7 +1,6 @@
 package org.kaivos.röda.type;
 
 import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.Interpreter.error;
 
 public class RödaBoolean extends RödaValue {
 	private boolean bool;
@@ -23,12 +22,8 @@ public class RödaBoolean extends RödaValue {
 		return bool;
 	}
 
-	@Override public boolean isBoolean() {
-		return true;
-	}
-
 	@Override public boolean strongEq(RödaValue value) {
-		return value.isBoolean() && value.bool() == bool;
+		return value.is(BOOLEAN) && value.bool() == bool;
 	}
 
 	public static RödaBoolean of(boolean value) {

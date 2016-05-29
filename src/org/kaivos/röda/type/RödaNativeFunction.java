@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Parser.Parameter;
 import static org.kaivos.röda.Parser.Datatype;
@@ -42,16 +41,8 @@ public class RödaNativeFunction extends RödaValue {
 		return "<nfunction '"+function.name+"'>";
 	}
 
-	@Override public boolean isFunction() {
-		return true;
-	}
-
-	@Override public boolean isNativeFunction() {
-		return true;
-	}
-
 	@Override public boolean strongEq(RödaValue value) {
-		return value.isNativeFunction() && value.nfunction() == function;
+		return value.is(NFUNCTION) && value.nfunction() == function;
 	}
 
 	public static RödaNativeFunction of(NativeFunction function) {

@@ -72,15 +72,11 @@ public class RödaMap extends RödaValue {
 	}
 
 	@Override public RödaValue length() {
-		return RödaNumber.of(map.size());
-	}
-
-	@Override public boolean isMap() {
-		return true;
+		return RödaInteger.of(map.size());
 	}
 
 	@Override public boolean strongEq(RödaValue value) {
-		if (!value.isMap()) return false;
+		if (!value.is(MAP)) return false;
 		if (map.size() != value.map().size()) return false;
 		boolean ans = true;
 		for (int i = 0; i < map.size(); i++)

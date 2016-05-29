@@ -1,7 +1,6 @@
 package org.kaivos.röda.type;
 
 import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Parser.Function;
 
@@ -37,12 +36,8 @@ public class RödaFunction extends RödaValue {
 		return localScope;
 	}
 
-	@Override public boolean isFunction() {
-		return true;
-	}
-
 	@Override public boolean strongEq(RödaValue value) {
-		return value.isFunction() && !value.isNativeFunction() && value.function() == function;
+		return value.is(FUNCTION) && !value.is(NFUNCTION) && value.function() == function;
 	}
 
 	public static RödaFunction of(Function function) {

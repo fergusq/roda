@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 
+import org.kaivos.röda.type.RödaBoolean;
+
 import static org.kaivos.röda.type.RödaNativeFunction.NativeFunction;
 import static org.kaivos.röda.Parser.Function;
 import static org.kaivos.röda.Parser.Datatype;
@@ -20,6 +22,7 @@ public abstract class RödaValue {
 	public static final Datatype MAP = new Datatype("map");
 	public static final Datatype FUNCTION = new Datatype("function");
 	public static final Datatype NFUNCTION = new Datatype("nfunction");
+	public static final Datatype REFERENCE = new Datatype("reference");
 
 	protected RödaValue() {} // käytä apufunktioita
 	
@@ -41,7 +44,7 @@ public abstract class RödaValue {
 		return true;
 	}
 	
-	public long num() {
+	public long integer() {
 		error("can't convert '" + str() + "' to a number");
 		return -1;
 	}
@@ -72,7 +75,7 @@ public abstract class RödaValue {
 	}
 
 	public void set(RödaValue index, RödaValue value) {
-		if (!isList()) error("a " + typeString() + " doesn't have elements");
+		error("a " + typeString() + " doesn't have elements");
 	}
 
 	public RödaValue contains(RödaValue index) {
@@ -101,11 +104,11 @@ public abstract class RödaValue {
 	}
 
 	public void add(RödaValue value) {
-	        error("can't add values to a " + typeString());
+		error("can't add values to a " + typeString());
 	}
 
 	public void addAll(List<RödaValue> value) {
-	        error("can't add values to a " + typeString());
+		error("can't add values to a " + typeString());
 	}
 
 	public void setField(String field, RödaValue value) {
@@ -121,14 +124,14 @@ public abstract class RödaValue {
 		error("a " + typeString() + " doesn't have fields");
 		return null;
 	}
-	
+
 	public RödaValue resolve(boolean implicite) {
-	        error("can't dereference a " + typeString());
+		error("can't dereference a " + typeString());
 		return null;
 	}
-	
+
 	public RödaValue unsafeResolve() {
-	        error("can't dereference a " + typeString());
+		error("can't dereference a " + typeString());
 		return null;
 	}
 
@@ -142,6 +145,22 @@ public abstract class RödaValue {
 	
 	public void assignLocal(RödaValue value) {
 		error("can't assign a " + typeString());
+	}
+	
+	public RödaValue callOperator(Parser.Expression.CType operator, RödaValue value) {
+		switch (operator) {
+		case EQ:
+			return RödaBoolean.of(this.halfEq(value));
+		case NEQ:
+			return RödaBoolean.of(!this.halfEq(value));
+		case MATCHES:
+			if (!this.is(STRING)) error("tried to MATCH a " + this.typeString());
+			if (!value.is(STRING)) error("tried to MATCH a " + value.typeString());
+			return RödaBoolean.of(this.str().matches(value.str()));
+		default:
+			error("can't " + operator.name() + " a " + basicIdentity() + " and a " + value.basicIdentity());
+			return null;
+		}
 	}
 
 	private List<Datatype> identities = new ArrayList<>();
@@ -180,8 +199,8 @@ public abstract class RödaValue {
 
 	/** Viittauksien vertaileminen kielletty **/
 	boolean halfEq(RödaValue value) {
-		if (isString() && value.isNumber()
-		    || isNumber() && value.isString()) {
+		if (is(STRING) && value.is(NUMBER)
+		    || is(NUMBER) && value.is(STRING)) {
 			return weakEq(value);
 		}
 		else return strongEq(value);
@@ -192,48 +211,8 @@ public abstract class RödaValue {
 	        return false;
 	}
 	
-	public boolean isFunction() {
-		return false;
-	}
-	
-	public boolean isNativeFunction() {
-		return false;
-	}
-	
-	public boolean isList() {
-		return false;
-	}
-	
-	public boolean isMap() {
-		return false;
-	}
-
-	public boolean isRecordInstance() {
-		return false;
-	}
-
-	public boolean isNumber() {
-		return false;
-	}
-	
-	public boolean isString() {
-		return false;
-	}
-	
-	public boolean isFlag() {
-		return false;
-	}
-	
-	public boolean isFlag(String flag) {
-		return false;
-	}
-
-	public boolean isBoolean() {
-		return false;
-	}
-	
-	public boolean isReference() {
-		return false;
+	public final boolean isFlag(String value) {
+		return is(FLAG) && str().equals(value);
 	}
 
 	public final String typeString() {

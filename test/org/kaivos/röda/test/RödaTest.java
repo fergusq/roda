@@ -195,13 +195,6 @@ public class RödaTest {
 	}
 
 	@Test
-	public void testWhilePullPushFunction() {
-		assertEquals("auto,auto,talo,talo",
-			     eval("duplicate{while pull -r a;do push a;push a;done}"
-				  + "main{push\"auto\"\"talo\"|duplicate;}"));
-	}
-
-	@Test
 	public void testVarargsFunction() {
 		assertEquals("got abba,got tuuli,got joki",
 			     eval("give words...{for word in words;do push\"got \"..word;done}"
@@ -477,7 +470,7 @@ public class RödaTest {
 	@Test
 	public void testListJoin() {
 		assertEquals("Annamari_Reetta_Vilma_Susanna",
-			     eval("main{push [\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"]&\"_\"}"));
+			     eval("main{push([\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"]&\"_\")}"));
 		init();
 		assertEquals("Annamari ja Reetta ja Vilma ja Susanna",
 			     eval("main{a:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];push a&\" ja \"}"));
@@ -486,13 +479,13 @@ public class RödaTest {
 	@Test
 	public void testListJoinEmpty() {
 		assertEquals("",
-			     eval("main{push []&\"_\"}"));
+			     eval("main{push([]&\"_\")}"));
 	}
 
 	@Test
 	public void testListJoinSingle() {
 		assertEquals("Jaana",
-			     eval("main{push [\"Jaana\"]&\"_\"}"));
+			     eval("main{push([\"Jaana\"]&\"_\")}"));
 	}
 
 	@Test
@@ -550,7 +543,7 @@ public class RödaTest {
 	@Test
 	public void testSplit() {
 		assertEquals("[sanna, ja, teemu, jokela]",
-			     eval("main{push([split(-s \"-\" \"sanna-ja-teemu-jokela\")])}"));
+			     eval("main{push([split(:s, \"-\", \"sanna-ja-teemu-jokela\")])}"));
 	}
 
 	// Nimettömät funktiot
