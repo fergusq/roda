@@ -46,7 +46,6 @@ public class Parser {
 		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
-		.addStringRule("[[", "]]", (char) 0)
 		.addStringRule('"','"','\\')
 		.addEscapeCode('\\', "\\")
 		.addEscapeCode('n', "\n")
@@ -303,7 +302,7 @@ public class Parser {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
 			String name = "@" + identifier(tl);
-			List<Argument> arguments = parseArguments(tl);
+			List<Argument> arguments = parseArguments(tl, false);
 			annotations.add(new Annotation(file, line, name, arguments));
 		}
 		return annotations;
@@ -764,7 +763,7 @@ public class Parser {
 		}
 
 		if (acceptIfNext(tl, "return")) {
-			List<Argument> arguments = parseArguments(tl);
+			List<Argument> arguments = parseArguments(tl, false);
 			return _makeReturnCommand(file, line, arguments);
 		}
 
@@ -791,10 +790,10 @@ public class Parser {
 		List<Argument> arguments;
 		
 		if (acceptIfNext(tl, "(")) {
-			arguments = parseArguments(tl);
+			arguments = parseArguments(tl, true);
 			accept(tl, ")");
 		}
-		else arguments = parseArguments(tl);
+		else arguments = parseArguments(tl, false);
 		
 		if (operator == null)
 			return _makeNormalCommand(file, line, name, typeargs, arguments);
@@ -802,9 +801,9 @@ public class Parser {
 			return _makeVariableCommand(file, line, name, operator, arguments);
 	}
 
-	private static List<Argument> parseArguments(TokenList tl) {
+	private static List<Argument> parseArguments(TokenList tl, boolean allowNewlines) {
 		List<Argument> arguments = new ArrayList<>();
-		while (!isNext(tl, "|", ")", "}", "in", "do", "done", "<EOF>")) {
+		while ((allowNewlines || !tl.isNext(";", "\n")) && !isNext(tl, "|", ")", "}", "in", "do", "done", "<EOF>")) {
 			boolean flattened = acceptIfNext(tl, "*");
 			arguments.add(_makeArgument(flattened,
 						    parseExpression(tl)));
@@ -1171,7 +1170,7 @@ public class Parser {
 			}
 			else if (allowCalls && acceptIfNext(tl, "(")) {
 				List<Command> commands = new ArrayList<>();
-				commands.add(_makeNormalCommand(file, line, ans, Collections.emptyList(), parseArguments(tl)));
+				commands.add(_makeNormalCommand(file, line, ans, Collections.emptyList(), parseArguments(tl, true)));
 				accept(tl, ")");
 				while (acceptIfNext(tl, "|")) {
 					commands.add(parseCommand(tl));
@@ -1301,7 +1300,10 @@ public class Parser {
 				if (!isNext(tl, "]")) accept(tl, ",");
 			}
 			accept(tl, "]");
-			ans = expressionList(file, line, list);
+			if (list.size() == 1 && list.get(0).type == Expression.Type.STATEMENT_SINGLE) {
+				ans = expressionStatementList(file, line, list.get(0).statement);
+			}
+			else ans = expressionList(file, line, list);
 		}
 		else if (acceptIfNext(tl, "-")) {
 			return expressionCalculatorUnary(file, line, Expression.CType.NEG,

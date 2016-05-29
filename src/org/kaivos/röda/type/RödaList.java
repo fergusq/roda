@@ -45,7 +45,7 @@ public class RödaList extends RödaValue {
 	}
 
 	@Override public String str() {
-		return "(" + list.stream().map(RödaValue::str).collect(joining(" ")) + ")";
+		return "[" + list.stream().map(RödaValue::str).collect(joining(", ")) + "]";
 	}
 
 	@Override public List<RödaValue> list() {
