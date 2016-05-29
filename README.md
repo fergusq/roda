@@ -23,8 +23,8 @@ Prime generator:
 #!/usr/bin/röda
 
 main {
-	primes := (2)
-	seq 3 10000 | { primes += i if [ i % p != 0 ] for p in primes } for i
+	primes := [2]
+	seq 3, 10000 | { primes += i if [ i % p != 0 ] for p in primes } for i
 	print p for p in primes
 }
 ```
@@ -36,10 +36,10 @@ HTTP server:
 
 main {
 	import "http_server.röd"
-	server := ![http_server 8080]
-	server.controllers["/"] = ![controller { |request|
-		request.send "200 OK" "<html><head><title>Hello world!</title></head><body>Hello world!</body></html>"
-	}]
+	server := http_server(8080)
+	server.controllers["/"] = controller({ |request|
+		request.send "200 OK", "<html><head><title>Hello world!</title></head><body>Hello world!</body></html>"
+	})
 	while true; do
 		server.update
 	done

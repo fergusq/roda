@@ -511,19 +511,6 @@ done
 Operaattorit taulukossa (tunniste tarkoittaa joko lukua tai merkkijonoa riippuen siitä, onko kyseessä lista
 vai kartta):
 
-| Operaattori | Selitys                     | Ottaa                             | Palauttaa              |
-|:-----------:| --------------------------- | --------------------------------- | ---------------------- |
-
-Laskujärjestys:
-
-| Sija | Operaattorit             |
-|:----:| ------------------------ |
-| 1.   | `[]`, `[:]`, `[]?`, `is` |
-| 2.   | `#`                      |
-| 3.   | `&`                      |
-| 4.   | `..`                     |
-| 5.   | `in`                     |
-
 
 | Operaattori | Selitys                     | Ottaa             | Palauttaa     |
 |:-----------:| --------------------------- | ----------------- | ------------- |
@@ -540,22 +527,23 @@ Laskujärjestys:
 | `^^`        | Looginen JOKO-TAI           | 2 totuusarvoa     | Totuusarvon   |
 | `=`         | Yhtäsuuruus                 | Mitä tahansa      | Totuusarvon   |
 | `!=`        | Erisuuruus                  | Mitä tahansa      | Totuusarvon   |
-| `<`         | Pienempi kuin               | 2 kokonaislukua   | Totuusarvon   |
-| `>`         | Suurempi kuin               | 2 kokonaislukua   | Totuusarvon   |
-| `<=`        | Pienempi tai yhtäsuuri kuin | 2 kokonaislukua   | Totuusarvon   |
-| `>=`        | Suurempi tai yhtäsuuri kuin | 2 kokonaislukua   | Totuusarvon   |
+| `<`         | Pienempi kuin               | 2 lukua           | Totuusarvon   |
+| `>`         | Suurempi kuin               | 2 lukua           | Totuusarvon   |
+| `<=`        | Pienempi tai yhtäsuuri kuin | 2 lukua           | Totuusarvon   |
+| `>=`        | Suurempi tai yhtäsuuri kuin | 2 lukua           | Totuusarvon   |
 | `b_and`     | Bittitason JA               | 2 kokonaislukua   | Kokonaisluvun |
 | `b_or`      | Bittitason TAI              | 2 kokonaislukua   | Kokonaisluvun |
 | `b_xor`     | Bittitason JOKO-TAI         | 2 kokonaislukua   | Kokonaisluvun |
 | `b_shiftl`  | Bittitason vasen siirto     | 2 kokonaislukua   | Kokonaisluvun |
 | `b_shiftr`  | Bittitason oikea siirto     | 2 kokonaislukua   | Kokonaisluvun |
 | `b_shiftrr` | Bittitason etumerkitön oikea siirto | 2 kokonaislukua | Kokonaisluvun |
-| `+`         | Yhteenlasku                 | 2 kokonaislukua   | Kokonaisluvun |
-| `-`         | Vähennyslasku               | 2 kokonaislukua   | Kokonaisluvun |
-| `*`         | Kertolasku                  | 2 kokonaislukua   | Kokonaisluvun |
-| `//`        | Jakolasku                   | 2 kokonaislukua   | Kokonaisluvun |
+| `+`         | Yhteenlasku                 | 2 lukua           | Luvun         |
+| `-`         | Vähennyslasku               | 2 lukua           | Luvun         |
+| `*`         | Kertolasku                  | 2 lukua           | Luvun         |
+| `/`         | Jakolasku                   | 2 lukua           | Liukuluvun    |
+| `//`        | Pyöristävä jakolasku        | 2 lukua           | Kokonaisluvun |
 | `%`         | Jakojäännös                 | 2 kokonaislukua   | Kokonaisluvun |
-| Unäärinen `-` | Vastaluku                 | Kokonaisluvun     | Kokonaisluvun |
+| Unäärinen `-` | Vastaluku                 | Luvun             | Luvun         |
 | Unäärinen `b_not` | Bittitason EI         | Kokonaisluvun     | Kokonaisluvun |
 | Unäärinen `not` | Looginen EI             | Totuusarvon       | Totuusarvon   |
 
@@ -660,7 +648,7 @@ reflect R.fields /* palauttaa listan, jossa on kaksi field oliota, yksi a:lle ja
 ## Esimerkkejä
 
 ```sh
-push env["PATH"] | split :s, ":" | exec :I, :l, "ls", dir for dir | create_global komento { |a...|; exec komento *a } for komento
+push env["PATH"] | split :s, ":" | exec :I, :l, "ls", dir for dir | create_global komento, { |a...|; exec komento, *a } for komento
 ```
 
 Etsii kaikki komentorivikomennot ja tekee jokaisesta funktion. Tämän jälkeen komentoja voi käyttää suoraan ilman
