@@ -441,19 +441,16 @@ public class Parser {
 		}
 	}
 
-	static Parameter parseParameter(TokenList tl) {
-		boolean reference = false, strong = false;
+	static Parameter parseParameter(TokenList tl, boolean allowTypes) {
+		boolean reference = false;
 		if (acceptIfNext(tl, "&")) {
 			reference = true;
-		} else if (acceptIfNext(tl, "(")) {
-			strong = true;
 		}
 		String name = nextString(tl);
 		Datatype type = null;
-		if (strong) {
+		if (!reference && allowTypes && isNext(tl, ":")) {
 			accept(tl, ":");
 			type = parseType(tl);
-			accept(tl, ")");
 		}
 		return new Parameter(name, reference, type);
 	}
@@ -467,12 +464,17 @@ public class Parser {
 
 		List<Parameter> parameters = new ArrayList<>();
 		boolean isVarargs = false;
-		while (!isNext(tl, ":") && !isNext(tl, "{")) {
-			parameters.add(parseParameter(tl));
+		boolean parentheses = acceptIfNext(tl, "(");
+		while (!isNext(tl, ":") && !isNext(tl, "{") && !isNext(tl, ")")) {
+			parameters.add(parseParameter(tl, parentheses));
 			if (!isVarargs && acceptIfNext(tl, "...")) {
 				isVarargs = true;
 			}
+			if (!isNext(tl, ":") && !isNext(tl, "{") && !isNext(tl, ")")) {
+				accept(tl, ",");
+			}
 		}
+		if (parentheses) accept(tl, ")");
 
 		List<Statement> body = parseBody(tl);
 
@@ -1269,7 +1271,7 @@ public class Parser {
 			if (isNext(tl, "|")) {
 				accept(tl, "|");
 				while (!isNext(tl, "|")) {
-					parameters.add(parseParameter(tl));
+					parameters.add(parseParameter(tl, true));
 					if (isNext(tl, "...")) {
 						accept(tl, "...");
 						isVarargs = true;

@@ -1,6 +1,6 @@
 /* hakee kuvan netistä */
 hae_kuva sana tiedosto {
-	sana ~= " " "+"
+	sana ~= " ", "+"
 	
 	/* asetukset */
 	user_agent := "Links (2.7; Linux 3.5.0-17-generic x86_64; GNU C 4.7.1; text)"
@@ -8,14 +8,14 @@ hae_kuva sana tiedosto {
 	etsitty_url := "http://t[0-9]\\.gstatic.com/images\\?q=tbn:[a-zA-Z0-9_-]*"
 	
 	/* haetaan lista kuvista */
-	kuvat := !(wcat -U user_agent hakukone | search etsitty_url)
+	kuvat := [wcat(-U, user_agent, hakukone) | search(etsitty_url)]
 	
 	/* jos kuvia löytyi... */
-	if test #kuvat -gt 0; do
+	if [ #kuvat > 0 ]; do
 		/* valitaan ensimmäinen kuva */
 		kuva := kuvat[0]
 		
 		/* ladataan kuva */
-		wcat -O tiedosto kuva	
+		wcat -O, tiedosto, kuva	
 	done
 }

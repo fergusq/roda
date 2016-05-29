@@ -2,75 +2,75 @@ record TelegramBot {
 	token : string
 	offset : number = 0
 	thread : Thread
-	running : boolean = ![true]
-	on_message : function = {|chat message|;}
+	running : boolean = true()
+	on_message : function = {|chat, message|;}
 	
 	function start {
-		self.thread = ![thread {
+		self.thread = thread({
 			while push self.running; do
 				try self.update
 			done
-		}]
+		})
 		self.thread.start
 	}
 	
 	function stop {
-		self.running = ![false]
+		self.running = false()
 	}
 	
 	function update {
 		base_url := "https://api.telegram.org/bot"..self.token
 		update_url = base_url.."/getUpdates?offset="
 		
-		code := !(wcat update_url..self.offset)&" "
-		tree := ![json code]
-		json_search tree ("result" { |updates|
+		code := [wcat(update_url..self.offset)]&" "
+		tree := json(code)
+		json_search tree, ["result", { |updates|
 			for update in updates[1]; do
 				chat_id := 0
 				msg_text := ""
-				json_search update ("update_id" { |id|
-					if test self.offset -le id[1]; do
-						self.offset = $(id[1]+1)
+				json_search update, ["update_id", { |id|
+					if [ self.offset <= id[1] ]; do
+						self.offset = id[1]+1
 					done
-				}) ("message" { |message|
-					json_search message ("chat" { |chat|
-						json_search chat ("id" { |id|
+				}], ["message", { |message|
+					json_search message, ["chat", { |chat|
+						json_search chat ["id", { |id|
 							chat_id = id[1]
-						})
-					}) ("text" { |text|
+						}]
+					}] ["text", { |text|
 						msg_text = text[1]
-					}) ("caption" { |caption|
+					}] ["caption", { |caption|
 						msg_text = caption[1]
-					})
-				})
-				self.on_message chat_id msg_text
+					}]
+				}]
+				self.on_message chat_id, msg_text
 			done
-		})
+		}]
 	}
 	
-	function send_message chat message args... {
+	function send_message chat, message, args... {
 		base_url := "https://api.telegram.org/bot"..self.token
 		message_url = base_url.."/sendMessage"
-		{} | exec "curl" --silent message_url -F "chat_id="..chat -F "text="..message *args | {}
+		{} | exec "curl", "--silent", message_url, "-F", "chat_id="..chat, "-F", "text="..message, *args | {}
 	}
 	
-	function send_photo chat file args... {
+	function send_photo chat, file, args... {
 		base_url := "https://api.telegram.org/bot"..self.token
 		photo_url = base_url.."/sendPhoto"
-		{} | exec "curl" --silent photo_url -F "chat_id="..chat -F "photo=@"..file *args | {}
+		{} | exec "curl", "--silent", photo_url, "-F", "chat_id="..chat, "-F", "photo=@"..file, *args | {}
 	}
 	
-	function send_action chat action {
+	function send_action chat, action {
 		base_url := "https://api.telegram.org/bot"..self.token
 		action_url = base_url.."/sendChatAction"
-		{} | exec "curl" --silent action_url -F "chat_id="..chat -F "action="..action | {}
+		{} | exec "curl", "--silent", action_url, "-F", "chat_id="..chat, "-F", "action="..action | {}
 	}
 }
 
-json_search tree queries... {
+json_search tree, queries... {
 	for node in tree[1]; do
 		for query in queries; do
-			if test node[0] -eq query[0]; do
+			if [ node[0] = query[0] ]; do
 				query[1] node[1]
 			done
 		done

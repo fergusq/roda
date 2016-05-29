@@ -191,7 +191,7 @@ public class RödaTest {
 	@Test
 	public void testSimplePullPushFunction() {
 		assertEquals("auto,auto",
-			     eval("duplicate{pull a;push a;push a;}main{push\"auto\"|duplicate;}"));
+			     eval("duplicate{pull a;push a;push a;}main{push(\"auto\")|duplicate;}"));
 	}
 
 	@Test
@@ -223,13 +223,13 @@ public class RödaTest {
 	@Test
 	public void testParameterTypeChecking() {
 		assertEquals("4451,[1, 2, 3],Lilli,Meri",
-			     eval("give (a : number) (b : list) (c : string)...{return a, b, *c}"
+			     eval("give (a : number, b : list, c : string...) {return a, b, *c}"
 				  + "main{give 4451, [1, 2, 3], \"Lilli\", \"Meri\"}"));
 	}
 
 	@Test(expected=RödaException.class)
 	public void testParameterTypeCheckingWithWrongTypes() {
-		eval("give (a : number) (b : list) (c : string)...{return a, b, *c}"
+		eval("give (a : number, b : list, c : string...){return a, b, *c}"
 		     + "main{give \"aasi\", new map, 11111, []}");
 	}
 
@@ -550,7 +550,7 @@ public class RödaTest {
 	@Test
 	public void testSplit() {
 		assertEquals("[sanna, ja, teemu, jokela]",
-			     eval("main{push [split(-s \"-\" \"sanna-ja-teemu-jokela\")]}"));
+			     eval("main{push([split(-s \"-\" \"sanna-ja-teemu-jokela\")])}"));
 	}
 
 	// Nimettömät funktiot
@@ -581,7 +581,7 @@ public class RödaTest {
 
 	@Test
 	public void testArguments() {
-		interpreter.interpret("main a b{push b, a}",
+		interpreter.interpret("main a, b{push b, a}",
 				      Arrays.asList(RödaString.of("Anne"),
 						    RödaString.of("Sanna")),
 				      "<test>");
@@ -590,7 +590,7 @@ public class RödaTest {
 
 	@Test
 	public void testArgumentsFlatten() {
-		assertEquals("Anu,Riina", eval("f a b{push b, a}main{A:=[\"Riina\", \"Anu\"];f*A}"));
+		assertEquals("Anu,Riina", eval("f a, b{push b, a}main{A:=[\"Riina\", \"Anu\"];f*A}"));
 	}
 
 	@Test

@@ -1,12 +1,12 @@
-hae_kuva_ja_tee_koodi sana mones montako {
-	hae_kuva sana mones
-	x_koordinaatti := $(mones*500//montako)
-	leveys := $(500//montako)
+hae_kuva_ja_tee_koodi sana, mones, montako {
+	hae_kuva sana, mones
+	x_koordinaatti := mones*500//montako
+	leveys := 500//montako
 	push "<image xlink:href='"..mones.."' preserveAspectRatio='none' x='"..x_koordinaatti.."' y='50' width='"..leveys.."' height='150' style='opacity:0.4;'/>"
 }
 
 /* tekee svg-kuvan */
-tee_pilakuva nettikuvat ylä ala tiedosto {
+tee_pilakuva nettikuvat, ylä, ala, tiedosto {
 	push "<?xml version='1.0' encoding='UTF-8'?>
 	<svg
 	xmlns='http://www.w3.org/2000/svg'
@@ -18,19 +18,19 @@ tee_pilakuva nettikuvat ylä ala tiedosto {
 	<text x='50%' y='14%'>"..ylä.."</text>
 	<text x='50%' y='98%'>"..ala.."</text>
 	</svg>" | write "kuha.svg"
-	{} | exec "rsvg-convert" -o tiedosto "kuha.svg"
+	{} | exec "rsvg-convert", "-o", tiedosto, "kuha.svg"
 }
 
 /* ohjaa kuvan luomista: käsittelee viestin, lataa kuvat, tekee kuhakuvan ja lähettää sen */
 käsittele_kuhaviesti botti ketju viesti {
 	/* esikäsitellään viesti */
-	viesti ~= "kunhan" "kuha" "Kunhan" "Kuha" "&" "&amp;" "<" "&lt;"
+	viesti ~= "kunhan", "kuha", "Kunhan", "Kuha", "&", "&amp;", "<", "&lt;"
 
-	push "käsitellään viesti '" viesti "'\n"
-	botti.send_action ketju "upload_photo"
+	push "käsitellään viesti '", viesti, "'\n"
+	botti.send_action ketju, "upload_photo"
 
 	/* jaetaan viesti sanoihin */
-	sanat := !(split viesti)
+	sanat := [split(viesti)]
 	montako := #sanat
 
 	/* erillinen lista niistä sanoista, joista otetaan kuvia, oletuksena kaikki sanat */
@@ -38,13 +38,13 @@ käsittele_kuhaviesti botti ketju viesti {
 	kuvamontako := montako
 
 	/* jos kuvia tulisi liikaa, valitaan satunnaisesti vain osa */
-	if test kuvamontako -gt 10; do
-		kuvasanat = ()
+	if [ kuvamontako > 10 ]; do
+		kuvasanat = []
 		kuvamontako = 5
 
 		/* hypitään satunnaisesti joidenkin kuvien yli */
 		i := 0
-		while test #kuvasanat -lt 5; do
+		while [ #kuvasanat < 5 ]; do
 			kuvasanat += sanat[i]
 			i ++
 			if random; do
@@ -57,16 +57,16 @@ käsittele_kuhaviesti botti ketju viesti {
 	nettikuvat := ""
 	laskuri := 0
 	for sana in kuvasanat; do
-		nettikuvat .= !(hae_kuva_ja_tee_koodi sana laskuri kuvamontako)&" "
+		nettikuvat .= [hae_kuva_ja_tee_koodi(sana, laskuri, kuvamontako)]&" "
 		laskuri ++
 	done
 
 	/* jaetaan sanat kahtia ja tehdään kuva */
-	puoliväli := $(montako//2)
-	tee_pilakuva nettikuvat sanat[:puoliväli]&" " sanat[puoliväli:]&" " "kuhaonmeemi.png"
+	puoliväli := montako//2
+	tee_pilakuva nettikuvat, sanat[:puoliväli]&" ", sanat[puoliväli:]&" ", "kuhaonmeemi.png"
 
 	/* lähetetään kuva ketjuun */
-	botti.send_photo ketju "kuhaonmeemi.png"
+	botti.send_photo ketju, "kuhaonmeemi.png"
 }
 
 {
@@ -76,16 +76,20 @@ käsittele_kuhaviesti botti ketju viesti {
 /* pääfunktio */
 main {
 	import "telegram.röd"
-	token := !(cat "token.txt")[0]
-	bot := ![tg_init token]
-	bot.on_message = { |ketju teksti|
-		if test teksti -matches ".*\\b[Kk][Uu][Hh][Aa].*"; do
-			käsittele_kuhaviesti bot ketju teksti
+	token := [cat("token.txt")][0]
+	bot := tg_init(token)
+	bot.on_message = { |ketju, teksti|
+		if [ teksti =~ ".*\\b[Kk][Uu][Hh][Aa].*" ]; do
+			käsittele_kuhaviesti bot, ketju, teksti
 		done
 	}
 	print "Started."
 	while true; do
-		try do bot.update; catch e; print "VIRHE: "..e.message; done
+		try do
+			bot.update
+		catch e
+			print "VIRHE: "..e.message
+		done
 	done
 }
 
