@@ -16,6 +16,8 @@ public abstract class RödaValue {
 
 	public static final Datatype STRING = new Datatype("string");
 	public static final Datatype NUMBER = new Datatype("number");
+	public static final Datatype INTEGER = new Datatype("integer");
+	public static final Datatype FLOATING = new Datatype("floating");
 	public static final Datatype BOOLEAN = new Datatype("boolean");
 	public static final Datatype FLAG = new Datatype("flag");
 	public static final Datatype LIST = new Datatype("list");
@@ -45,7 +47,12 @@ public abstract class RödaValue {
 	}
 	
 	public long integer() {
-		error("can't convert '" + str() + "' to a number");
+		error("can't convert '" + str() + "' to an integer");
+		return -1;
+	}
+	
+	public double floating() {
+		error("can't convert '" + str() + "' to a float");
 		return -1;
 	}
 
@@ -199,8 +206,8 @@ public abstract class RödaValue {
 
 	/** Viittauksien vertaileminen kielletty **/
 	boolean halfEq(RödaValue value) {
-		if (is(STRING) && value.is(NUMBER)
-		    || is(NUMBER) && value.is(STRING)) {
+		if (is(STRING) && value.is(INTEGER)
+		    || is(INTEGER) && value.is(STRING)) {
 			return weakEq(value);
 		}
 		else return strongEq(value);

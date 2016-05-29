@@ -41,6 +41,7 @@ import org.kaivos.röda.type.RödaMap;
 import org.kaivos.röda.type.RödaString;
 import org.kaivos.röda.type.RödaFlag;
 import org.kaivos.röda.type.RödaInteger;
+import org.kaivos.röda.type.RödaFloating;
 import org.kaivos.röda.type.RödaBoolean;
 import org.kaivos.röda.type.RödaFunction;
 import org.kaivos.röda.type.RödaNativeFunction;
@@ -456,7 +457,7 @@ public class Interpreter {
 	}
 	
 	static void checkListOrNumber(String function, RödaValue arg) {
-	        if (!arg.is(LIST) && !arg.is(NUMBER)) {
+	        if (!arg.is(LIST) && !arg.is(INTEGER)) {
 			error("illegal argument for '" + function
 			      + "': list or number expected (got " + arg.typeString() + ")");
 		}
@@ -477,7 +478,7 @@ public class Interpreter {
 	}
 
 	static void checkNumber(String function, RödaValue arg) {
-	        if (!arg.is(NUMBER)) {
+	        if (!arg.is(INTEGER)) {
 			error("illegal argument for '" + function
 			      + "': number expected (got " + arg.typeString() + ")");
 		}
@@ -1104,7 +1105,8 @@ public class Interpreter {
 							     boolean variablesAreReferences) {
 		if (exp.type == Expression.Type.STRING) return RödaString.of(exp.string);
 		if (exp.type == Expression.Type.FLAG) return RödaFlag.of(exp.string);
-		if (exp.type == Expression.Type.NUMBER) return RödaInteger.of(exp.number);
+		if (exp.type == Expression.Type.INTEGER) return RödaInteger.of(exp.integer);
+		if (exp.type == Expression.Type.FLOATING) return RödaFloating.of(exp.floating);
 		if (exp.type == Expression.Type.BLOCK) return RödaFunction.of(exp.block, scope);
 		if (exp.type == Expression.Type.LIST) return RödaList.of(exp.list
 									 .stream()
@@ -1228,10 +1230,10 @@ public class Interpreter {
 					if (!sub.is(BOOLEAN)) error("tried to NOT a " + sub.typeString());
 					return RödaBoolean.of(!sub.bool());
 				case NEG:
-					if (!sub.is(NUMBER)) error("tried to NEG a " + sub.typeString());
+					if (!sub.is(INTEGER)) error("tried to NEG a " + sub.typeString());
 					return RödaInteger.of(-sub.integer());
 				case BNOT:
-					if (!sub.is(NUMBER)) error("tried to BNOT a " + sub.typeString());
+					if (!sub.is(INTEGER)) error("tried to BNOT a " + sub.typeString());
 					return RödaInteger.of(~sub.integer());
 				}
 			}

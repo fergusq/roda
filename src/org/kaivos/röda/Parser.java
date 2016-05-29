@@ -19,6 +19,9 @@ import org.kaivos.nept.parser.OperatorPrecedenceParser;
 import org.kaivos.nept.parser.ParsingException;
 
 public class Parser {
+
+	private static final String NUMBER_REGEX = "-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE](\\+|-)?[0-9]+)";
+	
 	public static final TokenScanner t = new TokenScanner()
 		.addOperatorRule("...")
 		.addOperatorRule("..")
@@ -42,7 +45,7 @@ public class Parser {
 		.addOperatorRule("<<")
 		.addOperatorRule(">>>")
 		.addOperatorRule(">>")
-		.addPatternRule(Pattern.compile("--(?!\\p{L})"))
+		.addPatternRule(Pattern.compile(NUMBER_REGEX))
 		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
@@ -819,7 +822,8 @@ public class Parser {
 			VARIABLE,
 			STRING,
 			FLAG,
-			NUMBER,
+			INTEGER,
+			FLOATING,
 			STATEMENT_LIST,
 			STATEMENT_SINGLE,
 			BLOCK,
@@ -871,7 +875,8 @@ public class Parser {
 		boolean isUnary;
 		String variable;
 		String string;
-		int number;
+		int integer;
+		double floating;
 		Statement statement;
 		Function block;
 		List<Expression> list;
@@ -890,8 +895,8 @@ public class Parser {
 				return "\"" + string.replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
 			case FLAG:
 				return string;
-			case NUMBER:
-				return String.valueOf(number);
+			case INTEGER:
+				return String.valueOf(integer);
 			case SLICE: {
 				String i1 = index1 == null ? "" : index1.asString();
 				String i2 = index2 == null ? "" : index2.asString();
@@ -962,10 +967,19 @@ public class Parser {
 
 	private static Expression expressionInt(String file, int line, int d) {
 		Expression e = new Expression();
-		e.type = Expression.Type.NUMBER;
+		e.type = Expression.Type.INTEGER;
 		e.file = file;
 		e.line = line;
-		e.number = d;
+		e.integer = d;
+		return e;
+	}
+
+	private static Expression expressionFloat(String file, int line, double d) {
+		Expression e = new Expression();
+		e.type = Expression.Type.FLOATING;
+		e.file = file;
+		e.line = line;
+		e.floating = d;
 		return e;
 	}
 
@@ -1297,6 +1311,9 @@ public class Parser {
 		else if (seekString(tl).matches("[0-9]+")) {
 			ans = expressionInt(file, line, Integer.parseInt(nextString(tl)));
 		}
+		else if (seekString(tl).matches(NUMBER_REGEX)) {
+			ans = expressionFloat(file, line, Double.parseDouble(nextString(tl)));
+		}
 		else if (acceptIfNext(tl, "[")) {
 			List<Expression> list = new ArrayList<>();
 			while (!isNext(tl, "]")) {
@@ -1313,7 +1330,7 @@ public class Parser {
 			return expressionCalculatorUnary(file, line, Expression.CType.NEG,
 							 parseExpressionPrimary(tl, true));
 		}
-		else if (acceptIfNext(tl, "~")) {
+		else if (acceptIfNext(tl, "b_not")) {
 			return expressionCalculatorUnary(file, line, Expression.CType.BNOT,
 							 parseExpressionPrimary(tl, true));
 		}

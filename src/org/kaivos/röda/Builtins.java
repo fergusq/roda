@@ -201,7 +201,7 @@ class Builtins {
 							out.push(input);
 						}
 					}
-				}, Arrays.asList(new Parameter("number", false, NUMBER)), true));
+				}, Arrays.asList(new Parameter("number", false, INTEGER)), true));
 
 		S.setLocal("tail", RödaNativeFunction.of("tail", (typeargs, args, scope, in, out) -> {
 				        if (args.size() > 1) argumentOverflow("tail", 1, args.size());
@@ -228,7 +228,7 @@ class Builtins {
 						out.push(values.get(i));
 					}
 					
-				}, Arrays.asList(new Parameter("number", false, NUMBER)), true));
+				}, Arrays.asList(new Parameter("number", false, INTEGER)), true));
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
@@ -602,8 +602,8 @@ class Builtins {
 					long from = args.get(0).integer();
 					long to = args.get(1).integer();
 					for (long i = from; i <= to; i++) out.push(RödaInteger.of(i));
-				}, Arrays.asList(new Parameter("from", false, NUMBER),
-						 new Parameter("to", false, NUMBER)), false));
+				}, Arrays.asList(new Parameter("from", false, INTEGER),
+						 new Parameter("to", false, INTEGER)), false));
 
 		S.setLocal("true", RödaNativeFunction.of("list", (typeargs, args, scope, in, out) -> {
 				        out.push(RödaBoolean.of(true));
@@ -1028,7 +1028,7 @@ class Builtins {
 					} catch (IOException e) {
 						error(e);
 					}
-				}, Arrays.asList(new Parameter("port", false, NUMBER)), false));
+				}, Arrays.asList(new Parameter("port", false, INTEGER)), false));
 
 		// Säikeet
 

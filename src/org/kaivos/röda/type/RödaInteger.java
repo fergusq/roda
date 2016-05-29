@@ -8,6 +8,7 @@ public class RödaInteger extends RödaValue {
 	private long number;
 
 	private RödaInteger(long number) {
+		assumeIdentity(INTEGER);
 		assumeIdentity(NUMBER);
 		this.number = number;
 	}
@@ -23,14 +24,19 @@ public class RödaInteger extends RödaValue {
 	@Override public long integer() {
 	        return number;
 	}
+
+	@Override public double floating() {
+	        return number;
+	}
 	
 	@Override
 	public RödaValue callOperator(Parser.Expression.CType operator, RödaValue value) {
-		if (!this.is(NUMBER)) error("tried to " + operator.name() + " a " + this.typeString());
-		if (!value.is(NUMBER)) error("tried to " + operator.name() + " a " + value.typeString());
+		if (!value.is(INTEGER)) error("tried to " + operator.name() + " a " + typeString() + " and a " + value.typeString());
 		switch (operator) {
 		case MUL:
 			return RödaInteger.of(this.integer()*value.integer());
+		case DIV:
+			return RödaFloating.of((double) this.integer()/value.integer());
 		case IDIV:
 			return RödaInteger.of(this.integer()/value.integer());
 		case MOD:
@@ -65,7 +71,7 @@ public class RödaInteger extends RödaValue {
 	}
 
 	@Override public boolean strongEq(RödaValue value) {
-		return value.is(NUMBER) && value.integer() == number;
+		return value.is(INTEGER) && value.integer() == number;
 	}
 
 	public static RödaInteger of(long number) {
