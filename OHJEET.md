@@ -55,14 +55,14 @@ kaiken mahdollisen syötteen:
 
 ```sh
 duplicate {
-	while pull -r value; do
+	for value; do
 		push value
 		push value
 	done
 }
 ```
 
-`pull -r` (**r**esponse) palauttaa `true`n tai `false`n riippuen siitä, onko luettavaa vielä jäljellä.
+`for`-silmukka lukee sisääntulovirrasta arvoja, kunnes niitä ei enää ole.
 
 ## Perussyntaksi
 
@@ -71,7 +71,6 @@ duplicate {
 Joissakin kohdissa on oltava rivinvaihto.
 
 - Lauseet erotellaan toisistaan rivinvaihdoilla.
-- `for`, `while` ja `if` vaativat rivinvaihdon ennen koodilohkoa.
 - Nimettömän funktion parametrilistan jälkeen on oltava rivinvaihto.
 
 Rivinvaihtojen tilalla voi käyttää `;`-merkkiä ja toisinpäin.
@@ -111,7 +110,7 @@ lukee kaksi arvoa, tekee niistä listan ja asettaa sen muuttujaan.
 pull_twice &variable {
 	pull value1
 	pull value2
-	variable = (value1 value2)
+	variable = [value1, value2]
 }
 ```
 
@@ -156,7 +155,7 @@ voi kunnolla käyttää.
 perhe := new Perhe
 perhe.nimi = "Harakka"
 perhe.osoite = "Lumipolku 41 A 7"
-perhe.jäsenet = ("Miete" "Joona" "Linn")
+perhe.jäsenet = ["Miete", "Joona", "Linn"]
 ```
 
 Jos haluaa, osalle kentistä voi antaa oletusarvoja. Oletusarvolausekkeet suoritetaan uudestaan aina, kun uusi
@@ -166,7 +165,7 @@ tietue luodaan. Niiden sisään- ja ulostulovirrat ovat kiinni ja niiden näkyvy
 record Perhe {
 	nimi : string
 	osoite : string
-	jäsenet : list = ()
+	jäsenet : list = []
 }
 ```
 
@@ -195,7 +194,7 @@ Komento voi olla joko funktiokutsu, muuttujakomento tai ohjausrakenne.
 
 #### Funktiokutsu
 
-Funktiokutsu koostuu funktiosta ja argumenteista, joita ei ole erikseen eroteltu toisistaan.
+Funktiokutsu koostuu funktiosta ja argumenteista, jotka erotellaan pilkuilla.
 Myös muitakin arvoja kuin funktioita voidaan kutsua ikään, kuin ne olisivat funktioita. Nämä
 erityistapaukset on alempana.
 
@@ -209,14 +208,14 @@ parametrissa on valitsin `...`, asetetaan kaikki yli menevät argumentit siihen 
 myös tyhjä.
 
 ```sh
-tulosta_perheenjäsenet sukunimi etunimet... {
+tulosta_perheenjäsenet sukunimi, etunimet... {
 	for etunimi in etunimet; do
 		push etunimi " " sukunimi "\n"
 	done
 }
 
 main {
-	tulosta_perheenjäsenet "Luoto" "Einari" "Ville" "Jenni"
+	tulosta_perheenjäsenet "Luoto", "Einari", "Ville", "Jenni"
 }
 ```
 
@@ -224,16 +223,16 @@ Jos argumentin edessä on tähti `*`, oletetaan, että se on lista. Tällöin li
 argumentteina funktiolle, eikä itse listaa.
 
 ```c
-väli := (1 10)
-seq *väli /* sama kuin seq 1 10 */
+väli := [1, 10]
+seq *väli /* sama kuin seq 1, 10 */
 ```
 
 Tätä ominaisuutta on mahdollista käyttää yhdessä `...`-määrittimen kanssa,
 jos halutaan antaa arvot olemassa olevasta listasta.
 
 ```sh
-sisarukset := ("Joonas" "Amelie")
-tulosta_perheenjäsenet "Mikkola" *sisarukset
+sisarukset := ["Joonas", "Amelie"]
+tulosta_perheenjäsenet "Mikkola", *sisarukset
 ```
 
 Jos funktiolle on määritelty tyyppiparametreja, sille on annettava kutsun yhteydessä vastaava määrä
@@ -251,7 +250,7 @@ sisarukset += "Amelie"
 
 Listan "kutsuminen" työntää kaikki listan alkiot ulostulovirtaan:
 ```sh
-("rivi1\n" "rivi2\n" "rivi3\n") | write tiedosto
+["rivi1\n", "rivi2\n", "rivi3\n"] | write tiedosto
 ```
 
 #### Muuttujat
@@ -260,7 +259,7 @@ Uuden muuttujan voi luoda operaattorilla **`:=`**:
 ```sh
 tiedosto := "tieto.txt"
 ikä := 73
-tytöt := ("Annamari" "Reetta" "Vilma")
+tytöt := ["Annamari", "Reetta", "Vilma"]
 ```
 
 Muuttujalle voi asettaa uuden arvon operaattorilla **`=`**:
@@ -297,9 +296,9 @@ tasolla.
 nimi := "Lissu"
 {
 	nimi := "Emilia"
-	push nimi "\n" /* tulostaa Emilian */
+	push nimi, "\n" /* tulostaa Emilian */
 	undefine nimi
-	push nimi "\n" /* tulostaa Lissun */
+	push nimi, "\n" /* tulostaa Lissun */
 }
 push nimi /* tulostaa Lissun */
 ```
@@ -318,7 +317,7 @@ Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
 | `=`         | `nimi = "Maija"`   | Ylikirjoittaa aiemmin luodun muuttujan arvon.      |
 | `?`         | `nimi?`            | Työntää ulostulovirtaan totuusarvon `true` tai `false` riippuen siitä, onko muuttuja olemassa |
 | `+=`        | `tytöt += "Nea"`   | Lisää listaan elementin.                           |
-| `.=`        | `tytöt .= ("Annabella" "Linn")` | Yhdistää listaan toisen listan.       |
+| `.=`        | `tytöt .= ["Annabella", "Linn"]` | Yhdistää listaan toisen listan.       |
 | `.=`        | `nimi .= sukunimi` | Lisää tekstin merkkijonon loppuun.                 |
 | `~=`        | `nimi ~= "ae" "ä"` | Tekee annetut korvaukset merkkijonoon, toimii kuten funktio `replace`. |
 | `+=`, `-=`, `*=`, `/=` | `pisteet *= 2` | Suorittaa laskutoimituksen lukumuuttujalla. |
@@ -331,17 +330,16 @@ Ohjausrakenteita ovat `if`, `unless`, `while`, `until`, `for`, `break`, `continu
 **`if`**, **`unless`**, **`while`** ja **`until`** suorittavat annetun lauseen ja olettavat sen palauttavan joko arvon `true` tai arvon `false`.
 Muut arvot tulkitaan aina samoin kuin `true`. Jos lause palauttaa useita arvoja, pitää niiden kaikkien olla `true`, jotta ehto toteutuisi.
 
-Sisäänrakennetuista funktioista vain `true`, `false`, `test`, `random`, `file` (ks. alempana)
-ja `pull -r` palauttavat totuusarvon.
+Sisäänrakennetuista funktioista vain `true`, `false`, `test`, `random` ja `file` (ks. alempana) palauttavat totuusarvon.
 
 ```sh
-if test ikä -lt 18; do
+if [ ikä < 18 ]; do
 	push "Olet liian nuori!\n"
 done
 ```
 
 ```sh
-while test vastaus -not_matches "kyllä|ei"; do
+while [ not ( vastaus =~ "kyllä|ei" ) ]; do
 	push "Vastaa kyllä tai ei: "
 	pull vastaus
 done
@@ -359,7 +357,7 @@ done
 Jos `for`ille ei anna listaa, lukee se arvoja syötteestä:
 
 ```sh
-("Isabella" "Meeri" "Taina") | for tyttö do
+["Isabella", "Meeri", "Taina"] | for tyttö do
 	push tyttö.." on paikalla.\n"
 done
 ```
@@ -369,7 +367,7 @@ done
 ```sh
 määrä := 0
 summa := 0
-for tyttö in tytöt if test tyttö.ikä -gt 14; do
+for tyttö in tytöt if [ tyttö.ikä > 14 ]; do
 	määrä ++
 	summa += tyttö.pituus
 done
@@ -382,17 +380,17 @@ push "Yli neljätoistavuotiaiden tyttöjen pituuksien keskiarvo: "..$(summa/mä�
 
 ```sh
 push tyttö.nimi.." on paikalla.\n" for tyttö in tytöt
-push tyttö.nimi.." ei ole kiireinen.\n" for tyttö in tytöt if test tyttö.kiire -eq 0
+push tyttö.nimi.." ei ole kiireinen.\n" for tyttö in tytöt if [ tyttö.kiire = 0 ]
 
 hinta /= 2 if push alennus
 
-tyttö = ![hae_seuraava] while tarkista tyttö
+tyttö = hae_seuraava() while tarkista tyttö
 ```
 
 Suffiksit ovat laskujärjestyksessä korkeammalla kuin putket. Sulkuja `{}` voi käyttää tämän kiertämiseksi:
 
 ```sh
-hae_viestit | split -s "\\b" | { hae_tytöt | push tyttö for tyttö if test tyttö.nimi -eq sana } for sana | for tyttö do
+hae_viestit | split :s, "\\b" | { hae_tytöt | push tyttö for tyttö if [ tyttö.nimi = sana ] } for sana | for tyttö do
 	push tyttö.." mainittiin keskustelussa.\n"
 done
 ```
@@ -425,29 +423,12 @@ done
 ```sh
 hae_syntymävuodella_yksi_tyttö vuosi {
 	for tyttö in tytöt; do
-		if test tyttö[1] -eq vuosi; do
+		if [ tyttö[1] = vuosi ]; do
 			return tyttö
 		done
 	done
 }
 ```
-
-### Lausekekomento
-
-Komento `[ ... ]` työntää sisällään olevan aritmetiikkatilassa (ks. alla) suoritetun lausekkeen arvon ulostulovirtaan. Sitä voi
-käyttää `test`-komennon tilalla ehdoissa.
-
-```sh
-if [ tyttö.nimi = nimi ]; do
-	push "Tytön " nimi " ikä on " tyttö.ikä ".\n"
-done
-
-tytöt | filter { |tyttö|; [ tyttö.ikä >= 16 ] } | for tyttö; do
-	push tyttö.nimi " on yli 16.\n"
-done
-```
-
-`[ lauseke ]` on siis syntaksisokeria komennolle `push $( lauseke )`.
 
 ### Lausekkeet
 
@@ -461,18 +442,18 @@ Kaikki funktiot hyväksyvät lukujen tilalla merkkijonoja (joiden toki pitää s
 ja merkkijonojen tilalla lukuja. Optimointisyistä on kuitenkin aina hyvä käyttää lukuliteraaleja kaikkialla,
 missä mahdollista.
 
-Viiva-merkki (`-`) aloittaa lippuliteraalin. Lippuja käytetään lisäohjeiden antamiseksi komennoille.
+Kaksoispiste (`:`) aloittaa lippuliteraalin. Lippuja käytetään lisäohjeiden antamiseksi komennoille.
 
 Merkkijonoja voi yhdistellä `..`-operaattorilla ja niiden pituuden voi saada `#`-operaattorilla.
 
 ```sh
 nimi := etunimi.." "..sukunimi
-push "Nimesi pituus on " #nimi "\n"
+push "Nimesi pituus on ", #nimi, "\n"
 ```
 
 #### Listat
 
-Listaliteraali on joukko sulkujen ympäröimiä arvoja, joita ei ole mitenkään erikseen eroteltu toisistaan.
+Listaliteraali on joukko hakasulkeiden ympäröimiä arvoja, jotka erotellaan pilkuilla.
 
 Listasta voi hakea yksittäisiä alkioita `[]`-operaattorilla. Lisäksi osalistoja voi luota `[:]`-operaattorilla.
 Kuten merkkijonoillakin, `#` palauttaa listan koon.
@@ -481,7 +462,7 @@ Kaikki listan alkiot voi yhdistää merkkijonoksi `&`-operaattorilla, jonka toin
 pistetään alkioiden väleihin.
 
 ```sh
-tytöt := ("Annamari" "Reetta" "Vilma" "Susanna")
+tytöt := ["Annamari", "Reetta", "Vilma", "Susanna"]
 push "Tyttöjä on " #tytöt " kpl.\n"
 push "Ensimmäinen tyttö on " tytöt[0] " ja viimeinen " tytöt[-1] ". "
 push "Välissä ovat " tytöt[1:-1]&" ja " ".\n"
@@ -491,7 +472,7 @@ Jos listaan yhdistää merkkijonon, yhdistetään se kaikkiin listan alkioihin:
 
 ```sh
 sukunimi := "Kivinen"
-sisarukset := ("Maija" "Ilmari")
+sisarukset := ["Maija", "Ilmari"]
 kokonimet := sisarukset.." "..sukunimi
 push "Sisarusten koko nimet ovat " kokonimet&" ja " ".\n"
 ```
@@ -500,7 +481,7 @@ Listan alkioille voi määritellä tyypin, jos se luodaan `new`-avainsanan avull
 
 ```sh
 tytöt := new list<string>
-tytöt .= ("Eveliina" "Lilja" "Nea")
+tytöt .= ["Eveliina", "Lilja", "Nea"]
 ```
 
 Jos listaan yrittäisi laittaa joitain muita olioita kuin merkkijonoja, antaisi koodi suorituksenaikaisen
@@ -520,7 +501,7 @@ iät["Ilmari"] = 19
 `?`-operaattorilla voi tarkastaa, onko kartassa tietty alkio:
 
 ```sh
-if push $(!iät["Maija"]?); do
+if push(!iät["Maija"]?); do
 	push "Maijan ikää ei löydy!\n"
 done
 ```
@@ -532,14 +513,6 @@ vai kartta):
 
 | Operaattori | Selitys                     | Ottaa                             | Palauttaa              |
 |:-----------:| --------------------------- | --------------------------------- | ---------------------- |
-| `..`        | Yhdistää merkkijonoja       | 2 arvoa, merkkijonoja tai listoja | Merkkijonon tai listan |
-| `&`         | Yhdistää listan alkiot merkkijonoksi | Listan ja merkkijonon    | Merkkijonon            |
-| `#`         | Palauttaa arvon pituuden    | Listan, kartan tai merkkijonon    | Kokonaisluvun          |
-| `[]`        | Palauttaa listan alkion     | Listan tai kartan ja tunnisteen   | Alkion                 |
-| `[:]`       | Palauttaa listan osalistan  | Listan tai merkkijonon ja nollasta kahteen kokonaislukua | Listan tai merkkijonon |
-| `[]?`       | Kertoo, onko alkio olemassa | Listan tai kartan ja tunnisteen   | Totuusarvon            |
-| `in`        | Kertoo, onko listassa arvo  | Minkä tahansa arvon               | Totuusarvon            |
-| `is`        | Kertoo, onko arvo tiettyä tyyppiä | Minkä tahansa arvon ja tyypin | Totuusarvon          |
 
 Laskujärjestys:
 
@@ -551,6 +524,56 @@ Laskujärjestys:
 | 4.   | `..`                     |
 | 5.   | `in`                     |
 
+
+| Operaattori | Selitys                     | Ottaa             | Palauttaa     |
+|:-----------:| --------------------------- | ----------------- | ------------- |
+| `..`        | Yhdistää merkkijonoja       | 2 arvoa, merkkijonoja tai listoja | Merkkijonon tai listan |
+| `&`         | Yhdistää listan alkiot merkkijonoksi | Listan ja merkkijonon    | Merkkijonon            |
+| `#`         | Palauttaa arvon pituuden    | Listan, kartan tai merkkijonon    | Kokonaisluvun          |
+| `[]`        | Palauttaa listan alkion     | Listan tai kartan ja tunnisteen   | Alkion                 |
+| `[:]`       | Palauttaa listan osalistan  | Listan tai merkkijonon ja nollasta kahteen kokonaislukua | Listan tai merkkijonon |
+| `[]?`       | Kertoo, onko alkio olemassa | Listan tai kartan ja tunnisteen   | Totuusarvon            |
+| `in`        | Kertoo, onko listassa arvo  | Minkä tahansa arvon               | Totuusarvon            |
+| `is`        | Kertoo, onko arvo tiettyä tyyppiä | Minkä tahansa arvon ja tyypin | Totuusarvon          |
+| `&&`        | Looginen JA                 | 2 totuusarvoa     | Totuusarvon   |
+| `||`        | Looginen TAI                | 2 totuusarvoa     | Totuusarvon   |
+| `^^`        | Looginen JOKO-TAI           | 2 totuusarvoa     | Totuusarvon   |
+| `=`         | Yhtäsuuruus                 | Mitä tahansa      | Totuusarvon   |
+| `!=`        | Erisuuruus                  | Mitä tahansa      | Totuusarvon   |
+| `<`         | Pienempi kuin               | 2 kokonaislukua   | Totuusarvon   |
+| `>`         | Suurempi kuin               | 2 kokonaislukua   | Totuusarvon   |
+| `<=`        | Pienempi tai yhtäsuuri kuin | 2 kokonaislukua   | Totuusarvon   |
+| `>=`        | Suurempi tai yhtäsuuri kuin | 2 kokonaislukua   | Totuusarvon   |
+| `b_and`     | Bittitason JA               | 2 kokonaislukua   | Kokonaisluvun |
+| `b_or`      | Bittitason TAI              | 2 kokonaislukua   | Kokonaisluvun |
+| `b_xor`     | Bittitason JOKO-TAI         | 2 kokonaislukua   | Kokonaisluvun |
+| `b_shiftl`  | Bittitason vasen siirto     | 2 kokonaislukua   | Kokonaisluvun |
+| `b_shiftr`  | Bittitason oikea siirto     | 2 kokonaislukua   | Kokonaisluvun |
+| `b_shiftrr` | Bittitason etumerkitön oikea siirto | 2 kokonaislukua | Kokonaisluvun |
+| `+`         | Yhteenlasku                 | 2 kokonaislukua   | Kokonaisluvun |
+| `-`         | Vähennyslasku               | 2 kokonaislukua   | Kokonaisluvun |
+| `*`         | Kertolasku                  | 2 kokonaislukua   | Kokonaisluvun |
+| `//`        | Jakolasku                   | 2 kokonaislukua   | Kokonaisluvun |
+| `%`         | Jakojäännös                 | 2 kokonaislukua   | Kokonaisluvun |
+| Unäärinen `-` | Vastaluku                 | Kokonaisluvun     | Kokonaisluvun |
+| Unäärinen `b_not` | Bittitason EI         | Kokonaisluvun     | Kokonaisluvun |
+| Unäärinen `not` | Looginen EI             | Totuusarvon       | Totuusarvon   |
+
+Laskujärjestys:
+
+| Sija | Operaattorit                                               |
+|:----:| ---------------------------------------------------------- |
+| 1.   | `[]`, `[:]`, `[]?`, `is`                                   |
+| 2.   | Unäärinen `-`, unäärinen `~`, unäärinen `!`, unäärinen `#` |
+| 3.   | `*`, `//`, `%`                                             |
+| 4.   | `+`, binäärinen `-`                                        |
+| 5.   | `b_and`, `b_or`, `b_xor`, `b_shiftl`, `b_shiftr`, `b_shiftrr` |
+| 6.   | `<`, `>`, `<=`, `>=`, `in`                                 |
+| 7.   | `&`                                                         |
+| 8.   | `..`                                                       |
+| 9.   | `=`, `!=`                                                  |
+| 10.  | `&&`, `||`, `^^`                                           |
+
 #### Komento
 
 Lauseke voi olla myös komento tai putkitettuja komentoja. Tälloin lausekkeen arvoksi tulee lista,
@@ -559,7 +582,7 @@ joka on muodostettu kaikista viimeisen komennon ulostulon antamista arvoista.
 Seuraava ohjelma tulostaa tiedoston rivinumeroiden kera.
 
 ```sh
-rivit := !(cat tiedosto)
+rivit := [cat(tiedosto)]
 i := 1
 for rivi in rivit; do
 	push i " " rivi "\n"
@@ -567,11 +590,11 @@ for rivi in rivit; do
 done
 ```
 
-Jos on varmaa, että funktio antaa vain yhden arvon, voidaan käyttää hakasulkeita. Tällöin arvoksi
+Jos on varmaa, että funktio antaa vain yhden arvon, voi hakasulkeet jättää pois. Tällöin arvoksi
 tulee listan ainoa arvo. Tämä heittää virheen, jos funktio palauttaa useampia arvoja (tai ei yhtään).
 
 ```sh
-A := ![expr "PI*"r"**2"]
+A := expr("PI*"r"**2")
 ```
 
 #### Nimetön funktio
@@ -582,7 +605,7 @@ Seuraavassa koodissa määritellään `filter`-funktio, joka lukee arvoja ja pal
 
 ```sh
 filter cond_function {
-	while pull -r value; do
+	for value; do
 		if cond_function value; do
 			push value
 		done
@@ -594,64 +617,11 @@ Funktiota käytetään antamalla sille nimetön funktio (tai tavallinenkin funkt
 `true`n tai `false`n.
 
 ```sh
-tytöt := (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
-tytöt | filter { |tyttö|; test tyttö[1] -gt 1995 } | while pull -r tyttö; do
-	push tyttö[0] " on vielä nuori.\n"
+tytöt := [["Annamari", 1996], ["Reetta", 1992], ["Vilma", 1999]]
+tytöt | filter { |tyttö|; [ tyttö[1] > 1995 ] } | for tyttö; do
+	push tyttö[0], " on vielä nuori.\n"
 done
 ```
-
-#### Aritmetiikkatila
-
-Koska Rödan muu syntaksi varaa jo sulut `( )` ja miinusmerkin `-`, ei niitä voi käyttää laskutoimituksiin.
-Tämän rajoituksen kiertämiseksi Rödassa on aritmetiikkatila, jossa tavallinen syntaksi ei enää päde.
-Tilaan pääsee dollarimerkillä: `$(...)`.
-```c
-p := $(i//2+7)
-k := $((p-10)*2)
-```
-
-Aritmetiikkatilassa voi käyttää tavallisia sulkeita ja ylempänä esiteltyjä operaattoreita.
-Lisäksi seuraavat operaattorit ovat käytössä:
-
-| Operaattori | Selitys                     | Ottaa             | Palauttaa     |
-|:-----------:| --------------------------- | ----------------- | ------------- |
-| `&&`        | Looginen JA                 | 2 totuusarvoa     | Totuusarvon   |
-| `||`        | Looginen TAI                | 2 totuusarvoa     | Totuusarvon   |
-| `^^`        | Looginen JOKO-TAI           | 2 totuusarvoa     | Totuusarvon   |
-| `=`         | Yhtäsuuruus                 | Mitä tahansa      | Totuusarvon   |
-| `!=`        | Erisuuruus                  | Mitä tahansa      | Totuusarvon   |
-| `<`         | Pienempi kuin               | 2 kokonaislukua   | Totuusarvon   |
-| `>`         | Suurempi kuin               | 2 kokonaislukua   | Totuusarvon   |
-| `<=`        | Pienempi tai yhtäsuuri kuin | 2 kokonaislukua   | Totuusarvon   |
-| `>=`        | Suurempi tai yhtäsuuri kuin | 2 kokonaislukua   | Totuusarvon   |
-| `&`         | Bittitason JA               | 2 kokonaislukua   | Kokonaisluvun |
-| `|`         | Bittitason TAI              | 2 kokonaislukua   | Kokonaisluvun |
-| `^`         | Bittitason JOKO-TAI         | 2 kokonaislukua   | Kokonaisluvun |
-| `<<`        | Bittitason vasen siirto     | 2 kokonaislukua   | Kokonaisluvun |
-| `>>`        | Bittitason oikea siirto     | 2 kokonaislukua   | Kokonaisluvun |
-| `>>>`       | Bittitason etumerkitön oikea siirto | 2 kokonaislukua | Kokonaisluvun |
-| `+`         | Yhteenlasku                 | 2 kokonaislukua   | Kokonaisluvun |
-| `-`         | Vähennyslasku               | 2 kokonaislukua   | Kokonaisluvun |
-| `*`         | Kertolasku                  | 2 kokonaislukua   | Kokonaisluvun |
-| `//`        | Jakolasku                   | 2 kokonaislukua   | Kokonaisluvun |
-| `%`         | Jakojäännös                 | 2 kokonaislukua   | Kokonaisluvun |
-| Unäärinen `-` | Vastaluku                 | Kokonaisluvun     | Kokonaisluvun |
-| Unäärinen `~` | Bittitason EI             | Kokonaisluvun     | Kokonaisluvun |
-| Unäärinen `!` | Looginen EI               | Totuusarvon       | Totuusarvon   |
-
-Laskujärjestys:
-
-| Sija | Operaattorit                                               |
-|:----:| ---------------------------------------------------------- |
-| 1.   | `[]`, `[:]`, `[]?`, `is`                                   |
-| 2.   | Unäärinen `-`, unäärinen `~`, unäärinen `!`, unäärinen `#` |
-| 3.   | `*`, `//`, `%`                                             |
-| 4.   | `+`, binäärinen `-`                                        |
-| 5.   | `&`, `|`, `^`, `<<`, `>>`, `>>>`                           |
-| 6.   | `<`, `>`, `<=`, `>=`, `in`                                 |
-| 7.   | `..`                                                       |
-| 8.   | `=`, `!=`                                                  |
-| 9.   | `&&`, `||`, `^^`                                           |
 
 #### Reflektio
 
@@ -690,7 +660,7 @@ reflect R.fields /* palauttaa listan, jossa on kaksi field oliota, yksi a:lle ja
 ## Esimerkkejä
 
 ```sh
-push env["PATH"] | split -s ":" | exec -I -l "ls" dir for dir | assign_global -n komento { |a...|; exec komento *a } for komento
+push env["PATH"] | split :s, ":" | exec :I, :l, "ls", dir for dir | create_global komento { |a...|; exec komento *a } for komento
 ```
 
 Etsii kaikki komentorivikomennot ja tekee jokaisesta funktion. Tämän jälkeen komentoja voi käyttää suoraan ilman
@@ -703,10 +673,9 @@ Merkki `*` tarkoittaa "nolla tai useampi" ja `+` yksi tai useampi.
 
 ### assign_global
 
->`assign_global [-n] nimi arvo`
+>`assign_global nimi arvo`
 
-Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan. Valitsin `-n` (**n**ew)
-määrittää, että muuttuja luodaan vain, jos luominen ei tuhoa vanhaa samannimistä muuttujaa.
+Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan.
 
 ### btos
 
@@ -727,6 +696,13 @@ Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 
 Vaihtaa nykyistä työhakemistoa. Työhakemisto on se hakemisto, jossa tiedostonkäsittelykomennot olettavat
 tiedostojen olevan.
+
+### create_global
+
+>`create_global nimi arvo`
+
+Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan.
+Muuttuja luodaan vain, jos luominen ei tuhoa vanhaa samannimistä muuttujaa.
 
 ### errprint
 
@@ -828,10 +804,9 @@ Työntää annettut arvot ja rivinvaihdon ulostulovirtaan.
 
 ### pull
 
->`pull [-r] muuttuja+`
+>`pull muuttuja+`
 
-Lukee muuttujaan arvon sisääntulovirrasta. Jos valitsin `-r` on käytössä, palautetaan jokaista onnistunutta
-lukua kohti ulostulovirtaan arvo `true` ja jokaista epäonnistunutta lukua kohti arvo `false`.
+Lukee muuttujaan arvon sisääntulovirrasta.
 
 ### push
 
