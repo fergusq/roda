@@ -459,7 +459,7 @@ public class Interpreter {
 	static void checkListOrNumber(String function, RödaValue arg) {
 	        if (!arg.is(LIST) && !arg.is(INTEGER)) {
 			error("illegal argument for '" + function
-			      + "': list or number expected (got " + arg.typeString() + ")");
+			      + "': list or integer expected (got " + arg.typeString() + ")");
 		}
 	}
 	
@@ -480,7 +480,7 @@ public class Interpreter {
 	static void checkNumber(String function, RödaValue arg) {
 	        if (!arg.is(INTEGER)) {
 			error("illegal argument for '" + function
-			      + "': number expected (got " + arg.typeString() + ")");
+			      + "': integer expected (got " + arg.typeString() + ")");
 		}
 	}
 
