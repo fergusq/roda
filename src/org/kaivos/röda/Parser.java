@@ -131,6 +131,9 @@ public class Parser {
 		case "in":
 		case "do":
 		case "done":
+		case "break":
+		case "continue":
+		case "return":
 		case "record":
 		case "value":
 		case "new":
@@ -318,7 +321,7 @@ public class Parser {
 			final Expression defaultValue;
 			public final List<Annotation> annotations;
 
-			Field(String name,
+			public Field(String name,
 			      Datatype type) {
 				this(name, type, null, Collections.emptyList());
 			}
@@ -341,7 +344,7 @@ public class Parser {
 		public final List<Field> fields;
 		public final boolean isValueType;
 
-		Record(String name,
+		public Record(String name,
 		       List<String> typeparams,
 		       Datatype superType,
 		       List<Field> fields,
@@ -434,10 +437,10 @@ public class Parser {
 		String name;
 		boolean reference;
 		Datatype type;
-	        Parameter(String name, boolean reference) {
+	        public Parameter(String name, boolean reference) {
 			this(name, reference, null);
 		}
-	        Parameter(String name, boolean reference, Datatype type) {
+	        public Parameter(String name, boolean reference, Datatype type) {
 			this.name = name;
 			this.reference = reference;
 			this.type = type;
@@ -511,6 +514,10 @@ public class Parser {
 		Statement(List<Command> commands) {
 			this.commands = commands;
 		}
+		
+		String asString() {
+			return commands.stream().map(Command::asString).collect(joining(" | "));
+		}
 	}
 
 	static Statement parseStatement(TokenList tl) {
@@ -550,6 +557,33 @@ public class Parser {
 		Command() {} // käytä apufunktioita alla
 		String file;
 		int line;
+		
+		String argumentsAsString() {
+			return arguments.stream()
+					.map(arg -> (arg.flattened ? "*" : "") + arg.expr.asString())
+					.collect(joining(", "));
+		}
+		
+		String asString() {
+			switch (type) {
+			case NORMAL:
+				return name.asString() + "(" + argumentsAsString() + ")";
+			case BREAK:
+				return "break";
+			case CONTINUE:
+				return "continue";
+			case RETURN:
+				return "return " + argumentsAsString();
+			case IF:
+				return "if ... do ... done";
+			case WHILE:
+				return "while ... do ... done";
+			case FOR:
+				return "for " + variable + (list != null ? " in " + list.asString() : "") + " do ... done";
+			default:
+				return "<" + type + ">";
+			}
+		}
 	}
 
 	static class Argument {
@@ -672,6 +706,11 @@ public class Parser {
 
 	static Command parseCommand(TokenList tl) {
 		Command cmd = parsePrefixCommand(tl);
+		return parseSuffix(tl, cmd);
+	}
+	
+	static Command parseSuffix(TokenList tl, Command cmd) {
+
 		if (tl.isNext("while", "if", "unless", "until")) {
 			String commandName = nextString(tl);
 			boolean isWhile = commandName.equals("while") || commandName.equals("until");
@@ -907,9 +946,9 @@ public class Parser {
 			case LIST:
 				return "[...]";
 			case STATEMENT_LIST:
-				return "list ...";
+				return "[" + statement.asString() + "]";
 			case STATEMENT_SINGLE:
-				return "single ...";
+				return statement.asString();
 			case ELEMENT:
 				return sub.asString() + "[" + index.asString() + "]";
 			case CONTAINS:
@@ -1186,8 +1225,9 @@ public class Parser {
 			}
 			else if (allowCalls && acceptIfNext(tl, "(")) {
 				List<Command> commands = new ArrayList<>();
-				commands.add(_makeNormalCommand(file, line, ans, Collections.emptyList(), parseArguments(tl, true)));
+				Command cmd = _makeNormalCommand(file, line, ans, Collections.emptyList(), parseArguments(tl, true));
 				accept(tl, ")");
+				commands.add(parseSuffix(tl, cmd));
 				while (acceptIfNext(tl, "|")) {
 					commands.add(parseCommand(tl));
 				}

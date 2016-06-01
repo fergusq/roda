@@ -66,7 +66,7 @@ public class Interpreter {
 			this.map = new HashMap<>();
 			this.typeargs = new HashMap<>();
 		}
-		RödaScope(RödaScope parent) {
+		public RödaScope(RödaScope parent) {
 			this(Optional.of(parent));
 		}
 
@@ -121,12 +121,12 @@ public class Interpreter {
 	}
 	
 	public RödaScope G = new RödaScope(Optional.empty());
-	Map<String, Record> records = new HashMap<>();
+	public Map<String, Record> records = new HashMap<>();
 	Map<String, RödaValue> typeReflections = new HashMap<>();
 
 	RödaStream STDIN, STDOUT;
 
-	File currentDir = new File(System.getProperty("user.dir"));
+	public File currentDir = new File(System.getProperty("user.dir"));
 	
 	private void initializeIO() {
 		InputStreamReader ir = new InputStreamReader(System.in);
@@ -256,7 +256,7 @@ public class Interpreter {
 				 (list, list2) -> { list.addAll(list2.list()); });
 	}
 
-	static ExecutorService executor = Executors.newCachedThreadPool();
+	public static ExecutorService executor = Executors.newCachedThreadPool();
 
 	public static void shutdown() {
 		executor.shutdown();
@@ -435,70 +435,70 @@ public class Interpreter {
 		return p.reference;
 	}
 
-	static void checkReference(String function, RödaValue arg) {
+	public static void checkReference(String function, RödaValue arg) {
 	        if (!arg.is(REFERENCE)) {
 			error("illegal argument for '" + function
 			      + "': reference expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkList(String function, RödaValue arg) {
+	public static void checkList(String function, RödaValue arg) {
 	        if (!arg.is(LIST)) {
 			error("illegal argument for '" + function
 			      + "': list expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkListOrString(String function, RödaValue arg) {
+	public static void checkListOrString(String function, RödaValue arg) {
 	        if (!arg.is(LIST) && !arg.is(STRING)) {
 			error("illegal argument for '" + function
 			      + "': list or string expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkListOrNumber(String function, RödaValue arg) {
+	public static void checkListOrNumber(String function, RödaValue arg) {
 	        if (!arg.is(LIST) && !arg.is(INTEGER)) {
 			error("illegal argument for '" + function
 			      + "': list or integer expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkString(String function, RödaValue arg) {
+	public static void checkString(String function, RödaValue arg) {
 	        if (!arg.is(STRING)) {
 			error("illegal argument for '" + function
 			      + "': string expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkFlag(String function, RödaValue arg) {
+	public static void checkFlag(String function, RödaValue arg) {
 	        if (!arg.is(FLAG)) {
 			error("illegal argument for '" + function
 			      + "': flag expected (got " + arg.typeString() + ")");
 		}
 	}
 
-	static void checkNumber(String function, RödaValue arg) {
+	public static void checkNumber(String function, RödaValue arg) {
 	        if (!arg.is(INTEGER)) {
 			error("illegal argument for '" + function
 			      + "': integer expected (got " + arg.typeString() + ")");
 		}
 	}
 
-	static void checkBoolean(String function, RödaValue arg) {
+	public static void checkBoolean(String function, RödaValue arg) {
 	        if (!arg.is(BOOLEAN)) {
 			error("illegal argument for '" + function
 			      + "': boolean expected (got " + arg.typeString() + ")");
 		}
 	}
 
-	static void checkFunction(String function, RödaValue arg) {
+	public static void checkFunction(String function, RödaValue arg) {
 	        if (!arg.is(FUNCTION)) {
 			error("illegal argument for '" + function
 			      + "': function expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkArgs(String function, int required, int got) {
+	public static void checkArgs(String function, int required, int got) {
 		if (got > required) argumentOverflow(function, required, got);
 		if (got < required) argumentUnderflow(function, required, got);
 	}
@@ -522,17 +522,17 @@ public class Interpreter {
 		}
 	}
 	
-	static void argumentOverflow(String function, int required, int got) {
+	public static void argumentOverflow(String function, int required, int got) {
 		error("illegal number of arguments for '" + function
 		      + "': at most " + required + " required (got " + got + ")");
 	}
 
-	static void argumentUnderflow(String function, int required, int got) {
+	public static void argumentUnderflow(String function, int required, int got) {
 		error("illegal number of arguments for '" + function
 		      + "': at least " + required + " required (got " + got + ")");
 	}
 
-	void exec(String file, int line,
+	public void exec(String file, int line,
 		  RödaValue value, List<Datatype> typeargs, List<RödaValue> rawArgs,
 		  RödaScope scope, RödaStream in, RödaStream out) {
 		List<RödaValue> args = new ArrayList<>();
