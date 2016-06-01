@@ -1,7 +1,9 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.argumentUnderflow;
+import static org.kaivos.röda.Interpreter.argumentOverflow;
 import static org.kaivos.röda.Interpreter.checkReference;
+import static org.kaivos.röda.Interpreter.error;
 
 import java.util.Arrays;
 
@@ -16,10 +18,8 @@ public final class PushAndPullPopulator {
 
 	public static void populatePushAndPull(RödaScope S) {
 		S.setLocal("push", RödaNativeFunction.of("push", (typeargs, args, scope, in, out) -> {
-			if (args.isEmpty()) {
+			if (args.isEmpty())
 				argumentUnderflow("push", 1, 0);
-				return;
-			}
 			for (RödaValue value : args) {
 				out.push(value);
 			}
@@ -27,18 +27,38 @@ public final class PushAndPullPopulator {
 	
 		S.setLocal("pull", RödaNativeFunction.of("pull", (typeargs, args, scope, in, out) -> {
 			if (args.isEmpty()) {
-				argumentUnderflow("pull", 1, 0);
+				RödaValue value = in.pull();
+				if (value == null) error("empty stream");
+				out.push(value);
 				return;
 			}
+			
 			for (RödaValue value : args) {
 				checkReference("pull", value);
 
 				RödaValue pulled = in.pull();
-				if (pulled == null) {
-					continue;
-				}
+				if (pulled == null) error("empty stream");
 				value.assign(pulled);
 			}
 		}, Arrays.asList(new Parameter("variables", true)), true));
+	
+		S.setLocal("peek", RödaNativeFunction.of("peek", (typeargs, args, scope, in, out) -> {
+			if (args.isEmpty()) {
+				RödaValue value = in.peek();
+				if (value == null) error("empty stream");
+				out.push(value);
+				return;
+			}
+			
+			if (args.size() > 1)
+				argumentOverflow("peek", 1, 0);
+			
+			RödaValue value = args.get(0);
+			checkReference("peek", value);
+			
+			RödaValue value2 = in.peek();
+			if (value2 == null) error("empty stream");
+			value.assign(value2);
+		}, Arrays.asList(new Parameter("variable", true)), true));
 	}
 }

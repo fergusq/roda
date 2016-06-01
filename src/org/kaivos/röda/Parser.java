@@ -1303,9 +1303,9 @@ public class Parser {
 									  isVarargs, body));
 		}
 		else if (acceptIfNext(tl, "\"")) {
-			String s = nextString(tl);
-			accept(tl, "\"");
-		        ans = expressionString(file, line, s);
+			String s = tl.nextString();
+			tl.accept("\"");
+		    ans = expressionString(file, line, s);
 		}
 		else if (seekString(tl).matches("[0-9]+")) {
 			ans = expressionInt(file, line, Integer.parseInt(nextString(tl)));

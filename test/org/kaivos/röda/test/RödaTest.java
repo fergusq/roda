@@ -49,6 +49,13 @@ public class RödaTest {
 		assertEquals("abba", eval("main{push\"abba\"}"));
 	}
 	
+	// Peek-komento
+	
+	@Test
+	public void testPeek() {
+		assertEquals("10,10,7,2,2,2,45", eval("main{push(10, 7, 2, 45) | { push(peek()); push(pull()); push(pull()); push(peek()); push(peek()); push(pull()); push(peek()); }}"));
+	}
+	
 	// Laskutoimitukset
 
 	@Test
