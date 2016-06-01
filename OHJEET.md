@@ -250,7 +250,7 @@ sisarukset += "Amelie"
 
 Listan "kutsuminen" työntää kaikki listan alkiot ulostulovirtaan:
 ```sh
-["rivi1\n", "rivi2\n", "rivi3\n"] | write tiedosto
+["rivi1\n", "rivi2\n", "rivi3\n"] | writeLines tiedosto
 ```
 
 #### Muuttujat
@@ -384,13 +384,13 @@ push tyttö.nimi.." ei ole kiireinen.\n" for tyttö in tytöt if [ tyttö.kiire 
 
 hinta /= 2 if push alennus
 
-tyttö = hae_seuraava() while tarkista tyttö
+tyttö = haeSeuraava() while tarkista tyttö
 ```
 
 Suffiksit ovat laskujärjestyksessä korkeammalla kuin putket. Sulkuja `{}` voi käyttää tämän kiertämiseksi:
 
 ```sh
-hae_viestit | split :s, "\\b" | { hae_tytöt | push tyttö for tyttö if [ tyttö.nimi = sana ] } for sana | for tyttö do
+haeViestit() | split :s, "\\b" | { haeTytöt | push tyttö for tyttö if [ tyttö.nimi = sana ] } for sana | for tyttö do
 	push tyttö.." mainittiin keskustelussa.\n"
 done
 ```
@@ -410,7 +410,7 @@ Suorituksen keskeyttänyt virhe asetetaan `catch`-osion muuttujaan, mikäli se o
 
 ```sh
 try do
-	lähetä_viesti
+	lähetäViesti
 catch virhe
 	errprint "Viestiä ei voitu lähettää!"
 	errprint virhe.message
@@ -421,7 +421,7 @@ done
 **`return`** työntää sille annetut argumentit ulostulovirtaan ja lopettaa nykyisen funktion suorittamisen.
 
 ```sh
-hae_syntymävuodella_yksi_tyttö vuosi {
+haeSyntymävuodellaYksiTyttö vuosi {
 	for tyttö in tytöt; do
 		if [ tyttö[1] = vuosi ]; do
 			return tyttö
@@ -570,7 +570,7 @@ joka on muodostettu kaikista viimeisen komennon ulostulon antamista arvoista.
 Seuraava ohjelma tulostaa tiedoston rivinumeroiden kera.
 
 ```sh
-rivit := [cat(tiedosto)]
+rivit := [readLines(tiedosto)]
 i := 1
 for rivi in rivit; do
 	push i " " rivi "\n"
@@ -592,9 +592,9 @@ Nimetön funktio toimii kuten tavallinenkin funktio. Syntaksi on `{ |parametrit|
 Seuraavassa koodissa määritellään `filter`-funktio, joka lukee arvoja ja palauttaa osan niistä.
 
 ```sh
-filter cond_function {
+filter condFunction {
 	for value; do
-		if cond_function value; do
+		if condFunction value; do
 			push value
 		done
 	done
@@ -620,7 +620,7 @@ record Type {
 	name : string
 	annotations : list
 	fields : list<Field>
-	new_instance : function
+	newInstance : function
 }
 record Field {
 	name : string
@@ -659,24 +659,18 @@ Etsii kaikki komentorivikomennot ja tekee jokaisesta funktion. Tämän jälkeen 
 Tässä listassa sulkuja `()` käytetään ryhmittelemiseen, `[]` valinnaisuuteen ja merkkiä `|` vaihtoehtoon.
 Merkki `*` tarkoittaa "nolla tai useampi" ja `+` yksi tai useampi.
 
-### assign_global
+### assignGlobal
 
->`assign_global nimi arvo`
+>`assignGlobal nimi arvo`
 
 Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan.
 
-### btos
+### bytesToString
 
->`btos lista*`
+>`bytesToString lista*`
 
 Muuntaa argumentteina annetut tai sisääntulovirrasta luetut listat merkkijonoiksi. Listojen on sisällettävä vain lukuja ja niiden oletetaan
 koodaavan UTF-8-merkkijonoja.
-
-### cat
-
->`cat tiedosto*`
-
-Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 
 ### cd
 
@@ -685,12 +679,18 @@ Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 Vaihtaa nykyistä työhakemistoa. Työhakemisto on se hakemisto, jossa tiedostonkäsittelykomennot olettavat
 tiedostojen olevan.
 
-### create_global
+### createGlobal
 
->`create_global nimi arvo`
+>`createGlobal nimi arvo`
 
 Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan.
 Muuttuja luodaan vain, jos luominen ei tuhoa vanhaa samannimistä muuttujaa.
+
+### currentTime
+
+>`currentTime`
+
+Palauttaa nykyisen ajan millisekuntteina.
 
 ### errprint
 
@@ -698,7 +698,7 @@ Muuttuja luodaan vain, jos luominen ei tuhoa vanhaa samannimistä muuttujaa.
 
 Tulostaa annetut merkkijonot (tai sisääntulovirran arvot) standardivirheeseen.
 
-### file
+### file TODO
 
 >`file ((-l|-e|-f|-l|-m) tiedosto)*`
 
@@ -715,13 +715,6 @@ Palauttaa halutun tiedon tiedostosta.
 >`false`
 
 Työntää arvon `false` ulostulovirtaan.
-
-### expr
-
->`expr merkkijono+`
-
-Yhdistää merkkijonot ja antaa lopputuloksen laskimelle, joka palauttaa vastauksen ulostulovirtaan.
-Tukee tällä hetkellä vain liukulukuja.
 
 ### exec
 
@@ -752,11 +745,10 @@ Suorittaa annetut Röda-tiedostot.
 
 ### json
 
->`json [-i [-s]] [merkkijono]`
+>`json [merkkijono]`
 
 Parsii json-koodin, joka on joko annettu argumenttina tai kaikki sisääntulovirrasta annetut json-koodit (ei molempia).
-Palauttaa koodien puut ulostulovirtaan tai, jos valitsin `-i` on annettu, avain-arvo-parit. Lisävalitsin `-s`
-määrittää, että avaimet annetaan merkkijonoina listojen sijaan. (TODO parempi selitys)
+Palauttaa koodien puut ulostulovirtaan. (TODO parempi selitys)
 
 ### list
 
@@ -777,9 +769,9 @@ lausekkeen avulla. Palauttaa listan säännöllisen lausekkeen mukaisista ryhmis
 
 Työntää annettujen muuttujien nimet ulostulovirtaan merkkijonoina.
 
-### parse_num
+### parseInteger
 
->`parse_num [-c] [-r radix] merkkijono+`
+>`parseInteger [-c] [-r radix] merkkijono+`
 
 Parsii luvun merkkijonosta. Jos valitsin `-c` (**c**haracter) on annettu, tulkitsee luvun UTF-8-merkkinä
 ja palauttaa merkkijonon.
@@ -808,12 +800,18 @@ Työntää arvot ulostulovirtaan.
 
 Työntää nykyisen työhakemiston ulostulovirtaan.
 
-### random
+### random TODO
 
 >`random [-boolean|-float|-integer]`
 
 Työntää oletuksena satunnaisen totuusarvon ulostulovirtaan.
 Voi myös palauttaa kokonaisluvun tai liukuluvun merkkijonona.
+
+### readLines
+
+>`readLines tiedosto*`
+
+Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 
 ### replace
 
@@ -890,7 +888,7 @@ oletuksena välilyöntien perusteella. Jos merkkijonoja ei ole annettu, komento 
 
 Valitsin `-c` (**c**ollect) määrittää, että ulostulovirtaan työnnetään merkkijonojen osien sijasta lista merkkijonon osista.
 
-### stob
+### stringToBytes
 
 >`stob merkkijono*`
 
@@ -919,19 +917,6 @@ record Stream {
 
 Palauttaa merkkijonojen (argumentteina tai virrasta) koot UTF-8-enkoodattuina.
 
-### test
-
->`test arvo -[not_](eq|strong_eq|weak_eq|matches|lt|le|gt|ge) arvo`
-
-Vertailee kahta arvoa annetulla operaattorilla. Valitsin `-not_` tekee vertailusta käänteisen. Sen on oltava
-kiinni isäntävalitsimessa (ei välilyöntiä), esim. `-not_eq`.
-
-- `-eq` on paras yksinkertainen ekvivalenssioperaattori. Se muuttaa luvut merkkijonoiksi ja toisin päin,
-mutta vaatii muuten tyypeiltä yhtenevyyttä.
-- `-strong_eq` vaatii, että kaikki tyypit yhtenevät, myös luvut ja merkkijonot.
-- `-weak_eq` muuttaa operandit merkkijonoiksi ja vertailee niitä.
-- `-matches` vertailee ensimmäistä operandia toiseen, jonka se olettaa olevan säännöllinen lauseke.
-
 ### tail
 
 >`tail [määrä]`
@@ -954,12 +939,6 @@ record Thread {
 
 Funktio `start` käynnistää säikeen. Funktiot `push` ja `pull` on kytketty säiefunktion sisään- ja ulostulovirtoihin.
 
-### time
-
->`time`
-
-Palauttaa nykyisen ajan millisekuntteina.
-
 ### true
 
 >`true`
@@ -979,9 +958,9 @@ Tuhoaa annetut muuttujat.
 Lataa tiedostot annetuista Internet-osoitteista mahdollisesti annetuilla user agenteilla
 ja kirjoittaa ne annettuihin tiedostoihin (tai oletuksena rivi kerrallaan ulostulovirtaan).
 
-### write
+### writeLines
 
->`write tiedoston_nimi`
+>`writeLines tiedoston_nimi`
 
 Lukee kaiken sisääntulovirrasta, muuttaa arvot merkkijonoiksi ja kirjoittaa ne annettuun tiedostoon.
 

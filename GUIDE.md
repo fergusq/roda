@@ -110,7 +110,7 @@ Examples:
 names := [get_name(client) for client in clients]
 adults := [push(client) for client in clients if [ client.age >= 18 ]]
 pwdir := !pwd
-directories := [push(pwdir.."/"..f) for f in files if file :d, f]
+directories := [push(pwdir.."/"..f) for f in files if isDirectory(f)]
 ```
 
 #### Mapping and filtering
@@ -118,9 +118,10 @@ directories := [push(pwdir.."/"..f) for f in files if file :d, f]
 `for` can also used in pipes. `if` and `unless` are right-associative, so braces `{}` should be used around them.
 
 ```ruby
-["Pictures/", "Music/"] | exec(:l, "ls", dir) for dir | { [ f ] for f unless file :d, f } | for f do
+["Pictures/", "Music/"] | exec(:l, "ls", dir) for dir | { [ f ] for f unless isDirectory(f) } | for f do
 	print f.." "..file(:m, f)
 done
+```
 
 #### Looped conditionals
 
@@ -133,7 +134,7 @@ done
 Ensures that the condition is true for all elements in list.
 
 ```sh
-if file :d, f for f in [exec(:l, "ls")] do
+if isDirectory(f) for f in [exec(:l, "ls")] do
 	print "All files are directories!"
 done
 ```

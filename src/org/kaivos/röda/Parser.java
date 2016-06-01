@@ -34,6 +34,7 @@ public class Parser {
 		.addOperatorRule("*=")
 		.addOperatorRule("/=")
 		.addOperatorRule("++")
+		.addOperatorRule("--")
 		.addOperatorRule("//")
 		.addOperatorRule("&&")
 		.addOperatorRule("||")
