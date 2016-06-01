@@ -20,13 +20,13 @@ public final class CdAndPwdPopulator {
 
 	public static void populateCdAndPwd(Interpreter I, RödaScope S) {
 		S.setLocal("cd", RödaNativeFunction.of("cd", (typeargs, args, scope, in, out) -> {
-					String dirname = args.get(0).str();
-					File dir = IOUtils.getMaybeRelativeFile(I.currentDir, dirname);
-					if (!dir.isDirectory()) {
-						error("cd: not a directory");
-					}
-				        I.currentDir = dir;
-				}, Arrays.asList(new Parameter("path", false, STRING)), false));
+			String dirname = args.get(0).str();
+			File dir = IOUtils.getMaybeRelativeFile(I.currentDir, dirname);
+			if (!dir.isDirectory()) {
+				error("cd: not a directory");
+			}
+			I.currentDir = dir;
+		}, Arrays.asList(new Parameter("path", false, STRING)), false));
 		
 		S.setLocal("pwd", RödaNativeFunction.of("pwd", (typeargs, args, scope, in, out) -> {
 			try {

@@ -19,13 +19,12 @@ public final class ImportPopulator {
 
 	public static void populateImport(Interpreter I, RödaScope S) {
 		S.setLocal("import", RödaNativeFunction.of("import", (typeargs, args, scope, in, out) -> {
-				        for (RödaValue value : args) {
-						checkString("import", value);
-						String filename = value.str();
-						File file = IOUtils.getMaybeRelativeFile(I.currentDir,
-											 filename);
-						I.loadFile(file, I.G);
-					}
-				}, Arrays.asList(new Parameter("files", false, STRING)), true));
+			for (RödaValue value : args) {
+				checkString("import", value);
+				String filename = value.str();
+				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
+				I.loadFile(file, I.G);
+			}
+		}, Arrays.asList(new Parameter("files", false, STRING)), true));
 	}
 }

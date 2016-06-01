@@ -16,14 +16,13 @@ public class ErrorPopulator {
 
 	public static void populateError(RödaScope S) {
 		S.setLocal("error", RödaNativeFunction.of("error", (typeargs, args, scope, in, out) -> {
-					checkArgs("error", 1, args.size());
-					if (args.get(0).is(STRING)) {
-						error(args.get(0).str());
-					}
-					else if (!args.get(0).is("error")) {
-						error("error: can't cast a " + args.get(0).typeString() + " to an error");
-					}
-					else error(args.get(0));
-				}, Arrays.asList(new Parameter("errorObject", false)), false));
+			checkArgs("error", 1, args.size());
+			if (args.get(0).is(STRING)) {
+				error(args.get(0).str());
+			} else if (!args.get(0).is("error")) {
+				error("error: can't cast a " + args.get(0).typeString() + " to an error");
+			} else
+				error(args.get(0));
+		}, Arrays.asList(new Parameter("errorObject", false)), false));
 	}
 }

@@ -15,10 +15,10 @@ public final class SeqPopulator {
 
 	public static void populateSeq(RödaScope S) {
 		S.setLocal("seq", RödaNativeFunction.of("seq", (typeargs, args, scope, in, out) -> {
-					long from = args.get(0).integer();
-					long to = args.get(1).integer();
-					for (long i = from; i <= to; i++) out.push(RödaInteger.of(i));
-				}, Arrays.asList(new Parameter("from", false, INTEGER),
-						 new Parameter("to", false, INTEGER)), false));
+			long from = args.get(0).integer();
+			long to = args.get(1).integer();
+			for (long i = from; i <= to; i++)
+				out.push(RödaInteger.of(i));
+		}, Arrays.asList(new Parameter("from", false, INTEGER), new Parameter("to", false, INTEGER)), false));
 	}
 }

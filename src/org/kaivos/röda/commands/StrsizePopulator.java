@@ -20,22 +20,16 @@ public final class StrsizePopulator {
 
 	public static void populateStrsize(RödaScope S) {
 		S.setLocal("strsize", RödaNativeFunction.of("strsize", (typeargs, args, scope, in, out) -> {
-					Charset chrset = StandardCharsets.UTF_8;
-					Consumer<RödaValue> convert = v -> {
-							checkString("strsize", v);
-							out.push(RödaInteger.of(v.str().getBytes(chrset).length));
-					};
-				        if (args.size() > 0) {
-						for (RödaValue v : args) {
-							convert.accept(v);
-						}
-					} else {
-						while (true) {
-							RödaValue v = in.pull();
-							if (v == null) break;
-							convert.accept(v);
-						}
-					}
-				}, Arrays.asList(new Parameter("strings", false, STRING)), true));
+			Charset chrset = StandardCharsets.UTF_8;
+			Consumer<RödaValue> convert = v -> {
+				checkString("strsize", v);
+				out.push(RödaInteger.of(v.str().getBytes(chrset).length));
+			};
+			if (args.size() > 0) {
+				args.forEach(convert);
+			} else {
+				in.forAll(convert);
+			}
+		}, Arrays.asList(new Parameter("strings", false, STRING)), true));
 	}
 }

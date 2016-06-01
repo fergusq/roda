@@ -24,60 +24,52 @@ public final class ThreadPopulator {
 	private ThreadPopulator() {}
 
 	public static void populateThread(Interpreter I, RödaScope S) {
-		Record threadRecord = new Record("Thread",
-						 Collections.emptyList(),
-						 null,
-						 Arrays.asList(new Record.Field("start", new Datatype("function")),
-							       new Record.Field("pull", new Datatype("function")),
-							       new Record.Field("push", new Datatype("function"))),
-						 false);
+		Record threadRecord = new Record("Thread", Collections.emptyList(), null,
+				Arrays.asList(new Record.Field("start", new Datatype("function")),
+						new Record.Field("pull", new Datatype("function")),
+						new Record.Field("push", new Datatype("function"))),
+				false);
 		I.registerRecord(threadRecord);
-	
+
 		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, scope, in, out) -> {
-				        RödaValue function = args.get(0);
-	
-					RödaScope newScope =
-						!function.is(RödaValue.NFUNCTION)
-						&& function.localScope() != null
-						? new RödaScope(function.localScope())
-						: new RödaScope(I.G);
-					RödaStream _in = RödaStream.makeStream();
-					RödaStream _out = RödaStream.makeStream();
-					
-					class P { boolean started = false; }
-					P p = new P();
-	
-					Runnable task = () -> {
-						try {
-							I.exec("<Thread.start>", 0, function, Collections.emptyList(),
-							       Collections.emptyList(), newScope, _in, _out);
-						} catch (RödaException e) {
-							System.err.println("[E] " + e.getMessage());
-							for (String step : e.getStack()) {
-								System.err.println(step);
-							}
-							if (e.getCause() != null) e.getCause().printStackTrace();
-						}
-						_out.finish();
-					};
-	
-					RödaValue threadObject = RödaRecordInstance.of(threadRecord,
-										       Collections.emptyList(),
-										       I.records);
-					threadObject.setField("start",
-							      RödaNativeFunction
-							      .of("Thread.start",
-								  (ra, a, s, i, o) -> {
-									  checkArgs("Thread.start", 0, a.size());
-									  if (p.started)
-										  error("Thread has already "
-											+ "been executed");
-									  p.started = true;
-									  Interpreter.executor.execute(task);
-								  }, Collections.emptyList(), false));
-					threadObject.setField("pull",Builtins.genericPull("Thread.pull", _out));
-					threadObject.setField("push",Builtins.genericPush("Thread.push", _in));
-					out.push(threadObject);
-				}, Arrays.asList(new Parameter("runnable", false, FUNCTION)), false));
+			RödaValue function = args.get(0);
+
+			RödaScope newScope = !function.is(RödaValue.NFUNCTION) && function.localScope() != null
+					? new RödaScope(function.localScope()) : new RödaScope(I.G);
+			RödaStream _in = RödaStream.makeStream();
+			RödaStream _out = RödaStream.makeStream();
+
+			class P {
+				boolean started = false;
+			}
+			P p = new P();
+
+			Runnable task = () -> {
+				try {
+					I.exec("<Thread.start>", 0, function, Collections.emptyList(), Collections.emptyList(), newScope,
+							_in, _out);
+				} catch (RödaException e) {
+					System.err.println("[E] " + e.getMessage());
+					for (String step : e.getStack()) {
+						System.err.println(step);
+					}
+					if (e.getCause() != null)
+						e.getCause().printStackTrace();
+				}
+				_out.finish();
+			};
+
+			RödaValue threadObject = RödaRecordInstance.of(threadRecord, Collections.emptyList(), I.records);
+			threadObject.setField("start", RödaNativeFunction.of("Thread.start", (ra, a, s, i, o) -> {
+				checkArgs("Thread.start", 0, a.size());
+				if (p.started)
+					error("Thread has already " + "been executed");
+				p.started = true;
+				Interpreter.executor.execute(task);
+			}, Collections.emptyList(), false));
+			threadObject.setField("pull", Builtins.genericPull("Thread.pull", _out));
+			threadObject.setField("push", Builtins.genericPush("Thread.push", _in));
+			out.push(threadObject);
+		}, Arrays.asList(new Parameter("runnable", false, FUNCTION)), false));
 	}
 }

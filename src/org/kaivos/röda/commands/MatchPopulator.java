@@ -23,52 +23,49 @@ public final class MatchPopulator {
 
 	public static void populateMatch(RödaScope S) {
 		S.setLocal("match", RödaNativeFunction.of("match", (typeargs, args, scope, in, out) -> {
-					if (args.size() < 1) argumentUnderflow("match", 1, 0);
-				        String regex = args.get(0).str(); args.remove(0);
-					Pattern pattern;
-					try {
-						pattern = Pattern.compile(regex);
-					} catch (PatternSyntaxException e) {
-						error("match: pattern syntax exception: " + e.getMessage());
-						return;
-					}
-	
-					if (args.size() > 0) {
-						for (RödaValue arg : args) {
-							Matcher matcher = pattern.matcher(arg.str());
-							if (matcher.matches()) {
-								RödaValue[] results = new RödaValue[matcher.groupCount()+1];
-								for (int i = 0; i < results.length; i++) {
-									String group = matcher.group(i);
-									results[i] = RödaString.of(group != null
-												   ? group
-												   : "");
-								}
-								out.push(RödaList.of(results));
-							}
-							else out.push(RödaList.of());
+			if (args.size() < 1)
+				argumentUnderflow("match", 1, 0);
+			String regex = args.get(0).str();
+			args.remove(0);
+			Pattern pattern;
+			try {
+				pattern = Pattern.compile(regex);
+			} catch (PatternSyntaxException e) {
+				error("match: pattern syntax exception: " + e.getMessage());
+				return;
+			}
+
+			if (args.size() > 0) {
+				for (RödaValue arg : args) {
+					Matcher matcher = pattern.matcher(arg.str());
+					if (matcher.matches()) {
+						RödaValue[] results = new RödaValue[matcher.groupCount() + 1];
+						for (int i = 0; i < results.length; i++) {
+							String group = matcher.group(i);
+							results[i] = RödaString.of(group != null ? group : "");
 						}
-					}
-					else {
-						while (true) {
-							RödaValue input = in.pull();
-							if (input == null) break;
-							checkString("match", input);
-							Matcher matcher = pattern.matcher(input.str());
-							if (matcher.matches()) {
-								RödaValue[] results = new RödaValue[matcher.groupCount()];
-								for (int i = 0; i < results.length; i++) {
-									String group = matcher.group(i);
-									results[i] = RödaString.of(group != null
-												   ? group
-												   : "");
-								}
-								out.push(RödaList.of(results));
-							}
-							else out.push(RödaList.of());
+						out.push(RödaList.of(results));
+					} else
+						out.push(RödaList.of());
+				}
+			} else {
+				while (true) {
+					RödaValue input = in.pull();
+					if (input == null)
+						break;
+					checkString("match", input);
+					Matcher matcher = pattern.matcher(input.str());
+					if (matcher.matches()) {
+						RödaValue[] results = new RödaValue[matcher.groupCount()];
+						for (int i = 0; i < results.length; i++) {
+							String group = matcher.group(i);
+							results[i] = RödaString.of(group != null ? group : "");
 						}
-					}
-				}, Arrays.asList(new Parameter("pattern", false, STRING),
-						 new Parameter("strings", false, STRING)), true));
+						out.push(RödaList.of(results));
+					} else
+						out.push(RödaList.of());
+				}
+			}
+		}, Arrays.asList(new Parameter("pattern", false, STRING), new Parameter("strings", false, STRING)), true));
 	}
 }

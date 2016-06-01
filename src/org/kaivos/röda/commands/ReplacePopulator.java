@@ -18,23 +18,24 @@ public final class ReplacePopulator {
 
 	public static void populateReplace(RödaScope S) {
 		S.setLocal("replace", RödaNativeFunction.of("replace", (typeargs, args, scope, in, out) -> {
-					if (args.size() % 2 != 0) error("invalid arguments for replace: even number required (got " + args.size() + ")");
-					try {
-						while (true) {
-							RödaValue input = in.pull();
-							if (input == null) break;
-							
-							String text = input.str();
-							for (int i = 0; i < args.size(); i+=2) {
-								String pattern = args.get(i).str();
-								String replacement = args.get(i+1).str();
-								text = text.replaceAll(pattern, replacement);
-							}
-							out.push(RödaString.of(text));
-						}
-					} catch (PatternSyntaxException e) {
-						error("replace: pattern syntax exception: " + e.getMessage());
+			if (args.size() % 2 != 0)
+				error("invalid arguments for replace: even number required (got " + args.size() + ")");
+			try {
+				while (true) {
+					RödaValue input = in.pull();
+					if (input == null) break;
+
+					String text = input.str();
+					for (int i = 0; i < args.size(); i += 2) {
+						String pattern = args.get(i).str();
+						String replacement = args.get(i + 1).str();
+						text = text.replaceAll(pattern, replacement);
 					}
-				}, Arrays.asList(new Parameter("patterns_and_replacements", false, STRING)), true));
+					out.push(RödaString.of(text));
+				}
+			} catch (PatternSyntaxException e) {
+				error("replace: pattern syntax exception: " + e.getMessage());
+			}
+		}, Arrays.asList(new Parameter("patterns_and_replacements", false, STRING)), true));
 	}
 }

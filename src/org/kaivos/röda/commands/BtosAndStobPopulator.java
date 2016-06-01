@@ -27,54 +27,43 @@ public final class BtosAndStobPopulator {
 	private BtosAndStobPopulator() {}
 
 	public static void populateBtosAndStob(RödaScope S) {
-		S.setLocal("btos", RödaNativeFunction.of("btos", (typeargs, args, scope, in, out) -> {
-					Charset chrset = StandardCharsets.UTF_8;
-					Consumer<RödaValue> convert = v -> {
-							checkList("btos", v);
-							byte[] arr = new byte[(int) v.list().size()];
-							int c = 0;
-							for (RödaValue i : v.list()) {
-								checkNumber("btos", i);
-								long l = i.integer();
-								if (l > Byte.MAX_VALUE*2)
-									error("btos: too large byte: " + l);
-								arr[c++] = (byte) l;
-							}
-							out.push(RödaString.of(new String(arr, chrset)));
-					};
-				        if (args.size() > 0) {
-						for (RödaValue v : args) {
-							convert.accept(v);
-						}
-					} else {
-						while (true) {
-							RödaValue v = in.pull();
-							if (v == null) break;
-							convert.accept(v);
-						}
-					}
-				}, Arrays.asList(new Parameter("lists", false, LIST)), true));
-		
-		S.setLocal("stob", RödaNativeFunction.of("stob", (typeargs, args, scope, in, out) -> {
-					Charset chrset = StandardCharsets.UTF_8;
-					Consumer<RödaValue> convert = v -> {
-							checkString("stob", v);
-							byte[] arr = v.str().getBytes(chrset);
-							List<RödaValue> bytes = new ArrayList<>();
-							for (byte b : arr) bytes.add(RödaInteger.of(b));
-							out.push(RödaList.of(bytes));
-					};
-				        if (args.size() > 0) {
-						for (RödaValue v : args) {
-							convert.accept(v);
-						}
-					} else {
-						while (true) {
-							RödaValue v = in.pull();
-							if (v == null) break;
-							convert.accept(v);
-						}
-					}
-				}, Arrays.asList(new Parameter("strings", false, STRING)), true));
+		S.setLocal("byteToString", RödaNativeFunction.of("byteToString", (typeargs, args, scope, in, out) -> {
+			Charset chrset = StandardCharsets.UTF_8;
+			Consumer<RödaValue> convert = v -> {
+				checkList("byteToString", v);
+				byte[] arr = new byte[(int) v.list().size()];
+				int c = 0;
+				for (RödaValue i : v.list()) {
+					checkNumber("byteToString", i);
+					long l = i.integer();
+					if (l > Byte.MAX_VALUE * 2)
+						error("byteToString: too large byte: " + l);
+					arr[c++] = (byte) l;
+				}
+				out.push(RödaString.of(new String(arr, chrset)));
+			};
+			if (args.size() > 0) {
+				args.forEach(convert);
+			} else {
+				in.forAll(convert);
+			}
+		}, Arrays.asList(new Parameter("lists", false, LIST)), true));
+
+		S.setLocal("stringToByte", RödaNativeFunction.of("stringToByte", (typeargs, args, scope, in, out) -> {
+			Charset chrset = StandardCharsets.UTF_8;
+			Consumer<RödaValue> convert = v -> {
+				checkString("stringToByte", v);
+				byte[] arr = v.str().getBytes(chrset);
+				List<RödaValue> bytes = new ArrayList<>();
+				for (byte b : arr)
+					bytes.add(RödaInteger.of(b));
+				out.push(RödaList.of(bytes));
+			};
+			if (args.size() > 0) {
+				args.forEach(convert);
+			} else {
+				in.forAll(convert);
+			}
+		}, Arrays.asList(new Parameter("strings", false, STRING)), true));
 	}
 }

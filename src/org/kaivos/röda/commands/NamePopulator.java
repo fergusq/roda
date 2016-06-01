@@ -16,13 +16,12 @@ public final class NamePopulator {
 
 	public static void populateName(RödaScope S) {
 		S.setLocal("name", RödaNativeFunction.of("name", (typeargs, args, scope, in, out) -> {
-					for (RödaValue value : args) {
-						if (!value.is(RödaValue.REFERENCE))
-							error("invalid argument for undefine: "
-							      + "only references accepted");
-	
-						out.push(RödaString.of(value.target()));
-					}
-				}, Arrays.asList(new Parameter("variables", true)), true));
+			for (RödaValue value : args) {
+				if (!value.is(RödaValue.REFERENCE))
+					error("invalid argument for undefine: " + "only references accepted");
+
+				out.push(RödaString.of(value.target()));
+			}
+		}, Arrays.asList(new Parameter("variables", true)), true));
 	}
 }

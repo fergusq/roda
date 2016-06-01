@@ -100,6 +100,19 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		}
 		return RödaList.of(list);
 	}
+	
+	/**
+	 * Calls the given consumer for all current and future values in the stream.
+	 * 
+	 * @param consumer the callback function used to consume the values
+	 */
+	public final void forAll(Consumer<RödaValue> consumer) {
+		while (true) {
+			RödaValue val = get();
+			if (val == null) break;
+			consumer.accept(val);
+		}
+	}
 
 	/**
 	 * Returns a iterator that iterates over all the current and future values in the stream.

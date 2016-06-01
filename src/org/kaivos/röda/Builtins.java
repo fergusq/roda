@@ -17,6 +17,7 @@ import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.commands.AssignGlobalPopulator;
 import org.kaivos.röda.commands.BtosAndStobPopulator;
 import org.kaivos.röda.commands.CdAndPwdPopulator;
+import org.kaivos.röda.commands.CurrentTimePopulator;
 import org.kaivos.röda.commands.ErrorPopulator;
 import org.kaivos.röda.commands.ErrprintPopulator;
 import org.kaivos.röda.commands.ExecPopulator;
@@ -109,7 +110,7 @@ public class Builtins {
 
 		/* Apuoperaatiot */
 
-		populateTime(S);
+		CurrentTimePopulator.populateTime(S);
 		RandomPopulator.populateRandom(S);
 		ExecPopulator.populateExec(I, S);
 		GetenvPopulator.populateGetenv(S);
@@ -128,12 +129,6 @@ public class Builtins {
 		// Säikeet
 
 		ThreadPopulator.populateThread(I, S);
-	}
-
-	private static void populateTime(RödaScope S) {
-		S.setLocal("time", RödaNativeFunction.of("time", (typeargs, args, scope, in, out) -> {
-				        out.push(RödaInteger.of((int) System.currentTimeMillis()));
-				}, Arrays.asList(), false));
 	}
 
 	public static RödaValue genericPush(String name, RödaStream _out) {

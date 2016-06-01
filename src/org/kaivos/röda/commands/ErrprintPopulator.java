@@ -14,17 +14,17 @@ public final class ErrprintPopulator {
 
 	public static void populateErrprint(RödaScope S) {
 		S.setLocal("errprint", RödaNativeFunction.of("errprint", (typeargs, args, scope, in, out) -> {
-					if (args.isEmpty()) {
-						while (true) {
-							RödaValue input = in.pull();
-							if (input == null) break;
-							System.err.print(input.str());
-						}
-					}
-					else for (RödaValue value : args) {
-						System.err.print(value.str());
-						out.push(RödaString.of("\n"));
-					}
-				}, Arrays.asList(new Parameter("values", false)), true));
+			if (args.isEmpty()) {
+				while (true) {
+					RödaValue input = in.pull();
+					if (input == null) break;
+					System.err.print(input.str());
+				}
+			} else
+				for (RödaValue value : args) {
+					System.err.print(value.str());
+					out.push(RödaString.of("\n"));
+				}
+		}, Arrays.asList(new Parameter("values", false)), true));
 	}
 }

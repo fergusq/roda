@@ -15,7 +15,7 @@ public final class GetenvPopulator {
 
 	public static void populateGetenv(RödaScope S) {
 		S.setLocal("getenv", RödaNativeFunction.of("getenv", (typeargs, args, scope, in, out) -> {
-				        out.push(RödaString.of(System.getenv(args.get(0).str())));
-				}, Arrays.asList(new Parameter("name", false, STRING)), false));
+			out.push(RödaString.of(System.getenv(args.get(0).str())));
+		}, Arrays.asList(new Parameter("name", false, STRING)), false));
 	}
 }
