@@ -167,48 +167,6 @@ public class Parser {
 		return token.getToken();
 	}
 
-	// TODO tee parempi toteutus tyypeille
-	// Ongelmat:
-	// - RödaValue sisältää kaikki tyypit - HUONO
-	// - Datatype vs. RödaValue.Type - ei monia luokkia samaan asiaan
-	public static class Datatype {
-		public final String name;
-		public final List<Datatype> subtypes;
-
-		public Datatype(String name,
-				List<Datatype> subtypes) {
-			this.name = name;
-			this.subtypes = Collections.unmodifiableList(subtypes);
-		}
-
-		public Datatype(String name) {
-			this.name = name;
-			this.subtypes = Collections.emptyList();
-		}
-
-		@Override
-		public String toString() {
-			if (subtypes.isEmpty())
-				return name;
-			return name + "<" + subtypes.stream()
-				.map(Datatype::toString)
-				.collect(joining(", ")) + ">";
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (!(obj instanceof Datatype))
-				return false;
-			Datatype other = (Datatype) obj;
-			if (!name.equals(other.name))
-				return false;
-			if (!subtypes.equals(other.subtypes))
-				return false;
-
-			return true;
-		}
-	}
-
 	static Datatype parseType(TokenList tl) {
 		return _parseType(tl, 0, false).t;
 	}

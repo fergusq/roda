@@ -2,11 +2,12 @@ package org.kaivos.röda.type;
 
 import java.util.List;
 
+import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
+
 import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Parser.Parameter;
-import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaNativeFunction extends RödaValue {
 	public static class NativeFunction {

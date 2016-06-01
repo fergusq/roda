@@ -8,10 +8,10 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import org.kaivos.röda.Builtins;
+import org.kaivos.röda.Datatype;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaException;
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Datatype;
 import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.Parser.Record;
 import org.kaivos.röda.RödaStream;

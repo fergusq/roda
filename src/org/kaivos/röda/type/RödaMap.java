@@ -7,9 +7,10 @@ import java.util.Arrays;
 
 import static java.util.stream.Collectors.joining;
 
+import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
+
 import static org.kaivos.röda.Interpreter.error;
-import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaMap extends RödaValue {
 

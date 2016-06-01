@@ -8,7 +8,6 @@ import org.kaivos.röda.type.RödaBoolean;
 
 import static org.kaivos.röda.type.RödaNativeFunction.NativeFunction;
 import static org.kaivos.röda.Parser.Function;
-import static org.kaivos.röda.Parser.Datatype;
 import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Interpreter.error;
 

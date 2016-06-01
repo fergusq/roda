@@ -5,10 +5,11 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
+import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
+
 import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Parser.Record;
-import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaRecordInstance extends RödaValue {
 	private boolean isValueType;
