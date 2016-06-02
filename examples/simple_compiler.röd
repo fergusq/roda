@@ -1,0 +1,148 @@
+record Datatype(n) {
+	name : string = n
+}
+
+accept keyword {
+	pull(token)
+	error("expected `"..keyword.."', got `"..token.."'") if [ token != keyword ]
+}
+
+expect type1, type2 {
+	if [ type1.name != type2.name ] do
+		error("type mismatch: can't convert " .. type1.name .. " to " .. type2.name)
+	done
+}
+
+compilePrim(&type) {
+	if [ peek() = "(" ] do
+		accept("(")
+		compileExpression(type)
+		accept(")")
+		return
+	done
+	if [ peek() = "-" ] do
+		accept("-")
+		print("PUSH 0")
+		compilePrim(type)
+		expect(type, new Datatype("integer"))
+		print("SUB")
+		return
+	done
+	if [ peek() =~ "[0-9]+" ] do
+		print("PUSH " .. pull())
+		type := new Datatype("integer")
+		return
+	done
+	if [ peek() = "$" ] do
+		accept("$")
+		varname := pull()
+		if [ peek() = "=" ] do
+			accept("=")
+			compileExpression(type)
+			expect(type, new Datatype("integer"))
+			print("SETVAR " .. varname)
+		else
+			print("PUSHVAR " .. varname)
+			type := new Datatype("integer")
+		done
+		return
+	done
+	accept("void")
+	print("PUSH VOID")
+	type := new Datatype("void")
+}
+
+compileTerm(&type) {
+	compilePrim(type)
+	while [ peek() =~ "\\*|/" ] do
+		operator := pull()
+		compilePrim(type)
+		expect(type, new Datatype("integer"))
+		print("MUL") if [ operator = "*" ]
+		print("DIV") if [ operator = "/" ]
+	done if [ type.name = "integer" ]
+}
+
+compileExpression(&type) {
+	compileTerm(type)
+	while [ peek() =~ "\\+|\\-" ] do
+		operator := pull()
+		compileTerm(type)
+		expect(type, new Datatype("integer"))
+		print("ADD") if [ operator = "+" ]
+		print("SUB") if [ operator = "-" ]
+	done if [ type.name = "integer" ]
+}
+
+{ createGlobal "counter", 0 }
+newLabelNum {
+	counter ++
+	return counter
+}
+
+compileIf {
+	labelNum := newLabelNum()
+	accept("if")
+	accept("(")
+	compileExpression(type)
+	expect(type, new Datatype("integer"))
+	accept(")")
+	print("JNZ if"..labelNum.."_end")
+	accept("{")
+	compileBlock()
+	accept("}")
+	print("if"..labelNum.."_end:")
+}
+
+compileWhile {
+	labelNum := newLabelNum()
+	print("while"..labelNum.."_start:")
+	accept("while")
+	accept("(")
+	compileExpression(type)
+	expect(type, new Datatype("integer"))
+	accept(")")
+	print("JNZ while"..labelNum.."_end")
+	accept("{")
+	compileBlock()
+	accept("}")
+	print("JMP while"..labelNum.."_start")
+	print("while"..labelNum.."_end:")
+}
+
+compilePrint {
+	accept("print")
+	compileExpression(type)
+	accept(";")
+	print("PRINT")
+}
+
+compileStatement {
+	type := peek()
+	if [ type = "if" ] do
+		compileIf()
+		return
+	done
+	if [ type = "while" ] do
+		compileWhile()
+		return
+	done
+	if [ type = "print" ] do
+		compilePrint()
+		return
+	done
+	compileExpression(type)
+	accept(";")
+	print("POP")
+}
+
+compileBlock {
+	compileStatement()
+	while [ peek() != "<EOF>" and peek() != "}" ] do
+		compileStatement()
+	done
+}
+
+main code... {
+	push(code&" ") | { split(:s, "(?<=[^a-zA-Z0-9_])|(?=[^a-zA-Z0-9_])"); push("<EOF>") } | { push(token) for token if [ token != " " ] } | compileBlock()
+}
