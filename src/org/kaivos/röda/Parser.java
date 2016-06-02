@@ -297,7 +297,7 @@ public class Parser {
 		}
 
 		public final String name;
-		public final List<String> typeparams;
+		public final List<String> typeparams, params;
 		public final Datatype superType;
 		public final List<Annotation> annotations;
 		public final List<Field> fields;
@@ -308,18 +308,19 @@ public class Parser {
 		       Datatype superType,
 		       List<Field> fields,
 		       boolean isValueType) {
-			this(name, typeparams, superType, Collections.emptyList(),
-			     fields, isValueType);
+			this(name, typeparams, Collections.emptyList(), superType, Collections.emptyList(), fields, isValueType);
 		}
 
 		Record(String name,
 		       List<String> typeparams,
+		       List<String> params,
 		       Datatype superType,
 		       List<Annotation> annotations,
 		       List<Field> fields,
 		       boolean isValueType) {
 			this.name = name;
 			this.typeparams = Collections.unmodifiableList(typeparams);
+			this.params = Collections.unmodifiableList(params);
 			this.annotations = Collections.unmodifiableList(annotations);
 			this.fields = Collections.unmodifiableList(fields);
 			this.superType = superType;
@@ -335,13 +336,21 @@ public class Parser {
 		String name = identifier(tl);
 		List<String> typeparams = parseTypeparameters(tl);
 
+		List<String> params = new ArrayList<>();
+		if (acceptIfNext(tl, "(")) {
+			params.add(identifier(tl));
+			while (acceptIfNext(tl, ", "))
+				params.add(identifier(tl));
+			accept(tl, ")");
+		}
+
 		Datatype superType = null;
 		if (acceptIfNext(tl, ":")) {
 			superType = parseType(tl);
 		}
-
+		
 		List<Record.Field> fields = new ArrayList<>();
-
+		
 		accept(tl, "{");
 		while (!isNext(tl, "}")) {
 			List<Annotation> annotations = parseAnnotations(tl);
@@ -368,7 +377,7 @@ public class Parser {
 		}
 		accept(tl, "}");
 
-		return new Record(name, typeparams, superType, recordAnnotations, fields, isValueType);
+		return new Record(name, typeparams, params, superType, recordAnnotations, fields, isValueType);
 	}
 
 	public static class Function {
@@ -921,7 +930,7 @@ public class Parser {
 			case JOIN:
 				return exprA.asString() + "&" + exprB.asString();
 			case NEW:
-				return "new " + datatype.toString();
+				return "new " + datatype.toString() + "(" + list.stream().map(Expression::asString).collect(joining(", ")) + ")";
 			case REFLECT:
 				return "reflect " + datatype.toString();
 			case TYPEOF:
@@ -1113,12 +1122,13 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionNew(String file, int line, Datatype datatype) {
+	private static Expression expressionNew(String file, int line, Datatype datatype, List<Expression> args) {
 		Expression e = new Expression();
 		e.type = Expression.Type.NEW;
 		e.file = file;
 		e.line = line;
 		e.datatype = datatype;
+		e.list = args;
 		return e;
 	}
 
@@ -1265,7 +1275,16 @@ public class Parser {
 		Expression ans = null;
 		if (acceptIfNext(tl, "new")) {
 			Datatype type = parseType(tl);
-			ans = expressionNew(file, line, type);
+			List<Expression> args = new ArrayList<>();
+			if (acceptIfNext(tl, "(")) {
+				if (!isNext(tl, ")")) {
+					args.add(parseExpression(tl));
+					while (acceptIfNext(tl, ","))
+						args.add(parseExpression(tl));
+				}
+				accept(tl, ")");
+			}
+			ans = expressionNew(file, line, type, args);
 		}
 		else if (acceptIfNext(tl, "reflect")) {
 			Datatype type = parseType(tl);

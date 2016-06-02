@@ -161,7 +161,7 @@ public class Interpreter {
 											      Arrays
 											      .asList(new Datatype
 												      ("Field")))),
-						      new Record.Field("new_instance", new Datatype("function"))
+						      new Record.Field("newInstance", new Datatype("function"))
 						      ),
 					false);
 		fieldRecord = new Record("Field",
@@ -199,10 +199,10 @@ public class Interpreter {
 		typeObj.setField("fields", RödaList.of("Field", record.fields.stream()
 						       .map(f -> createFieldReflection(record, f))
 						       .collect(toList())));
-		typeObj.setField("new_instance", RödaNativeFunction
-				 .of("Type.new_instance",
+		typeObj.setField("newInstance", RödaNativeFunction
+				 .of("Type.newInstance",
 				     (ta, a, s, i, o) -> {
-					     o.push(newRecord(new Datatype(record.name), ta));
+					     o.push(newRecord(new Datatype(record.name), ta, Collections.emptyList()));
 				     }, Collections.emptyList(), false));
 		return typeObj;
 	}
@@ -1134,7 +1134,9 @@ public class Interpreter {
 			Datatype type = scope.substitute(exp.datatype);
 			List<Datatype> subtypes = exp.datatype.subtypes.stream()
 				.map(scope::substitute).collect(toList());
-			return newRecord(type, subtypes);
+			List<RödaValue> args = exp.list.stream().map(e -> evalExpression(e, scope, in, out)).map(RödaValue::impliciteResolve)
+					.collect(toList());
+			return newRecord(type, subtypes, args);
 		}
 		if (exp.type == Expression.Type.LENGTH
 		    || exp.type == Expression.Type.ELEMENT
@@ -1272,7 +1274,7 @@ public class Interpreter {
 		return null;
 	}
 
-	private RödaValue newRecord(Datatype type, List<Datatype> subtypes) {
+	private RödaValue newRecord(Datatype type, List<Datatype> subtypes, List<RödaValue> args) {
 		switch (type.name) {
 		case "list":
 			if (subtypes.size() == 0)
@@ -1295,11 +1297,17 @@ public class Interpreter {
 		if (r.typeparams.size() != subtypes.size())
 			error("wrong number of typearguments for '" + r.name + "': "
 			      + r.typeparams.size() + " required, got " + subtypes.size());
+		if (r.params.size() != args.size())
+			error("wrong number of arguments for '" + r.name + "': "
+			      + r.params.size() + " required, got " + args.size());
 		RödaValue value = RödaRecordInstance.of(r, subtypes, records);
 		RödaScope recordScope = new RödaScope(G);
 		recordScope.setLocal("self", value);
 		for (int i = 0; i < subtypes.size(); i++) {
 			recordScope.addTypearg(r.typeparams.get(i), subtypes.get(i));
+		}
+		for (int i = 0; i < args.size(); i++) {
+			recordScope.setLocal(r.params.get(i), args.get(i));
 		}
 		for (Record.Field f : r.fields) {
 			if (f.defaultValue != null) {
