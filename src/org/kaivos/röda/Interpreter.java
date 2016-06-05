@@ -140,7 +140,7 @@ public class Interpreter {
 	static {
 		errorRecord = new Record("Error",
 					 Collections.emptyList(),
-					 null,
+					 Collections.emptyList(),
 					 Arrays.asList(new Record.Field("message", new Datatype("string")),
 						       new Record.Field("stack", new Datatype("list",
 											      Arrays
@@ -154,7 +154,7 @@ public class Interpreter {
 					 false);
 		typeRecord = new Record("Type",
 					Collections.emptyList(),
-					null,
+					Collections.emptyList(),
 					Arrays.asList(new Record.Field("name", new Datatype("string")),
 						      new Record.Field("annotations", new Datatype("list")),
 						      new Record.Field("fields", new Datatype("list",
@@ -166,7 +166,7 @@ public class Interpreter {
 					false);
 		fieldRecord = new Record("Field",
 					 Collections.emptyList(),
-					 null,
+					 Collections.emptyList(),
 					 Arrays.asList(new Record.Field("name", new Datatype("string")),
 						       new Record.Field("annotations", new Datatype("list")),
 						       new Record.Field("type", new Datatype("Type")),

@@ -298,23 +298,23 @@ public class Parser {
 
 		public final String name;
 		public final List<String> typeparams, params;
-		public final Datatype superType;
+		public final List<Datatype> superTypes;
 		public final List<Annotation> annotations;
 		public final List<Field> fields;
 		public final boolean isValueType;
 
 		public Record(String name,
 		       List<String> typeparams,
-		       Datatype superType,
+		       List<Datatype> superTypes,
 		       List<Field> fields,
 		       boolean isValueType) {
-			this(name, typeparams, Collections.emptyList(), superType, Collections.emptyList(), fields, isValueType);
+			this(name, typeparams, Collections.emptyList(), superTypes, Collections.emptyList(), fields, isValueType);
 		}
 
 		Record(String name,
 		       List<String> typeparams,
 		       List<String> params,
-		       Datatype superType,
+		       List<Datatype> superTypes,
 		       List<Annotation> annotations,
 		       List<Field> fields,
 		       boolean isValueType) {
@@ -323,7 +323,7 @@ public class Parser {
 			this.params = Collections.unmodifiableList(params);
 			this.annotations = Collections.unmodifiableList(annotations);
 			this.fields = Collections.unmodifiableList(fields);
-			this.superType = superType;
+			this.superTypes = superTypes;
 			this.isValueType = isValueType;
 		}
 	}
@@ -344,9 +344,12 @@ public class Parser {
 			accept(tl, ")");
 		}
 
-		Datatype superType = null;
+		List<Datatype> superTypes = new ArrayList<>();
 		if (acceptIfNext(tl, ":")) {
-			superType = parseType(tl);
+			superTypes.add(parseType(tl));
+			while (acceptIfNext(tl, ",")) {
+				superTypes.add(parseType(tl));
+			}
 		}
 		
 		List<Record.Field> fields = new ArrayList<>();
@@ -377,7 +380,7 @@ public class Parser {
 		}
 		accept(tl, "}");
 
-		return new Record(name, typeparams, params, superType, recordAnnotations, fields, isValueType);
+		return new Record(name, typeparams, params, superTypes, recordAnnotations, fields, isValueType);
 	}
 
 	public static class Function {
