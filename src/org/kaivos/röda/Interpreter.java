@@ -202,7 +202,7 @@ public class Interpreter {
 		typeObj.setField("newInstance", RödaNativeFunction
 				 .of("Type.newInstance",
 				     (ta, a, s, i, o) -> {
-					     o.push(newRecord(new Datatype(record.name), ta, Collections.emptyList()));
+					     o.push(newRecord(new Datatype(record.name), ta, a));
 				     }, Collections.emptyList(), false));
 		return typeObj;
 	}
