@@ -167,47 +167,23 @@ public class Parser {
 						   token);
 		return token.getToken();
 	}
-
-	static Datatype parseType(TokenList tl) {
-		return _parseType(tl, 0, false).t;
-	}
-
-	/* Pitää kirjaa siitä, montako ylimääräistä kulmasulkua tai yhtäsuuruusmerkkiä on jo parsittu */
-	private static class DTP { int p; int e; Datatype t; }
-	private static DTP _parseType(TokenList tl, int extraPs, boolean allowEqSymbol) {
+	
+	private static Datatype parseType(TokenList tl) {
 		String name = typename(tl);
 		List<Datatype> subtypes = new ArrayList<>();
-		int extraAngles = 0;
-		int extraEq = 0;
 	        if (!name.equals("function")
 		    && !name.equals("string")
 		    && !name.equals("boolean")
 		    && !name.equals("number")
-		    && acceptIfNext(tl, "<")) {
+		    && acceptIfNext(tl, "@")) {
+		    	accept(tl, "(");
 			do {
-				DTP dtp = _parseType(tl, extraPs+1, false);
-				subtypes.add(dtp.t);
-				if (dtp.p > 0) {
-					extraAngles = dtp.p;
-					break;
-				}
+				Datatype t = parseType(tl);
+				subtypes.add(t);
 			} while (acceptIfNext(tl, ","));
-			if (extraAngles == 0) {
-				if (extraPs >= 2
-				    && acceptIfNext(tl, ">>>")) extraAngles = 2;
-				else if (extraPs >= 1
-					 && acceptIfNext(tl, ">>")) extraAngles = 1;
-				else if (allowEqSymbol
-					 && acceptIfNext(tl, ">=")) extraEq = 1;
-				else accept(tl, ">");
-			}
-			else extraAngles--;
+			accept(tl, ")");
 		}
-		DTP ans = new DTP();
-		ans.p = extraAngles;
-		ans.e = extraEq;
-		ans.t = new Datatype(name, subtypes);
-		return ans;
+		return new Datatype(name, subtypes);
 	}
 	
 	static class Program {
@@ -369,10 +345,9 @@ public class Parser {
 			else {
 				String fieldName = identifier(tl);
 				accept(tl, ":");
-				DTP dtp = _parseType(tl, 0, true);
-				Datatype type = dtp.t;
+				Datatype type = parseType(tl);
 				Expression defaultValue = null;
-				if (dtp.e > 0 || acceptIfNext(tl, "=")) {
+				if (acceptIfNext(tl, "=")) {
 					defaultValue = parseExpression(tl);
 				}
 				fields.add(new Record.Field(fieldName, type, defaultValue, annotations));
@@ -460,12 +435,13 @@ public class Parser {
 
 	static List<String> parseTypeparameters(TokenList tl) {
 		List<String> typeparams = new ArrayList<>();
-		if (acceptIfNext(tl, "<")) {
+		if (acceptIfNext(tl, "@")) {
+			accept(tl, "(");
 			do {
 				String typeparam = identifier(tl);
 				typeparams.add(typeparam);
 			} while (acceptIfNext(tl, ","));
-			accept(tl, ">");
+			accept(tl, ")");
 		}
 		return typeparams;
 	}
@@ -796,11 +772,12 @@ public class Parser {
 		if (isNext(tl, ":=", "=", "++", "--", "+=", "-=", "*=", "/=", ".=", "~=", "?")) {
 			operator = nextString(tl);
 		}
-		else if (acceptIfNext(tl, "<")) {
+		else if (acceptIfNext(tl, "@")) {
+			accept(tl, "(");
 			do {
 				typeargs.add(parseType(tl));
 			} while (acceptIfNext(tl, ","));
-			accept(tl, ">");
+			accept(tl, ")");
 		}
 		List<Argument> arguments;
 		
@@ -1174,7 +1151,7 @@ public class Parser {
 	}
 
 	private static Expression parseArrayAccessIfPossible(TokenList tl, Expression ans, boolean allowCalls) {
-		while (isNext(tl, "[", ".", "is") || allowCalls && isNext(tl, "(")) {
+		while (isNext(tl, "[", ".", "is") || allowCalls && isNext(tl, "(", "@")) {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
 			if (acceptIfNext(tl, "[")) {
@@ -1195,9 +1172,18 @@ public class Parser {
 					}
 				}
 			}
-			else if (allowCalls && acceptIfNext(tl, "(")) {
+			else if (allowCalls && isNext(tl, "@", "(")) {
+				List<Datatype> typeargs = new ArrayList<>();
+				if (acceptIfNext(tl, "@")) {
+					accept(tl, "(");
+					do {
+						typeargs.add(parseType(tl));
+					} while (acceptIfNext(tl, ","));
+					accept(tl, ")");
+				}
+				accept(tl, "(");
 				List<Command> commands = new ArrayList<>();
-				Command cmd = _makeNormalCommand(file, line, ans, Collections.emptyList(), parseArguments(tl, true));
+				Command cmd = _makeNormalCommand(file, line, ans, typeargs, parseArguments(tl, true));
 				accept(tl, ")");
 				commands.add(parseSuffix(tl, cmd));
 				while (acceptIfNext(tl, "|")) {
