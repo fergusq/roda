@@ -74,7 +74,7 @@ public class LexerTest {
 
 	@Test
 	public void testLinesAndText() {
-		assertEquals("a, -, b, --, -, -, d, -, e, f, -, -, gh, -, ij, -, k, -, <EOF>",
+		assertEquals("a, -, b, --, --, d, -, e, f, --, gh, -, ij, -, k, -, <EOF>",
 			     lex("a-b-- --d -e f--gh-ij- k-"));
 	}
 
@@ -98,16 +98,5 @@ public class LexerTest {
 	@Test(expected=ParsingException.class)
 	public void testUnclosedStringWithEscapeCodeAtEnd() {
 		lex("\"abba\\\"");
-	}
-
-	@Test
-	public void testLuaQuote() {
-		assertEquals("[[, abb\na\"\rväli\\nab\\\nba2, ]], <EOF>",
-			     lex("[[abb\na\"\rväli\\nab\\\nba2]]"));
-	}
-
-	@Test(expected=ParsingException.class)
-	public void testUnclosedLuaQuote() {
-	        lex("[[abb\na\"\rväli\\nab\\\nba2");
 	}
 }

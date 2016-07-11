@@ -140,7 +140,7 @@ public class Interpreter {
 	static {
 		errorRecord = new Record("Error",
 					 Collections.emptyList(),
-					 null,
+					 Collections.emptyList(),
 					 Arrays.asList(new Record.Field("message", new Datatype("string")),
 						       new Record.Field("stack", new Datatype("list",
 											      Arrays
@@ -154,7 +154,7 @@ public class Interpreter {
 					 false);
 		typeRecord = new Record("Type",
 					Collections.emptyList(),
-					null,
+					Collections.emptyList(),
 					Arrays.asList(new Record.Field("name", new Datatype("string")),
 						      new Record.Field("annotations", new Datatype("list")),
 						      new Record.Field("fields", new Datatype("list",
@@ -166,7 +166,7 @@ public class Interpreter {
 					false);
 		fieldRecord = new Record("Field",
 					 Collections.emptyList(),
-					 null,
+					 Collections.emptyList(),
 					 Arrays.asList(new Record.Field("name", new Datatype("string")),
 						       new Record.Field("annotations", new Datatype("list")),
 						       new Record.Field("type", new Datatype("Type")),
@@ -202,7 +202,7 @@ public class Interpreter {
 		typeObj.setField("newInstance", RödaNativeFunction
 				 .of("Type.newInstance",
 				     (ta, a, s, i, o) -> {
-					     o.push(newRecord(new Datatype(record.name), ta, Collections.emptyList()));
+					     o.push(newRecord(new Datatype(record.name), ta, a));
 				     }, Collections.emptyList(), false));
 		return typeObj;
 	}
