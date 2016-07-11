@@ -339,7 +339,7 @@ public class Parser {
 		List<String> params = new ArrayList<>();
 		if (acceptIfNext(tl, "(")) {
 			params.add(identifier(tl));
-			while (acceptIfNext(tl, ", "))
+			while (acceptIfNext(tl, ","))
 				params.add(identifier(tl));
 			accept(tl, ")");
 		}

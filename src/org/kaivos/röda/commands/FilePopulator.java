@@ -42,7 +42,7 @@ public final class FilePopulator {
 			}
 			else {
 				for (int i = 0; i < args.size(); i++) {
-					RödaValue value = args.get(++i);
+					RödaValue value = args.get(i);
 					processQuery(I, name, out, consumer, value);
 				}
 			}
