@@ -5,10 +5,11 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
+import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
+
 import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Parser.Record;
-import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaRecordInstance extends RödaValue {
 	private boolean isValueType;
@@ -61,10 +62,6 @@ public class RödaRecordInstance extends RödaValue {
 		return a;
 	}
 
-	@Override public boolean isRecordInstance() {
-		return true;
-	}
-
 	@Override public boolean strongEq(RödaValue value) {
 		if (!basicIdentity().equals(value.basicIdentity()))
 			return false;
@@ -87,10 +84,12 @@ public class RödaRecordInstance extends RödaValue {
 				      List<Datatype> identities) {
 		identities.add(new Datatype(record.name, typearguments));
 		for (Record.Field field : record.fields) {
+			if (fieldTypes.containsKey(field.name))
+				error("double inheritance of field '" + field.name + "'");
 			fieldTypes.put(field.name, substitute(field.type, record.typeparams, typearguments));
 		}
-		if (record.superType != null) {
-			Datatype superType = substitute(record.superType, record.typeparams, typearguments);
+		for (Datatype superType : record.superTypes) {
+			superType = substitute(superType, record.typeparams, typearguments);
 			Record r = records.get(superType.name);
 			if (r == null)
 				error("super type " + superType.name + " not found");

@@ -26,9 +26,9 @@ The maybe second most used command is variable assignment. Below is a basic exam
 ```sh
 name := "Caroline"
 age := 31
-print name ", " age " years"
+print name, ", ", age, " years"
 age = 32
-print name ", " age " years"
+print name, ", ", age, " years"
 ```
 
 Here we declare two variables, `name` and `age` and use them to print an introductive text of a person: `Caroline, 31 years`.
@@ -39,19 +39,17 @@ Using variables and a while loop we can print the first even numbers:
 ```sh
 i := 0
 while [ i < 10 ] do
-	print $ i*2
+	print i*2
 	i++
 done
 ```
 
-In Röda all arithmetics must be prefixed with `$`, which enables the _arithmetic expression context_.
-
 Like in Bourne shell, condition is a command. It can be an arithmetic command `[]` or a normal function call like below.
-`file -e` is used to check if the file exists.
+`file :e` is used to check if the file exists.
 
 ```sh
-if file -e "log.txt" do
-	exec "rm" "log.txt"
+if file :e, "log.txt" do
+	exec "rm", "log.txt"
 done
 ```
 
@@ -63,8 +61,8 @@ In this section we're going to review some syntactic features of Röda which may
 In README.md, I used this prime generator as an example:
 
 ```sh
-primes := (2)
-seq 3 10000 | { primes += i if [ i % p != 0 ] for p in primes } for i
+primes := [2]
+seq 3, 10000 | { primes += i if [ i % p != 0 ] for p in primes } for i
 print p for p in primes
 ```
 
@@ -78,7 +76,7 @@ body is written _before_ the loop declaration.
 But how does the second line work? I have written the loops and conditionals without suffix syntax below:
 
 ```sh
-seq 3 10000 | for i do
+seq 3, 10000 | for i do
 	if for p in primes do [ i % p != 0 ] done do
 		primes += i
 	done
@@ -104,15 +102,15 @@ The suffix syntax is a generalization of many other features like list comprehen
 #### List comprehension
 
 ```sh
-new_list := !(statement for variable in list if statement)
+new_list := [statement for variable in list if statement]
 ```
 
 Examples:
 ```sh
-names := !(get_name client for client in clients)
-adults := !([ client ] for client in clients if [ client.age >= 18 ])
+names := [get_name(client) for client in clients]
+adults := [push(client) for client in clients if [ client.age >= 18 ]]
 pwdir := !pwd
-directories := !([ pwdir.."/"..f ] for f in files if file -d f)
+directories := [push(pwdir.."/"..f) for f in files if isDirectory(f)]
 ```
 
 #### Mapping and filtering
@@ -120,9 +118,10 @@ directories := !([ pwdir.."/"..f ] for f in files if file -d f)
 `for` can also used in pipes. `if` and `unless` are right-associative, so braces `{}` should be used around them.
 
 ```ruby
-("Pictures/" "Music/") | exec -l "ls" dir for dir | { [ f ] for f unless file -d f } | for f do
-	print f.." "..![file -m f]
+["Pictures/", "Music/"] | exec(:l, "ls", dir) for dir | { [ f ] for f unless isDirectory(f) } | for f do
+	print f.." "..file(:m, f)
 done
+```
 
 #### Looped conditionals
 
@@ -135,36 +134,7 @@ done
 Ensures that the condition is true for all elements in list.
 
 ```sh
-if file -d f for f in !(exec -l "ls") do
+if isDirectory(f) for f in [exec(:l, "ls")] do
 	print "All files are directories!"
 done
 ```
-
-### Possibly confusing syntaxes
-
-In Röda there are many ways to do the same thing, which is purely a side effect of the different levels of syntax:
-statement-level (S), expression-level (E) and arithmetic expression-level (AE).
-
-#### Assigning a value of a function to a variable
-
-* `var = ![f p1 p2]` (E)
-* `var = ! f p1 p2` (E)
-* `var = $[f p1 p2]` (AE)
-* `var = !(f p1 p2)[0]` (E, no error if more than one return value)
-* `f p1 p2 | pull var` (S, no error if more than one return value)
-
-How to decide which one to use? In this situation I'd recommend the second syntax, but in general it is best to use the first.
-The fourth way should be used to avoid errors and the last when there are more than one return value. One should never use the
-third syntax, that is just bad style and confuses people.
-
-#### Pushing a variable to the output stream
-
-* `push var`
-* `push $var`
-* `(var)` (`($var)`)
-* `[var]`
-
-The first syntax is recommended in all situations except in condition statements, where the last should be used.
-The third way is useful when pushing a list (as list literals are forbidden in aritmetic expressions).
-_Never_ prefix a variable with a dollar.
-Note that in the last syntax the dollar would be a syntax error, as `[` and `]` already introduce an arithmetic expression context.

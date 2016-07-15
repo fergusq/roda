@@ -7,9 +7,10 @@ import java.util.Arrays;
 
 import static java.util.stream.Collectors.joining;
 
+import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
+
 import static org.kaivos.röda.Interpreter.error;
-import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaList extends RödaValue {
 
@@ -45,7 +46,7 @@ public class RödaList extends RödaValue {
 	}
 
 	@Override public String str() {
-		return "(" + list.stream().map(RödaValue::str).collect(joining(" ")) + ")";
+		return "[" + list.stream().map(RödaValue::str).collect(joining(", ")) + "]";
 	}
 
 	@Override public List<RödaValue> list() {
@@ -53,7 +54,7 @@ public class RödaList extends RödaValue {
 	}
 
 	@Override public RödaValue get(RödaValue indexVal) {
-		long index = indexVal.num();
+		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
 		if (list.size() <= index) error("array index out of bounds: index " + index
 						+ ", size " + list.size());
@@ -62,7 +63,7 @@ public class RödaList extends RödaValue {
 	}
 
 	@Override public void set(RödaValue indexVal, RödaValue value) {
-		long index = indexVal.num();
+		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
 		if (list.size() <= index)
 			error("array index out of bounds: index " + index
@@ -74,7 +75,7 @@ public class RödaList extends RödaValue {
 	}
 
 	@Override public RödaValue contains(RödaValue indexVal) {
-		long index = indexVal.num();
+		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
 		return RödaBoolean.of(index < list.size());
 	}
@@ -89,12 +90,12 @@ public class RödaList extends RödaValue {
 	}
 
 	@Override public RödaValue length() {
-		return RödaNumber.of(list.size());
+		return RödaInteger.of(list.size());
 	}
 
 	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal) {
-		long start = startVal == null ? 0 : startVal.num();
-		long end = endVal == null ? list.size() : endVal.num();
+		long start = startVal == null ? 0 : startVal.integer();
+		long end = endVal == null ? list.size() : endVal.integer();
 		if (start < 0) start = list.size()+start;
 		if (end < 0) end = list.size()+end;
 		if (end == 0 && start > 0) end = list.size();
@@ -129,12 +130,8 @@ public class RödaList extends RödaValue {
 		list.addAll(values);
 	}
 
-	@Override public boolean isList() {
-		return true;
-	}
-
 	@Override public boolean strongEq(RödaValue value) {
-		if (!value.isList()) return false;
+		if (!value.is(LIST)) return false;
 		if (list.size() != value.list().size()) return false;
 		boolean ans = true;
 		for (int i = 0; i < list.size(); i++)

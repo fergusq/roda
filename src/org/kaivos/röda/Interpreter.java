@@ -20,7 +20,6 @@ import static java.util.stream.Collectors.joining;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
 
@@ -35,12 +34,14 @@ import java.io.PrintWriter;
 import java.io.IOException;
 
 import org.kaivos.röda.RödaValue;
+import static org.kaivos.röda.RödaValue.*;
 import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
 import org.kaivos.röda.type.RödaString;
 import org.kaivos.röda.type.RödaFlag;
-import org.kaivos.röda.type.RödaNumber;
+import org.kaivos.röda.type.RödaInteger;
+import org.kaivos.röda.type.RödaFloating;
 import org.kaivos.röda.type.RödaBoolean;
 import org.kaivos.röda.type.RödaFunction;
 import org.kaivos.röda.type.RödaNativeFunction;
@@ -65,7 +66,7 @@ public class Interpreter {
 			this.map = new HashMap<>();
 			this.typeargs = new HashMap<>();
 		}
-		RödaScope(RödaScope parent) {
+		public RödaScope(RödaScope parent) {
 			this(Optional.of(parent));
 		}
 
@@ -120,12 +121,12 @@ public class Interpreter {
 	}
 	
 	public RödaScope G = new RödaScope(Optional.empty());
-	Map<String, Record> records = new HashMap<>();
+	public Map<String, Record> records = new HashMap<>();
 	Map<String, RödaValue> typeReflections = new HashMap<>();
 
 	RödaStream STDIN, STDOUT;
 
-	File currentDir = new File(System.getProperty("user.dir"));
+	public File currentDir = new File(System.getProperty("user.dir"));
 	
 	private void initializeIO() {
 		InputStreamReader ir = new InputStreamReader(System.in);
@@ -139,7 +140,7 @@ public class Interpreter {
 	static {
 		errorRecord = new Record("Error",
 					 Collections.emptyList(),
-					 null,
+					 Collections.emptyList(),
 					 Arrays.asList(new Record.Field("message", new Datatype("string")),
 						       new Record.Field("stack", new Datatype("list",
 											      Arrays
@@ -153,19 +154,19 @@ public class Interpreter {
 					 false);
 		typeRecord = new Record("Type",
 					Collections.emptyList(),
-					null,
+					Collections.emptyList(),
 					Arrays.asList(new Record.Field("name", new Datatype("string")),
 						      new Record.Field("annotations", new Datatype("list")),
 						      new Record.Field("fields", new Datatype("list",
 											      Arrays
 											      .asList(new Datatype
 												      ("Field")))),
-						      new Record.Field("new_instance", new Datatype("function"))
+						      new Record.Field("newInstance", new Datatype("function"))
 						      ),
 					false);
 		fieldRecord = new Record("Field",
 					 Collections.emptyList(),
-					 null,
+					 Collections.emptyList(),
 					 Arrays.asList(new Record.Field("name", new Datatype("string")),
 						       new Record.Field("annotations", new Datatype("list")),
 						       new Record.Field("type", new Datatype("Type")),
@@ -198,10 +199,10 @@ public class Interpreter {
 		typeObj.setField("fields", RödaList.of("Field", record.fields.stream()
 						       .map(f -> createFieldReflection(record, f))
 						       .collect(toList())));
-		typeObj.setField("new_instance", RödaNativeFunction
-				 .of("Type.new_instance",
+		typeObj.setField("newInstance", RödaNativeFunction
+				 .of("Type.newInstance",
 				     (ta, a, s, i, o) -> {
-					     o.push(newRecord(new Datatype(record.name), ta));
+					     o.push(newRecord(new Datatype(record.name), ta, a));
 				     }, Collections.emptyList(), false));
 		return typeObj;
 	}
@@ -255,7 +256,7 @@ public class Interpreter {
 				 (list, list2) -> { list.addAll(list2.list()); });
 	}
 
-	static ExecutorService executor = Executors.newCachedThreadPool();
+	public static ExecutorService executor = Executors.newCachedThreadPool();
 
 	public static void shutdown() {
 		executor.shutdown();
@@ -335,6 +336,7 @@ public class Interpreter {
 		throw e;
 	}
 
+	@SuppressWarnings("unused")
 	private static void printStackTrace() {
 	        for (String step : callStack.get()) {
 			System.err.println(step);
@@ -355,7 +357,7 @@ public class Interpreter {
 			
 			RödaValue main = G.resolve("main");
 			if (main == null) return;
-			if (!main.isFunction() || main.isNativeFunction())
+			if (!main.is(FUNCTION) || main.is(NFUNCTION))
 				error("The variable 'main' must be a function");
 			
 			exec("<runtime>", 0, main, Collections.emptyList(), args, G, STDIN, STDOUT);
@@ -405,7 +407,7 @@ public class Interpreter {
 
 	public void interpretStatement(String code, String filename) {
 		try {
-			Statement statement = parseStatement(t.tokenize(code, filename), false);
+			Statement statement = parseStatement(t.tokenize(code, filename));
 			evalStatement(statement, G, STDIN, STDOUT, false);
 		} catch (RödaException e) {
 			throw e;
@@ -417,8 +419,8 @@ public class Interpreter {
 	}
 	
 	private Parameter getParameter(RödaValue function, int i) {
-		assert function.isFunction();
-		boolean isNative = function.isNativeFunction();
+		assert function.is(FUNCTION);
+		boolean isNative = function.is(NFUNCTION);
 		List<Parameter> parameters = isNative ? function.nfunction().parameters
 			: function.function().parameters;
 		boolean isVarargs = isNative ? function.nfunction().isVarargs : function.function().isVarargs;
@@ -433,70 +435,70 @@ public class Interpreter {
 		return p.reference;
 	}
 
-	static void checkReference(String function, RödaValue arg) {
-	        if (!arg.isReference()) {
+	public static void checkReference(String function, RödaValue arg) {
+	        if (!arg.is(REFERENCE)) {
 			error("illegal argument for '" + function
 			      + "': reference expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkList(String function, RödaValue arg) {
-	        if (!arg.isList()) {
+	public static void checkList(String function, RödaValue arg) {
+	        if (!arg.is(LIST)) {
 			error("illegal argument for '" + function
 			      + "': list expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkListOrString(String function, RödaValue arg) {
-	        if (!arg.isList() && !arg.isString()) {
+	public static void checkListOrString(String function, RödaValue arg) {
+	        if (!arg.is(LIST) && !arg.is(STRING)) {
 			error("illegal argument for '" + function
 			      + "': list or string expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkListOrNumber(String function, RödaValue arg) {
-	        if (!arg.isList() && !arg.isNumber()) {
+	public static void checkListOrNumber(String function, RödaValue arg) {
+	        if (!arg.is(LIST) && !arg.is(INTEGER)) {
 			error("illegal argument for '" + function
-			      + "': list or number expected (got " + arg.typeString() + ")");
+			      + "': list or integer expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkString(String function, RödaValue arg) {
-	        if (!arg.isString()) {
+	public static void checkString(String function, RödaValue arg) {
+	        if (!arg.is(STRING)) {
 			error("illegal argument for '" + function
 			      + "': string expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkFlag(String function, RödaValue arg) {
-	        if (!arg.isFlag()) {
+	public static void checkFlag(String function, RödaValue arg) {
+	        if (!arg.is(FLAG)) {
 			error("illegal argument for '" + function
 			      + "': flag expected (got " + arg.typeString() + ")");
 		}
 	}
 
-	static void checkNumber(String function, RödaValue arg) {
-	        if (!arg.isNumber()) {
+	public static void checkNumber(String function, RödaValue arg) {
+	        if (!arg.is(INTEGER)) {
 			error("illegal argument for '" + function
-			      + "': number expected (got " + arg.typeString() + ")");
+			      + "': integer expected (got " + arg.typeString() + ")");
 		}
 	}
 
-	static void checkBoolean(String function, RödaValue arg) {
-	        if (!arg.isBoolean()) {
+	public static void checkBoolean(String function, RödaValue arg) {
+	        if (!arg.is(BOOLEAN)) {
 			error("illegal argument for '" + function
 			      + "': boolean expected (got " + arg.typeString() + ")");
 		}
 	}
 
-	static void checkFunction(String function, RödaValue arg) {
-	        if (!arg.isFunction()) {
+	public static void checkFunction(String function, RödaValue arg) {
+	        if (!arg.is(FUNCTION)) {
 			error("illegal argument for '" + function
 			      + "': function expected (got " + arg.typeString() + ")");
 		}
 	}
 	
-	static void checkArgs(String function, int required, int got) {
+	public static void checkArgs(String function, int required, int got) {
 		if (got > required) argumentOverflow(function, required, got);
 		if (got < required) argumentUnderflow(function, required, got);
 	}
@@ -520,37 +522,37 @@ public class Interpreter {
 		}
 	}
 	
-	static void argumentOverflow(String function, int required, int got) {
+	public static void argumentOverflow(String function, int required, int got) {
 		error("illegal number of arguments for '" + function
 		      + "': at most " + required + " required (got " + got + ")");
 	}
 
-	static void argumentUnderflow(String function, int required, int got) {
+	public static void argumentUnderflow(String function, int required, int got) {
 		error("illegal number of arguments for '" + function
 		      + "': at least " + required + " required (got " + got + ")");
 	}
 
-	void exec(String file, int line,
+	public void exec(String file, int line,
 		  RödaValue value, List<Datatype> typeargs, List<RödaValue> rawArgs,
 		  RödaScope scope, RödaStream in, RödaStream out) {
 		List<RödaValue> args = new ArrayList<>();
 		int i = 0;
 		for (RödaValue val : rawArgs) {
-			if (val.isReference()
-			    && !(value.isFunction()
+			if (val.is(REFERENCE)
+			    && !(value.is(FUNCTION)
 				&& isReferenceParameter(value, i))) {
 				RödaValue rval = val.resolve(true);
-				if (rval.isReference()) rval = rval.resolve(true);
+				if (rval.is(REFERENCE)) rval = rval.resolve(true);
 				args.add(rval);
 			}
-			else if (val.isReference()
-				 && value.isFunction()
+			else if (val.is(REFERENCE)
+				 && value.is(FUNCTION)
 				 && isReferenceParameter(value, i)) {
 				RödaValue rval = val.unsafeResolve();
-				if (rval != null && rval.isReference()) args.add(rval);
+				if (rval != null && rval.is(REFERENCE)) args.add(rval);
 				else args.add(val);
 			}
-			else if (val.isList()) {
+			else if (val.is(LIST)) {
 				args.add(val.copy());
 			}
 			else args.add(val);
@@ -587,12 +589,12 @@ public class Interpreter {
 					     RödaScope scope, RödaStream in, RödaStream out) {
 		
 		//System.err.println("exec " + value + "("+args+") " + in + " -> " + out);
-		if (value.isList()) {
+		if (value.is(LIST)) {
 			for (RödaValue item : value.list())
 				out.push(item);
 			return;
 		}
-		if (value.isFunction() && !value.isNativeFunction()) {
+		if (value.is(FUNCTION) && !value.is(NFUNCTION)) {
 			boolean isVarargs = value.function().isVarargs;
 			List<String> typeparams = value.function().typeparams;
 			List<Parameter> parameters = value.function().parameters;
@@ -632,7 +634,7 @@ public class Interpreter {
 			}
 			return;
 		}
-		if (value.isNativeFunction()) {
+		if (value.is(NFUNCTION)) {
 			checkArgs(value.nfunction().name, value.nfunction().isVarargs,
 				  value.nfunction().parameters, args, scope);
 			value.nfunction().body.exec(typeargs, args, scope, in, out);
@@ -742,13 +744,13 @@ public class Interpreter {
 			if (e.type == Expression.Type.VARIABLE) {
 				assign = v -> {
 				        RödaValue value = scope.resolve(e.variable);
-					if (value == null || !value.isReference())
+					if (value == null || !value.is(REFERENCE))
 						value = RödaReference.of(e.variable, scope);
 					value.assign(v);
 				};
 				assignLocal = v -> {
 				        RödaValue value = scope.resolve(e.variable);
-					if (value == null || !value.isReference())
+					if (value == null || !value.is(REFERENCE))
 						value = RödaReference.of(e.variable, scope);
 					value.assignLocal(v);
 				};
@@ -774,14 +776,14 @@ public class Interpreter {
 			switch (cmd.operator) {
 			case ":=": {
 				r = () -> {
-					boolean quoteMode = false;
-                                        if (args.size() > 0 && args.get(0).isFlag("-G")) {
-                                                args.remove(0);
-                                                if (e.type != Expression.Type.VARIABLE)
-                                                	error("bad lvalue for ':=': " + e.asString());
-						if (args.size() > 1) argumentOverflow(":=", 1, args.size());
+					if (args.size() > 0 && args.get(0).isFlag("-G")) {
+						args.remove(0);
+						if (e.type != Expression.Type.VARIABLE)
+							error("bad lvalue for ':=': " + e.asString());
+						if (args.size() > 1)
+							argumentOverflow(":=", 1, args.size());
 						G.setLocal(e.variable, args.get(0));
-                                        }
+                    }
 					else {
 						if (args.size() > 1) argumentOverflow(":=", 1, args.size());
 						assignLocal.accept(args.get(0));
@@ -798,26 +800,26 @@ public class Interpreter {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkNumber("++", v);
-					assign.accept(RödaNumber.of(v.num()+1));
+					assign.accept(RödaInteger.of(v.integer()+1));
 				};
 			} break;
 			case "--": {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkNumber("--", v);
-					assign.accept(RödaNumber.of(v.num()-1));
+					assign.accept(RödaInteger.of(v.integer()-1));
 				};
 			} break;
 			case "+=": {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkListOrNumber("+=", v);
-					if (v.isList()) {
+					if (v.is(LIST)) {
 						v.add(args.get(0));
 					}
 					else {
 						checkNumber("+=", args.get(0));
-						assign.accept(RödaNumber.of(v.num()+args.get(0).num()));
+						assign.accept(RödaInteger.of(v.integer()+args.get(0).integer()));
 					}
 				};
 			} break;
@@ -826,7 +828,7 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkNumber("-=", v);
 					checkNumber("-=", args.get(0));
-					assign.accept(RödaNumber.of(v.num()-args.get(0).num()));
+					assign.accept(RödaInteger.of(v.integer()-args.get(0).integer()));
 				};
 			} break;
 			case "*=": {
@@ -834,7 +836,7 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkNumber("*=", v);
 					checkNumber("*=", args.get(0));
-					assign.accept(RödaNumber.of(v.num()*args.get(0).num()));
+					assign.accept(RödaInteger.of(v.integer()*args.get(0).integer()));
 				};
 			} break;
 			case "/=": {
@@ -842,14 +844,14 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkNumber("/=", v);
 					checkNumber("/=", args.get(0));
-					assign.accept(RödaNumber.of(v.num()/args.get(0).num()));
+					assign.accept(RödaInteger.of(v.integer()/args.get(0).integer()));
 				};
 			} break;
 			case ".=": {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkListOrString(".=", v);
-					if (v.isList()) {
+					if (v.is(LIST)) {
 						checkList(".=", args.get(0));
 						ArrayList<RödaValue> newList = new ArrayList<>();
 						newList.addAll(v.list());
@@ -1097,12 +1099,14 @@ public class Interpreter {
 		return value;
 	}
 	
+	@SuppressWarnings("incomplete-switch")
 	private RödaValue evalExpressionWithoutErrorHandling(Expression exp, RödaScope scope,
 							     RödaStream in, RödaStream out,
 							     boolean variablesAreReferences) {
 		if (exp.type == Expression.Type.STRING) return RödaString.of(exp.string);
 		if (exp.type == Expression.Type.FLAG) return RödaFlag.of(exp.string);
-		if (exp.type == Expression.Type.NUMBER) return RödaNumber.of(exp.number);
+		if (exp.type == Expression.Type.INTEGER) return RödaInteger.of(exp.integer);
+		if (exp.type == Expression.Type.FLOATING) return RödaFloating.of(exp.floating);
 		if (exp.type == Expression.Type.BLOCK) return RödaFunction.of(exp.block, scope);
 		if (exp.type == Expression.Type.LIST) return RödaList.of(exp.list
 									 .stream()
@@ -1130,7 +1134,9 @@ public class Interpreter {
 			Datatype type = scope.substitute(exp.datatype);
 			List<Datatype> subtypes = exp.datatype.subtypes.stream()
 				.map(scope::substitute).collect(toList());
-			return newRecord(type, subtypes);
+			List<RödaValue> args = exp.list.stream().map(e -> evalExpression(e, scope, in, out)).map(RödaValue::impliciteResolve)
+					.collect(toList());
+			return newRecord(type, subtypes, args);
 		}
 		if (exp.type == Expression.Type.LENGTH
 		    || exp.type == Expression.Type.ELEMENT
@@ -1223,14 +1229,14 @@ public class Interpreter {
 				RödaValue sub = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 				switch (exp.ctype) {
 				case NOT:
-					if (!sub.isBoolean()) error("tried to NOT a " + sub.typeString());
+					if (!sub.is(BOOLEAN)) error("tried to NOT a " + sub.typeString());
 					return RödaBoolean.of(!sub.bool());
 				case NEG:
-					if (!sub.isNumber()) error("tried to NEG a " + sub.typeString());
-					return RödaNumber.of(-sub.num());
+					if (!sub.is(INTEGER)) error("tried to NEG a " + sub.typeString());
+					return RödaInteger.of(-sub.integer());
 				case BNOT:
-					if (!sub.isNumber()) error("tried to BNOT a " + sub.typeString());
-					return RödaNumber.of(~sub.num());
+					if (!sub.is(INTEGER)) error("tried to BNOT a " + sub.typeString());
+					return RödaInteger.of(~sub.integer());
 				}
 			}
 			else {
@@ -1240,68 +1246,25 @@ public class Interpreter {
 					.impliciteResolve();
 				switch (exp.ctype) {
 				case AND:
-					if (!val1.isBoolean()) error("tried to AND a " + val1.typeString());
+					if (!val1.is(BOOLEAN)) error("tried to AND a " + val1.typeString());
 					if (val1.bool() == false) return RödaBoolean.of(false);
 				        val2 = getVal2.get();
-					if (!val2.isBoolean()) error("tried to AND a " + val2.typeString());
+					if (!val2.is(BOOLEAN)) error("tried to AND a " + val2.typeString());
 					return RödaBoolean.of(val2.bool());
 				case OR:
-					if (!val1.isBoolean()) error("tried to OR a " + val1.typeString());
+					if (!val1.is(BOOLEAN)) error("tried to OR a " + val1.typeString());
 					if (val1.bool() == true) return RödaBoolean.of(true);
 					val2 = getVal2.get();
-					if (!val2.isBoolean()) error("tried to OR a " + val2.typeString());
+					if (!val2.is(BOOLEAN)) error("tried to OR a " + val2.typeString());
 					return RödaBoolean.of(val1.bool() || val2.bool());
 				case XOR:
-					if (!val1.isBoolean()) error("tried to XOR a " + val1.typeString());
+					if (!val1.is(BOOLEAN)) error("tried to XOR a " + val1.typeString());
 					val2 = getVal2.get();
-					if (!val2.isBoolean()) error("tried to XOR a " + val2.typeString());
+					if (!val2.is(BOOLEAN)) error("tried to XOR a " + val2.typeString());
 					return RödaBoolean.of(val1.bool() ^ val2.bool());
 				}
 				val2 = getVal2.get();
-				switch (exp.ctype) {
-				case EQ:
-					return RödaBoolean.of(val1.halfEq(val2));
-				case NEQ:
-					return RödaBoolean.of(!val1.halfEq(val2));
-				case MATCHES:
-					if (!val1.isString()) error("tried to MATCH a " + val1.typeString());
-					if (!val2.isString()) error("tried to MATCH a " + val2.typeString());
-					return RödaBoolean.of(val1.str().matches(val2.str()));
-				}
-				if (!val1.isNumber()) error("tried to " + exp.ctype + " a " + val1.typeString());
-				if (!val2.isNumber()) error("tried to " + exp.ctype + " a " + val2.typeString());
-				switch (exp.ctype) {
-				case MUL:
-					return RödaNumber.of(val1.num()*val2.num());
-				case IDIV:
-					return RödaNumber.of(val1.num()/val2.num());
-				case MOD:
-					return RödaNumber.of(val1.num()%val2.num());
-				case ADD:
-					return RödaNumber.of(val1.num()+val2.num());
-				case SUB:
-					return RödaNumber.of(val1.num()-val2.num());
-				case BAND:
-					return RödaNumber.of(val1.num()&val2.num());
-				case BOR:
-					return RödaNumber.of(val1.num()|val2.num());
-				case BXOR:
-					return RödaNumber.of(val1.num()^val2.num());
-				case BLSHIFT:
-					return RödaNumber.of(val1.num()<<val2.num());
-				case BRSHIFT:
-					return RödaNumber.of(val1.num()>>val2.num());
-				case BRRSHIFT:
-					return RödaNumber.of(val1.num()>>>val2.num());
-				case LT:
-					return RödaBoolean.of(val1.num()<val2.num());
-				case GT:
-					return RödaBoolean.of(val1.num()>val2.num());
-				case LE:
-					return RödaBoolean.of(val1.num()<=val2.num());
-				case GE:
-					return RödaBoolean.of(val1.num()>=val2.num());
-				}
+				return val1.callOperator(exp.ctype, val2);
 			}
 			error("unknown expression type " + exp.ctype);
 			return null;
@@ -1311,7 +1274,7 @@ public class Interpreter {
 		return null;
 	}
 
-	private RödaValue newRecord(Datatype type, List<Datatype> subtypes) {
+	private RödaValue newRecord(Datatype type, List<Datatype> subtypes, List<RödaValue> args) {
 		switch (type.name) {
 		case "list":
 			if (subtypes.size() == 0)
@@ -1334,11 +1297,17 @@ public class Interpreter {
 		if (r.typeparams.size() != subtypes.size())
 			error("wrong number of typearguments for '" + r.name + "': "
 			      + r.typeparams.size() + " required, got " + subtypes.size());
+		if (r.params.size() != args.size())
+			error("wrong number of arguments for '" + r.name + "': "
+			      + r.params.size() + " required, got " + args.size());
 		RödaValue value = RödaRecordInstance.of(r, subtypes, records);
 		RödaScope recordScope = new RödaScope(G);
 		recordScope.setLocal("self", value);
 		for (int i = 0; i < subtypes.size(); i++) {
 			recordScope.addTypearg(r.typeparams.get(i), subtypes.get(i));
+		}
+		for (int i = 0; i < args.size(); i++) {
+			recordScope.setLocal(r.params.get(i), args.get(i));
 		}
 		for (Record.Field f : r.fields) {
 			if (f.defaultValue != null) {
@@ -1349,7 +1318,7 @@ public class Interpreter {
 	}
 
 	private RödaValue concat(RödaValue val1, RödaValue val2) {
-		if (val1.isList() && val2.isList()) {
+		if (val1.is(LIST) && val2.is(LIST)) {
 			List<RödaValue> newList = new ArrayList<>();
 			for (RödaValue valA : val1.list()) {
 				for (RödaValue valB : val2.list()) {
@@ -1358,14 +1327,14 @@ public class Interpreter {
 			}
 			return RödaList.of(newList);
 		}
-		if (val1.isList()) {
+		if (val1.is(LIST)) {
 			List<RödaValue> newList = new ArrayList<>();
 			for (RödaValue val : val1.list()) {
 				newList.add(concat(val, val2));
 			}
 			return RödaList.of(newList);
 		}
-		if (val2.isList()) {
+		if (val2.is(LIST)) {
 			List<RödaValue> newList = new ArrayList<>();
 			for (RödaValue val : val2.list()) {
 				newList.add(concat(val1, val));

@@ -1,7 +1,6 @@
 package org.kaivos.röda;
 
 import org.kaivos.röda.Interpreter;
-import static org.kaivos.röda.RödaStream.ISLineStream;
 import static org.kaivos.röda.RödaStream.OSStream;
 import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.type.RödaString;
@@ -37,7 +36,10 @@ public class Röda {
 		String prompt = null;
 		
 		for (int i = 0; i < args.length; i++) {
-			if (file != null) argsForRöda.add(args[i]);
+			if (file != null) {
+				argsForRöda.add(args[i]);
+				continue;
+			}
 			switch (args[i]) {
 			case "-p":
 				prompt = args[++i];

@@ -9,7 +9,7 @@ public class RödaReference extends RödaValue {
 	private RödaScope scope;
 
 	private RödaReference(String target, RödaScope scope) {
-		assumeIdentity("reference");
+		assumeIdentity(REFERENCE);
 		this.target = target;
 		this.scope = scope;
 	}
@@ -47,10 +47,6 @@ public class RödaReference extends RödaValue {
 
 	@Override public void assignLocal(RödaValue value) {
 		scope.setLocal(target, value);
-	}
-
-	@Override public boolean isReference() {
-		return true;
 	}
 
 	@Override public boolean strongEq(RödaValue value) {

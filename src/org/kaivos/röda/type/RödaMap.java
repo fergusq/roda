@@ -7,9 +7,10 @@ import java.util.Arrays;
 
 import static java.util.stream.Collectors.joining;
 
+import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
+
 import static org.kaivos.röda.Interpreter.error;
-import static org.kaivos.röda.Parser.Datatype;
 
 public class RödaMap extends RödaValue {
 
@@ -72,15 +73,11 @@ public class RödaMap extends RödaValue {
 	}
 
 	@Override public RödaValue length() {
-		return RödaNumber.of(map.size());
-	}
-
-	@Override public boolean isMap() {
-		return true;
+		return RödaInteger.of(map.size());
 	}
 
 	@Override public boolean strongEq(RödaValue value) {
-		if (!value.isMap()) return false;
+		if (!value.is(MAP)) return false;
 		if (map.size() != value.map().size()) return false;
 		boolean ans = true;
 		for (int i = 0; i < map.size(); i++)
