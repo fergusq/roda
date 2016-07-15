@@ -1298,7 +1298,9 @@ public class Parser {
 					if (isNext(tl, "...")) {
 						accept(tl, "...");
 						isVarargs = true;
+						break;
 					}
+					else if (!isNext(tl, "|")) accept(tl, ",");
 				}
 				accept(tl, "|");
 			}
