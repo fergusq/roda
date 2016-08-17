@@ -40,7 +40,7 @@ record HttpServer(port_value) {
 			if [ line =~ "Content-Length: .*\r?\n" ]; do
 				cl := line
 				cl ~= "^Content-Length: ", "", "\r?\n$", ""
-				length = cl
+				length = parseInteger(cl)
 			done
 		done
 		request.content = ""
@@ -78,7 +78,7 @@ record HttpServer(port_value) {
 	
 	/* Lähetys */
 	
-	function send_continue connection {
+	function sendContinue connection {
 		response := "HTTP/1.1 100 Continue\r\n\r\n"
 		connection.write(response)
 	}
@@ -121,6 +121,68 @@ record Request {
 	server : HttpServer
 	connection : Socket
 	
+	function send status, data {
+		new Response(self).send status, data
+	}
+	
+	function sendFile mime, name {
+		new Response(self).sendFile mime, name
+	}
+	
+	function redirect target {
+		new Response(self).redirect target
+	}
+	
+	function send403 {
+		new Response(self).send403 status, data
+	}
+	
+	function send404 {
+		new Response(self).send404
+	}
+	
+	function send412 {
+		new Response(self).send412
+	}
+	
+	function send500 err {
+		new Response(self).send500 err
+	}
+	
+	function handle {
+		if push(self.headers["If-Unmodified-Since"]?); do
+			self.send412()
+			return
+		done
+		path := match("(/[^/]*)(/[^/]*)*", self.path)
+		if [ #path = 0 ]; do path = ["/", "/", ""]; done
+		if push self.server.controllers[path[1]]?; do
+			ctrl := self.server.controllers[path[1]]
+			type := typeof ctrl
+			for f in type.fields do
+				for a in f.annotations do
+					if [ #a = 2 and a[0] = "HANDLE" and self.path =~ a[1] ]; do
+						handler := f.get(ctrl)
+						handler(self)
+						return
+					done
+				done
+			done
+			ctrl.handle(self)
+		else
+			self.send404()
+		done
+	}
+}
+
+record Response(request) {
+	request : Request = request
+	connection : Socket = request.connection
+	protocol : string = request.protocol
+	server : HttpServer = request.server
+	cookies : list<string> = new list<string>
+	cookie_values : map<string> = new map<string>
+	
 	function contentHeaders type, length {
 		content_headers := ""
 		if [ length != 0 ]; do
@@ -131,6 +193,12 @@ record Request {
 		return content_headers
 	}
 	
+	function cookieHeaders {
+		return [
+			push("Set-Cookie: " .. name .. "=" .. cookie_values[name] .. "\r\n") for name in cookies
+		] & ""
+	}
+	
 	function createHeaders content_headers, status {
 		headers := ""
 		if [ self.protocol != "HTTP/1.0" ]; do
@@ -139,12 +207,14 @@ record Request {
 			headers .= "Date: "
 			headers .= [exec(:E, "LC_TIME", "c.UTF-8", "date", "-u", "+%a, %b %d %Y %H:%M:%S GMT")][:-1]&"".."\r\n"
 			headers .= content_headers
+			headers .= self.cookieHeaders()
 			headers .= "Connection: keep-alive\r\n"
 			headers .= "\r\n"
 		else
 			headers = "HTTP/1.0 "..status.."\r\n"
 			headers .= "Server: httpd.roed\r\n"
 			headers .= content_headers
+			headers .= self.cookieHeaders()
 			headers .= "\r\n"
 		done
 		return headers
@@ -152,7 +222,7 @@ record Request {
 	
 	function send status, data {
 		response := self.createHeaders(self.contentHeaders("text/html; charset=utf-8", strsize(data)), status)
-		if [ self.command != "HEAD" ]; do
+		if [ self.request.command != "HEAD" ]; do
 			response .= data
 		done
 		self.connection.write(response)
@@ -161,7 +231,7 @@ record Request {
 	function sendFile mime, name {
 		response := self.createHeaders(self.contentHeaders(mime, fileLength(name)), "200 OK")
 		self.connection.write(response)
-		if [ self.command != "HEAD" ]; do
+		if [ self.request.command != "HEAD" ]; do
 			self.connection.write(:f, name)
 		done
 	}
@@ -181,7 +251,7 @@ record Request {
 		"
 		headers := self.contentHeaders("text/html; charset=utf-8", strsize(data)).."Location: "..target.."\r\n"
 		response := self.createHeaders(headers, status_code)
-		if [ self.command != "HEAD" ]; do
+		if [ self.request.command != "HEAD" ]; do
 			response .= data
 		done
 		self.connection.write(response)
@@ -220,29 +290,9 @@ record Request {
 		</html>")
 	}
 	
-	function handle {
-		if push(self.headers["If-Unmodified-Since"]?); do
-			self.send412()
-			return
-		done
-		path := match("(/[^/]*)(/[^/]*)*", self.path)
-		if [ #path = 0 ]; do path = ["/", "/", ""]; done
-		if push self.server.controllers[path[1]]?; do
-			ctrl := self.server.controllers[path[1]]
-			type := typeof ctrl
-			for f in type.fields do
-				for a in f.annotations do
-					if [ #a = 2 and a[0] = "HANDLE" and self.path =~ a[1] ]; do
-						handler := f.get(ctrl)
-						handler(self)
-						return
-					done
-				done
-			done
-			ctrl.handle(self)
-		else
-			self.send404()
-		done
+	function setCookie name, v {
+		cookies += name unless [ name in cookies ]
+		cookie_values[name] = v
 	}
 }
 
