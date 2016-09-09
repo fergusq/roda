@@ -34,12 +34,12 @@ record TelegramBot {
 					done
 				}], ["message", { |message|
 					json_search message, ["chat", { |chat|
-						json_search chat ["id", { |id|
+						json_search chat, ["id", { |id|
 							chat_id = id[1]
 						}]
-					}] ["text", { |text|
+					}], ["text", { |text|
 						msg_text = text[1]
-					}] ["caption", { |caption|
+					}], ["caption", { |caption|
 						msg_text = caption[1]
 					}]
 				}]

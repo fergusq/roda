@@ -17,12 +17,12 @@ tee_pilakuva nettikuvat, ylä, ala, tiedosto {
 	"..nettikuvat.."
 	<text x='50%' y='14%'>"..ylä.."</text>
 	<text x='50%' y='98%'>"..ala.."</text>
-	</svg>" | write "kuha.svg"
+	</svg>" | writeLines "kuha.svg"
 	{} | exec "rsvg-convert", "-o", tiedosto, "kuha.svg"
 }
 
 /* ohjaa kuvan luomista: käsittelee viestin, lataa kuvat, tekee kuhakuvan ja lähettää sen */
-käsittele_kuhaviesti botti ketju viesti {
+käsittele_kuhaviesti botti, ketju, viesti {
 	/* esikäsitellään viesti */
 	viesti ~= "kunhan", "kuha", "Kunhan", "Kuha", "&", "&amp;", "<", "&lt;"
 
@@ -76,7 +76,7 @@ käsittele_kuhaviesti botti ketju viesti {
 /* pääfunktio */
 main {
 	import "telegram.röd"
-	token := [cat("token.txt")][0]
+	token := [readLines("token.txt")][0]
 	bot := tg_init(token)
 	bot.on_message = { |ketju, teksti|
 		if [ teksti =~ ".*\\b[Kk][Uu][Hh][Aa].*" ]; do
