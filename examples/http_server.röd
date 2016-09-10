@@ -195,7 +195,7 @@ record Response(request) {
 	
 	function cookieHeaders {
 		return [
-			push("Set-Cookie: " .. name .. "=" .. cookie_values[name] .. "\r\n") for name in cookies
+			push("Set-Cookie: " .. name .. "=" .. self.cookie_values[name] .. "\r\n") for name in self.cookies
 		] & ""
 	}
 	
