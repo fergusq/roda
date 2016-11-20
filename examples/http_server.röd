@@ -134,7 +134,7 @@ record Request {
 	}
 	
 	function send403 {
-		new Response(self).send403 status, data
+		new Response(self).send403
 	}
 	
 	function send404 {

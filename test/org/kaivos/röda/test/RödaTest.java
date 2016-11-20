@@ -528,6 +528,18 @@ public class RödaTest {
 				  + "push a[\"Elina\"]?}"));
 	}
 
+	@Test
+	public void testMapGet() {
+		assertEquals("23",
+			     eval("main{a:=new map;a[\"Reetta\"]=19;a[\"Vilma\"]=23;a[\"Susanna\"]=14;push a[\"Vilma\"]}"));
+	}
+
+	@Test(expected=RödaException.class)
+	public void testMapGetUnknownKey() {
+		assertEquals("3",
+			     eval("main{a:=new map;a[\"Reetta\"]=19;push a[\"Susanna\"]}"));
+	}
+
 	// Upotetut komennot
 
 	@Test

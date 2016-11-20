@@ -57,6 +57,7 @@ public class RödaMap extends RödaValue {
 
 	@Override public RödaValue get(RödaValue indexVal) {
 		String index = indexVal.str();
+		if (!map.containsKey(index)) error("key does not exist: " + index);
 		return map.get(index);
 	}
 
