@@ -68,7 +68,7 @@ public class LexerTest {
 
 	@Test
 	public void testLinesAndAngles() {
-		assertEquals("--, <, >, --, ->, <, --, <, >>>, <, ->, --, <EOF>",
+		assertEquals("--, <, >, --, ->, <, --, <, >>, >, <, ->, --, <EOF>",
 			     lex("--<>---><--<>>><->--"));
 	}
 

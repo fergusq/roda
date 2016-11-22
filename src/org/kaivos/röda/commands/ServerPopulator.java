@@ -30,13 +30,13 @@ public final class ServerPopulator {
 	}
 
 	public static void populateServer(Interpreter I, RödaScope S) {
-		Record serverRecord = new Record("Server", Collections.emptyList(), null,
+		Record serverRecord = new Record("Server", Collections.emptyList(), Collections.emptyList(),
 				Arrays.asList(new Record.Field("accept", new Datatype("function")),
 						new Record.Field("close", new Datatype("function"))),
 				false);
 		I.registerRecord(serverRecord);
 
-		Record socketRecord = new Record("Socket", Collections.emptyList(), null, Arrays.asList(
+		Record socketRecord = new Record("Socket", Collections.emptyList(), Collections.emptyList(), Arrays.asList(
 				new Record.Field("write", new Datatype("function")), new Record.Field("read", new Datatype("function")),
 				new Record.Field("close", new Datatype("function")), new Record.Field("ip", new Datatype("string")),
 				new Record.Field("hostname", new Datatype("string")), new Record.Field("port", new Datatype("number")),

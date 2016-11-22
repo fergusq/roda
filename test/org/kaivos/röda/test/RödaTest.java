@@ -115,56 +115,56 @@ public class RödaTest {
 
 	@Test
 	public void testTypeparametrizationInRecords() {
-		assertEquals("Elsa,Kyllikki", eval("record R@(T){t:T;l:list@(T)}main{r:=new R@(string);"
-						   + "r.t=\"Kyllikki\";r.l=new list@(string);r.l+=\"Elsa\";"
+		assertEquals("Elsa,Kyllikki", eval("record R<<T>>{t:T;l:list<<T>>}main{r:=new R<<string>>;"
+						   + "r.t=\"Kyllikki\";r.l=new list<<string>>;r.l+=\"Elsa\";"
 						   + "push r.l[0], r.t}"));
 	}
 
 	@Test(expected=RödaException.class)
 	public void testFieldTypeparametrizationWithWrongTypes() {
-		eval("record R@(T){t:T}main{r:=new R@(string);r.t=5}");
+		eval("record R<<T>>{t:T}main{r:=new R<<string>>;r.t=5}");
 	}
 
 	@Test(expected=RödaException.class)
 	public void testListTypeparametrizationWithWrongTypes() {
-		eval("record R@(T){l:list@(T)}main{r:=new R@(string);r.l=new list@(list);r.l+=[]}");
+		eval("record R<<T>>{l:list<<T>>}main{r:=new R<<string>>;r.l=new list<<list>>;r.l+=[]}");
 	}
 
 	@Test
 	public void testTypeparameterScopingInDefaultValues() {
-		assertEquals("Viivi", eval("record R@(T){l:list@(T)=new list@(T)}main{r:=new R@(string);"
+		assertEquals("Viivi", eval("record R<<T>>{l:list<<T>>=new list<<T>>}main{r:=new R<<string>>;"
 					   + "r.l+=\"Viivi\";push r.l[0]}"));
 	}
 
 	@Test(expected=RödaException.class)
 	public void testTypeparameterScopingInDefaultValuesWithWrongTypes() {
-		eval("record R@(T){l:list@(T)=new list@(T)}main{r:=new R@(number);"
+		eval("record R<<T>>{l:list<<T>>=new list<<T>>}main{r:=new R<<number>>;"
 		     + "r.l+={}}");
 	}
 
 	@Test
 	public void testTypeparameterScopingInMethods() {
-		assertEquals("Sofia", eval("record R@(T){function f{push new T}}main{r:=new R@(list@(string));"
+		assertEquals("Sofia", eval("record R<<T>>{function f{push new T}}main{r:=new R<<list<<string>>>>;"
 					   + "l:=r.f();l+=\"Sofia\";push l[0]}"));
 	}
 
 	@Test(expected=RödaException.class)
 	public void testTypeparameterScopingInMethodsWithWrongTypes() {
-		eval("record R@(T){function f{push new list@(T)}}main{r:=new R@(function);"
+		eval("record R<<T>>{function f{push new list<<T>>}}main{r:=new R<<function>>;"
 		     + "l:=r.f();l+=24;push l[0]}");
 	}
 
 	@Test
 	public void testTypeparametrizationInMethods() {
-		assertEquals("Kaisa", eval("record R@(T){function f@(U){push new list@(U);push new list@(T)}}"
-					   + "main{r:=new R@(string);"
-					   + "l:=[r.f@(list)()];l[0]+=[];l[1]+=\"Kaisa\";push l[1][0]}"));
+		assertEquals("Kaisa", eval("record R<<T>>{function f<<U>>{push new list<<U>>;push new list<<T>>}}"
+					   + "main{r:=new R<<string>>;"
+					   + "l:=[r.f<<list>>()];l[0]+=[];l[1]+=\"Kaisa\";push l[1][0]}"));
 	}
 
 	@Test(expected=RödaException.class)
 	public void testOverridingTypeparameter() {
-		eval("record R@(T){function f@(T){push new list@(T)}}main{r:=new R@(string);"
-		     + "l:=r.f@(number)();l+=12;push l[0]}");
+		eval("record R<<T>>{function f<<T>>{push new list<<T>>}}main{r:=new R<<string>>;"
+		     + "l:=r.f<<number>>();l+=12;push l[0]}");
 	}
 
 	// Reflektio
@@ -210,14 +210,14 @@ public class RödaTest {
 
 	@Test
 	public void testTypeparametrizationInFunctions() {
-		assertEquals("Leila", eval("f@(T){push new list@(T)}main{"
-					   + "l:=f@(string)();l+=\"Leila\";push l[0]}"));
+		assertEquals("Leila", eval("f<<T>>{push new list<<T>>}main{"
+					   + "l:=f<<string>>();l+=\"Leila\";push l[0]}"));
 	}
 
 	@Test(expected=RödaException.class)
 	public void testTypeparametrizationInFunctionsWithWrongTypes() {
-	        eval("f@(T){push new list@(T)}main{"
-		     + "l:=f@(string)();l+=();push l[0]}");
+	        eval("f<<T>>{push new list<<T>>}main{"
+		     + "l:=f<<string>>();l+=();push l[0]}");
 	}
 
 	@Test

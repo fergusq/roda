@@ -44,7 +44,6 @@ public class Parser {
 		.addOperatorRule("<=")
 		.addOperatorRule(">=")
 		.addOperatorRule("<<")
-		.addOperatorRule(">>>")
 		.addOperatorRule(">>")
 		.addPatternRule(Pattern.compile(NUMBER_REGEX))
 		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$")
@@ -121,7 +120,7 @@ public class Parser {
 	}
 
 	private static boolean validTypename(String applicant) {
-		if (applicant.matches("[<>()\\[\\]{}|&.,:;=#%!?\n+\\-*/~@%$]|[:~.+\\-*/!]=|\\+\\+|&&|\\|\\||^^|=~|<=|>=|<<|>>|>>>")) return false;
+		if (applicant.matches("[<>()\\[\\]{}|&.,:;=#%!?\n+\\-*/~@%$]|[:~.+\\-*/!]=|\\+\\+|&&|\\|\\||^^|=~|<=|>=|<<|>>")) return false;
 		switch (applicant) {
 		case "if":
 		case "unless":
@@ -175,13 +174,12 @@ public class Parser {
 		    && !name.equals("string")
 		    && !name.equals("boolean")
 		    && !name.equals("number")
-		    && acceptIfNext(tl, "@")) {
-		    	accept(tl, "(");
+		    && acceptIfNext(tl, "<<")) {
 			do {
 				Datatype t = parseType(tl);
 				subtypes.add(t);
 			} while (acceptIfNext(tl, ","));
-			accept(tl, ")");
+			accept(tl, ">>");
 		}
 		return new Datatype(name, subtypes);
 	}
@@ -435,13 +433,12 @@ public class Parser {
 
 	static List<String> parseTypeparameters(TokenList tl) {
 		List<String> typeparams = new ArrayList<>();
-		if (acceptIfNext(tl, "@")) {
-			accept(tl, "(");
+		if (acceptIfNext(tl, "<<")) {
 			do {
 				String typeparam = identifier(tl);
 				typeparams.add(typeparam);
 			} while (acceptIfNext(tl, ","));
-			accept(tl, ")");
+			accept(tl, ">>");
 		}
 		return typeparams;
 	}
@@ -772,12 +769,11 @@ public class Parser {
 		if (isNext(tl, ":=", "=", "++", "--", "+=", "-=", "*=", "/=", ".=", "~=", "?")) {
 			operator = nextString(tl);
 		}
-		else if (acceptIfNext(tl, "@")) {
-			accept(tl, "(");
+		else if (acceptIfNext(tl, "<<")) {
 			do {
 				typeargs.add(parseType(tl));
 			} while (acceptIfNext(tl, ","));
-			accept(tl, ")");
+			accept(tl, ">>");
 		}
 		List<Argument> arguments;
 		
@@ -1151,7 +1147,7 @@ public class Parser {
 	}
 
 	private static Expression parseArrayAccessIfPossible(TokenList tl, Expression ans, boolean allowCalls) {
-		while (isNext(tl, "[", ".", "is") || allowCalls && isNext(tl, "(", "@")) {
+		while (isNext(tl, "[", ".", "is") || allowCalls && isNext(tl, "(", "<<")) {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
 			if (acceptIfNext(tl, "[")) {
@@ -1172,14 +1168,13 @@ public class Parser {
 					}
 				}
 			}
-			else if (allowCalls && isNext(tl, "@", "(")) {
+			else if (allowCalls && isNext(tl, "<<", "(")) {
 				List<Datatype> typeargs = new ArrayList<>();
-				if (acceptIfNext(tl, "@")) {
-					accept(tl, "(");
+				if (acceptIfNext(tl, "<<")) {
 					do {
 						typeargs.add(parseType(tl));
 					} while (acceptIfNext(tl, ","));
-					accept(tl, ")");
+					accept(tl, ">>");
 				}
 				accept(tl, "(");
 				List<Command> commands = new ArrayList<>();

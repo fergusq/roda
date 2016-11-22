@@ -1,7 +1,7 @@
 record HttpServer(port_value) {
 	port : number = port_value
 	socket : Server = server(port_value)
-	controllers : map<Controller> = new map<Controller>
+	controllers : map<<Controller>> = new map<<Controller>>
 	
 	/* Luku */
 	
@@ -25,7 +25,7 @@ record HttpServer(port_value) {
 		done
 		request.path ~= "^([a-z0-9]+://)?[^/]+", ""
 		length := 0
-		request.headers = new map<string>
+		request.headers = new map<<string>>
 		request.as_text = ""
 		while [ not (line =~ "\r?\n") ]; do
 			request.as_text .= line
@@ -49,7 +49,7 @@ record HttpServer(port_value) {
 			connection.read(:b, length, content)
 			request.content = content
 		done
-		request.form = new map<string>
+		request.form = new map<<string>>
 		if push(request.headers["Content-Type"]?); do
 			if [ request.headers["Content-Type"] = "application/x-www-form-urlencoded" ]; do
 				for param in [split(:s, "&", request.content)] do
@@ -58,7 +58,7 @@ record HttpServer(port_value) {
 						key := kv[0]
 						val := kv[1]
 						val ~= "\\+", " "
-						code := new list<number>
+						code := new list<<number>>
 						i := 0
 						while [ i < #val ] do
 							if [ val[i:i+1] = "%" and i < #val-2 ]; do
@@ -114,10 +114,10 @@ record Request {
 	command : string
 	path : string
 	protocol : string
-	headers : map<string>
+	headers : map<<string>>
 	as_text : string
 	content : string
-	form : map<string>
+	form : map<<string>>
 	server : HttpServer
 	connection : Socket
 	
@@ -180,8 +180,8 @@ record Response(request) {
 	connection : Socket = request.connection
 	protocol : string = request.protocol
 	server : HttpServer = request.server
-	cookies : list<string> = new list<string>
-	cookie_values : map<string> = new map<string>
+	cookies : list<<string>> = new list<<string>>
+	cookie_values : map<<string>> = new map<<string>>
 	
 	function contentHeaders type, length {
 		content_headers := ""
