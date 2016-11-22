@@ -21,7 +21,7 @@ public final class StreamPopulator {
 	}
 
 	public static void populateStream(Interpreter I, RödaScope S) {
-		Record streamRecord = new Record("Stream", Collections.emptyList(), null,
+		Record streamRecord = new Record("Stream", Collections.emptyList(), Collections.emptyList(),
 				Arrays.asList(new Record.Field("pull", new Datatype("function")),
 						new Record.Field("push", new Datatype("function")),
 						new Record.Field("finish", new Datatype("function"))),

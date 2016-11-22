@@ -24,7 +24,7 @@ public final class ThreadPopulator {
 	private ThreadPopulator() {}
 
 	public static void populateThread(Interpreter I, RödaScope S) {
-		Record threadRecord = new Record("Thread", Collections.emptyList(), null,
+		Record threadRecord = new Record("Thread", Collections.emptyList(), Collections.emptyList(),
 				Arrays.asList(new Record.Field("start", new Datatype("function")),
 						new Record.Field("pull", new Datatype("function")),
 						new Record.Field("push", new Datatype("function"))),
