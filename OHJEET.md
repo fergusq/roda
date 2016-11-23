@@ -127,8 +127,8 @@ Muuttujaparametrien lisäksi funktiolla voi olla tyyppiparametreja, joille pitä
 arvot muiden parametrien tapaan:
 
 ```sh
-init_list<T> &variable {
-	variable := new list<T>
+init_list<<T>> &variable {
+	variable := new list<<T>>
 }
 ```
 
@@ -172,9 +172,9 @@ record Perhe {
 Tietueilla voi olla tyyppiparametreja, joiden avulla tietyn kentän tyypin voi päättää oliota luodessa:
 
 ```
-record LinkattuLista<T> {
+record LinkattuLista<<T>> {
 	arvo : T
-	linkki : LinkattuLista<T>
+	linkki : LinkattuLista<<T>>
 }
 ```
 
@@ -239,7 +239,7 @@ Jos funktiolle on määritelty tyyppiparametreja, sille on annettava kutsun yhte
 tyyppiargumentteja:
 
 ```sh
-init_list<string> sisarukset
+init_list<<string>> sisarukset
 sisarukset += "Joonas"
 sisarukset += "Amelie"
 ```
@@ -480,7 +480,7 @@ push "Sisarusten koko nimet ovat ", kokonimet&" ja ", ".\n"
 Listan alkioille voi määritellä tyypin, jos se luodaan `new`-avainsanan avulla:
 
 ```sh
-tytöt := new list<string>
+tytöt := new list<<string>>
 tytöt .= ["Eveliina", "Lilja", "Nea"]
 ```
 
@@ -493,7 +493,7 @@ Uuden kartan voi luoda samaan tapaan kuten tietueolion.
 Kuten listoille, myös tauluille voi määritellä erikseen alkion tyypin. Tätä ei kuitenkaan ole pakko tehdä.
 
 ```sh
-iät := new map<number>
+iät := new map<<number>>
 iät["Maija"] = 13
 iät["Ilmari"] = 19
 ```
@@ -615,21 +615,6 @@ done
 
 Reflektion avulla on mahdollista saada metatietoa olioiden tyypeistä. Rödassa on kaksi mekanismia reflektion
 käyttämiseen: `reflect`-avainsana ja `typeof`-avainsana.
-```
-record Type {
-	name : string
-	annotations : list
-	fields : list<Field>
-	newInstance : function
-}
-record Field {
-	name : string
-	annotations : list
-	type : Type
-	get : function
-	set : function
-}
-```
 
 `reflect` palauttaa annetun tyypin metaluokan, joka on tyyppiä `Type`.
 ```c
@@ -640,7 +625,7 @@ record R {
 
 ...
 
-reflect R.fields /* palauttaa listan, jossa on kaksi field oliota, yksi a:lle ja toinen b:lle */
+reflect R.fields /* palauttaa listan, jossa on kaksi field-oliota, yksi a:lle ja toinen b:lle */
 ```
 
 `typeof` toimii samoin, mutta ottaa tyyppinimen sijasta arvon ja palauttaa sen tyypin.
@@ -653,6 +638,39 @@ push env["PATH"] | split :s, ":" | exec :I, :l, "ls", dir for dir | createGlobal
 
 Etsii kaikki komentorivikomennot ja tekee jokaisesta funktion. Tämän jälkeen komentoja voi käyttää suoraan ilman
 `exec`iä.
+
+## Lista sisäänrakennetuista tietueluokista
+
+Näiden lisäksi jotkin funktiot palauttavat omia tietueitaan, joiden määritykset listattu kyseisten funktioiden kohdalla.
+
+### Error
+
+```
+record Error {
+	message : string
+	stack : list<<string>>
+	javastack : list<<string>>
+}
+```
+
+### Type ja Field
+
+```
+record Type {
+	name : string
+	annotations : list
+	fields : list<<Field>>
+	newInstance : function
+}
+
+record Field {
+	name : string
+	annotations : list
+	type : Type
+	get : function
+	set : function
+}
+```
 
 ## Lista sisäänrakennetuista funktioista
 
