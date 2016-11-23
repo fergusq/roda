@@ -84,8 +84,7 @@ public class RödaRecordInstance extends RödaValue {
 				      List<Datatype> identities) {
 		identities.add(new Datatype(record.name, typearguments));
 		for (Record.Field field : record.fields) {
-			if (fieldTypes.containsKey(field.name))
-				error("double inheritance of field '" + field.name + "'");
+			// TODO check double inheritance
 			fieldTypes.put(field.name, substitute(field.type, record.typeparams, typearguments));
 		}
 		for (Datatype superType : record.superTypes) {
