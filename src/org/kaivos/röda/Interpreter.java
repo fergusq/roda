@@ -952,12 +952,13 @@ public class Interpreter {
 		if (cmd.type == Command.Type.FOR) {
 			Runnable r;
 			if (cmd.list != null) {
+				if (cmd.variables.size() != 1) error("invalid for statement: there must be only 1 variable when iterating a list");
 				RödaValue list = evalExpression(cmd.list, scope, in, out).impliciteResolve();
 				checkList("for", list);
 				r = () -> {
 					for (RödaValue val : list.list()) {
 						RödaScope newScope = new RödaScope(scope);
-						newScope.setLocal(cmd.variable, val);
+						newScope.setLocal(cmd.variables.get(0), val);
 						if (cmd.cond != null
 						    && evalCond("for if", cmd.cond, newScope, _in))
 							continue;
@@ -972,12 +973,20 @@ public class Interpreter {
 				};
 			} else {
 				r = () -> {
+					String firstVar = cmd.variables.get(0);
+					List<String> otherVars = cmd.variables.subList(1, cmd.variables.size());
 					while (true) {
 						RödaValue val = _in.pull();
 						if (val == null) break;
-
+						
 						RödaScope newScope = new RödaScope(scope);
-						newScope.setLocal(cmd.variable, val);
+						newScope.setLocal(firstVar, val);
+						for (String var : otherVars) {
+							val = _in.pull();
+							if (val == null) error("empty stream");
+							newScope.setLocal(var, val);
+						}
+
 						if (cmd.cond != null
 						    && evalCond("for if", cmd.cond, newScope, _in))
 							continue;

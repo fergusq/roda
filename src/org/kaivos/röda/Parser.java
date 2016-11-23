@@ -495,6 +495,7 @@ public class Parser {
 		boolean negation;
 		Statement cond;
 		String variable;
+		List<String> variables;
 		Expression list;
 		List<Statement> body, elseBody;
 		Command cmd;
@@ -523,7 +524,7 @@ public class Parser {
 			case WHILE:
 				return "while ... do ... done";
 			case FOR:
-				return "for " + variable + (list != null ? " in " + list.asString() : "") + " do ... done";
+				return "for " + variables.stream().collect(joining(", ")) + (list != null ? " in " + list.asString() : "") + " do ... done";
 			default:
 				return "<" + type + ">";
 			}
@@ -580,13 +581,13 @@ public class Parser {
 		return cmd;
 	}
 	
-	static Command _makeForCommand(String file, int line, String variable,
+	static Command _makeForCommand(String file, int line, List<String> variables,
 				       Expression list, Statement cond, List<Statement> body) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.FOR;
 		cmd.file = file;
 		cmd.line = line;
-		cmd.variable = variable;
+		cmd.variables = variables;
 		cmd.list = list;
 		cmd.cond = cond;
 		cmd.body = body;
@@ -664,7 +665,11 @@ public class Parser {
 						     Arrays.asList(new Statement(Arrays.asList(cmd))), null);
 		}
 		else if (tl.acceptIfNext("for")) {
-			String variable = nextString(tl);
+			List<String> variables = new ArrayList<>();
+			variables.add(nextString(tl));
+			while (acceptIfNext(tl, ",")) {
+				variables.add(nextString(tl));
+			}
 			Expression list = null;
 			Statement cond = null;
 			if (acceptIfNext(tl, "in")) {
@@ -673,7 +678,7 @@ public class Parser {
 			if (acceptIfNext(tl, "if")) {
 				cond = parseStatement(tl);
 			}
-			return _makeForCommand(cmd.file, cmd.line, variable, list, cond,
+			return _makeForCommand(cmd.file, cmd.line, variables, list, cond,
 					       Arrays.asList(new Statement(Arrays.asList(cmd))));
 		}
 		else return cmd;
@@ -706,7 +711,11 @@ public class Parser {
 		}
 
 		if (acceptIfNext(tl, "for")) {
-			String variable = nextString(tl);
+			List<String> variables = new ArrayList<>();
+			variables.add(nextString(tl));
+			while (acceptIfNext(tl, ",")) {
+				variables.add(nextString(tl));
+			}
 			Expression list = null;
 			Statement cond = null;
 			if (acceptIfNext(tl, "in")) {
@@ -722,7 +731,7 @@ public class Parser {
 				if (isNext(tl, "done")) break;
 			}
 			accept(tl, "done");
-			return _makeForCommand(file, line, variable, list, cond, body);
+			return _makeForCommand(file, line, variables, list, cond, body);
 		}
 
 		if (acceptIfNext(tl, "try")) {
