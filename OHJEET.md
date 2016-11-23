@@ -210,7 +210,7 @@ myös tyhjä.
 ```sh
 tulosta_perheenjäsenet sukunimi, etunimet... {
 	for etunimi in etunimet; do
-		push etunimi " " sukunimi "\n"
+		push etunimi, " ", sukunimi, "\n"
 	done
 }
 
@@ -348,7 +348,7 @@ done
 **`for`** käy läpi annetun listan kaikki arvot:
 
 ```sh
-tytöt := (("Annamari" 1996) ("Reetta" 1992) ("Vilma" 1999))
+tytöt := [["Annamari", 1996], ["Reetta", 1992], ["Vilma", 1999]]
 for tyttö in tytöt do
 	push "Hänen nimensä on "..tyttö[0].." ja hän on syntynyt vuonna "..tyttö[1].."\n"
 done
@@ -371,7 +371,7 @@ for tyttö in tytöt if [ tyttö.ikä > 14 ]; do
 	määrä ++
 	summa += tyttö.pituus
 done
-push "Yli neljätoistavuotiaiden tyttöjen pituuksien keskiarvo: "..$(summa/määrä).."\n"
+push "Yli neljätoistavuotiaiden tyttöjen pituuksien keskiarvo: "..(summa/määrä).."\n"
 ```
 
 **`break`**ia ja **`continue`**a voi käyttää silmukasta poistumiseen tai vuoron yli hyppäämiseen.
@@ -390,7 +390,7 @@ tyttö = haeSeuraava() while tarkista tyttö
 Suffiksit ovat laskujärjestyksessä korkeammalla kuin putket. Sulkuja `{}` voi käyttää tämän kiertämiseksi:
 
 ```sh
-haeViestit() | split :s, "\\b" | { haeTytöt | push tyttö for tyttö if [ tyttö.nimi = sana ] } for sana | for tyttö do
+haeViestit() | split(:s, "\\b") | { haeTytöt | push tyttö for tyttö if [ tyttö.nimi = sana ] } for sana | for tyttö do
 	push tyttö.." mainittiin keskustelussa.\n"
 done
 ```
@@ -463,9 +463,9 @@ pistetään alkioiden väleihin.
 
 ```sh
 tytöt := ["Annamari", "Reetta", "Vilma", "Susanna"]
-push "Tyttöjä on " #tytöt " kpl.\n"
-push "Ensimmäinen tyttö on " tytöt[0] " ja viimeinen " tytöt[-1] ". "
-push "Välissä ovat " tytöt[1:-1]&" ja " ".\n"
+push "Tyttöjä on ", #tytöt, " kpl.\n"
+push "Ensimmäinen tyttö on ", tytöt[0], " ja viimeinen ", tytöt[-1], ". "
+push "Välissä ovat ", tytöt[1:-1]&" ja ", ".\n"
 ```
 
 Jos listaan yhdistää merkkijonon, yhdistetään se kaikkiin listan alkioihin:
@@ -474,7 +474,7 @@ Jos listaan yhdistää merkkijonon, yhdistetään se kaikkiin listan alkioihin:
 sukunimi := "Kivinen"
 sisarukset := ["Maija", "Ilmari"]
 kokonimet := sisarukset.." "..sukunimi
-push "Sisarusten koko nimet ovat " kokonimet&" ja " ".\n"
+push "Sisarusten koko nimet ovat ", kokonimet&" ja ", ".\n"
 ```
 
 Listan alkioille voi määritellä tyypin, jos se luodaan `new`-avainsanan avulla:
@@ -573,7 +573,7 @@ Seuraava ohjelma tulostaa tiedoston rivinumeroiden kera.
 rivit := [readLines(tiedosto)]
 i := 1
 for rivi in rivit; do
-	push i " " rivi "\n"
+	push i, " ", rivi, "\n"
 	i ++
 done
 ```
@@ -648,7 +648,7 @@ reflect R.fields /* palauttaa listan, jossa on kaksi field oliota, yksi a:lle ja
 ## Esimerkkejä
 
 ```sh
-push env["PATH"] | split :s, ":" | exec :I, :l, "ls", dir for dir | create_global komento, { |a...|; exec komento, *a } for komento
+push env["PATH"] | split :s, ":" | exec :I, :l, "ls", dir for dir | createGlobal komento, { |a...|; exec komento, *a } for komento
 ```
 
 Etsii kaikki komentorivikomennot ja tekee jokaisesta funktion. Tämän jälkeen komentoja voi käyttää suoraan ilman
@@ -661,7 +661,7 @@ Merkki `*` tarkoittaa "nolla tai useampi" ja `+` yksi tai useampi.
 
 ### assignGlobal
 
->`assignGlobal nimi arvo`
+>`assignGlobal nimi, arvo`
 
 Ottaa merkkijonon ja arvon ja luo niiden perusteella uuden globaalin muuttujan.
 
@@ -698,17 +698,19 @@ Palauttaa nykyisen ajan millisekuntteina.
 
 Tulostaa annetut merkkijonot (tai sisääntulovirran arvot) standardivirheeseen.
 
-### file TODO
+### fileExists
 
->`file ((-l|-e|-f|-l|-m) tiedosto)*`
+>`fileExists tiedosto*`
 
-Palauttaa halutun tiedon tiedostosta.
+Palauttaa totuusarvon siitä, onko tiedosto olemassa.
+Voi ottaa joko argumentteja tai lukea arvoja sisääntulovirrasta.
 
-- `-l` palauttaa tiedoston koon.
-- `-e` palauttaa totuusarvon siitä, onko tiedosto olemassa.
-- `-f` kertoo, onko tiedosto tavallinen tiedosto.
-- `-d` kertoo, onko tiedosto kansio.
-- `-m` palauttaa tiedoston mime-tyypin.
+### fileLength
+
+>`fileLength tiedosto*`
+
+Palauttaa tiedoston koon.
+Voi ottaa joko argumentteja tai lukea arvoja sisääntulovirrasta.
 
 ### false
 
@@ -718,12 +720,12 @@ Työntää arvon `false` ulostulovirtaan.
 
 ### exec
 
->`exec komento argumentit*`
+>`exec komento, argumentit*`
 
 Suorittaa annetun ulkoisen komennon annetuilla argumenteilla. Jos komennolle ei halua antaa syötettä tai sen
 ulostuloa ei halua, voi sen putkittaa nimettömälle funktiolle:
 
-`{} | exec komento argumentit | {}`
+`{} | exec komento, argumentit | {}`
 
 ### head
 
@@ -743,6 +745,20 @@ Lukee sisääntulovirrasta arvoja ja työntää ne ulostulovirtaan.
 
 Suorittaa annetut Röda-tiedostot.
 
+### isDirectory
+
+>`isDirectory tiedostonimi*`
+
+Palauttaa totuusarvon siitä, onko tiedosto kansio.
+Voi ottaa joko argumentteja tai lukea arvoja sisääntulovirrasta.
+
+### isFile
+
+>`isFile tiedostonimi*`
+
+Palauttaa totuusarvon siitä, onko tiedosto muunlainen tiedosto kuin kansio.
+Voi ottaa joko argumentteja tai lukea arvoja sisääntulovirrasta.
+
 ### json
 
 >`json [merkkijono]`
@@ -758,10 +774,17 @@ Palauttaa argumentit listana.
 
 ### match
 
->`match regex merkkijono*`
+>`match regex, merkkijono*`
 
 Yrittää parsia annetut merkkijonot (tai vaihtoehtoisesti sisääntulovirrasta otetut merkkijonot) annetun säännöllisen
 lausekkeen avulla. Palauttaa listan säännöllisen lausekkeen mukaisista ryhmistä merkkijonossa.
+
+### mimeType
+
+>`mimeType tiedostonimi*`
+
+Palauttaa tiedoston mime-tyypin.
+Voi ottaa joko argumentteja tai lukea arvoja sisääntulovirrasta.
 
 ### name
 
@@ -771,9 +794,9 @@ Työntää annettujen muuttujien nimet ulostulovirtaan merkkijonoina.
 
 ### parseInteger
 
->`parseInteger [-c] [-r radix] merkkijono+`
+>`parseInteger [:c,] [:r, radix,] merkkijono+`
 
-Parsii luvun merkkijonosta. Jos valitsin `-c` (**c**haracter) on annettu, tulkitsee luvun UTF-8-merkkinä
+Parsii luvun merkkijonosta. Jos valitsin `:c` (**c**haracter) on annettu, tulkitsee luvun UTF-8-merkkinä
 ja palauttaa merkkijonon.
 
 ### print
@@ -800,12 +823,23 @@ Työntää arvot ulostulovirtaan.
 
 Työntää nykyisen työhakemiston ulostulovirtaan.
 
-### random TODO
+### randomBoolean
 
->`random [-boolean|-float|-integer]`
+>`randomBoolean muuttuja*`
 
-Työntää oletuksena satunnaisen totuusarvon ulostulovirtaan.
-Voi myös palauttaa kokonaisluvun tai liukuluvun merkkijonona.
+Työntää satunnaisen totuusarvon ulostulovirtaan tai asettaa annettuihin muuttujiin.
+
+### randomFloating
+
+>`randomFloating muuttuja*`
+
+Työntää satunnaisen liukuluvun ulostulovirtaan tai asettaa annettuihin muuttujiin.
+
+### randomInteger
+
+>`randomInteger muuttuja*`
+
+Työntää satunnaisen kokonaisluvun ulostulovirtaan tai asettaa annettuihin muuttujiin.
 
 ### readLines
 
@@ -815,7 +849,7 @@ Lukee annetut tiedostot rivi kerrallaan ja työntää rivit ulostulovirtaan.
 
 ### replace
 
->`replace (regex korvaava)+`
+>`replace (regex, korvaava)+`
 
 Lukee sisääntulovirrasta merkkijonoarvoja ja työntää ne ulostulovirtaan siten, että niihin on tehty annetut
 korvaukset järjestyksessä. Käyttää sisäisesti Javan `String.replaceAll`-metodia.
@@ -864,12 +898,12 @@ record Socket {
 
 Metodit toimivat seuraavasti:
 
->`Socket.write (-f tiedosto|arvo)*`
+>`Socket.write (:f, tiedosto|arvo)*`
 
 Kirjoittaa annettujen merkkijonojen (joko argumentien tai sisääntulovirran arvojen) UTF-8-esitykset
 virtaan. Argumentin avulla virtaan voi kirjoittaa myös tiedoston sisällön.
 
->`Socket.read ((-b n|-l) muuttuja)*`
+>`Socket.read ((:b, n|:l), muuttuja)*`
 
 Ilman argumentteja työntää ulostulovirtaansa virrasta luettuja tavuja lukuina.
 Jos argumentteja on, asettaa jokaiseen annettuun muuttujaan joko `n` seuraavaa tavua tulkittuna UTF-8-merkkijonona
@@ -881,12 +915,12 @@ Sulkee yhteyden.
 
 ### split
 
->`split [-s regex] [-c] merkkijono*`
+>`split [:s, regex,] [:c,] merkkijono*`
 
 Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **s**eparator) osoittamista kohdista tai
 oletuksena välilyöntien perusteella. Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
 
-Valitsin `-c` (**c**ollect) määrittää, että ulostulovirtaan työnnetään merkkijonojen osien sijasta lista merkkijonon osista.
+Valitsin `:c` (**c**ollect) määrittää, että ulostulovirtaan työnnetään merkkijonojen osien sijasta lista merkkijonon osista.
 
 ### stringToBytes
 
@@ -953,7 +987,7 @@ Tuhoaa annetut muuttujat.
 
 ### wcat
 
->`wcat ([-O tiedosto] [-U user_agent] osoite)*`
+>`wcat ([:O, tiedosto,] [:U, user_agent,] osoite)*`
 
 Lataa tiedostot annetuista Internet-osoitteista mahdollisesti annetuilla user agenteilla
 ja kirjoittaa ne annettuihin tiedostoihin (tai oletuksena rivi kerrallaan ulostulovirtaan).
