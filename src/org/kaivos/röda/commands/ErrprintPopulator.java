@@ -23,7 +23,6 @@ public final class ErrprintPopulator {
 			} else
 				for (RödaValue value : args) {
 					System.err.print(value.str());
-					out.push(RödaString.of("\n"));
 				}
 		}, Arrays.asList(new Parameter("values", false)), true));
 	}
