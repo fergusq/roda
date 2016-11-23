@@ -562,7 +562,10 @@ public class RödaTest {
 	@Test
 	public void testSplit() {
 		assertEquals("[sanna, ja, teemu, jokela]",
-			     eval("main{push([split(:s, \"-\", \"sanna-ja-teemu-jokela\")])}"));
+			     eval("main{push([splitAt(\"-\", \"sanna-ja-teemu-jokela\")])}"));
+		init();
+		assertEquals("[sanna, ja, teemu, jokela]",
+			     eval("main{push([split(\"sanna ja teemu jokela\")])}"));
 	}
 
 	// Nimettömät funktiot

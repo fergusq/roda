@@ -915,16 +915,43 @@ Sulkee yhteyden.
 
 ### split
 
->`split [:s, regex,] [:c,] merkkijono*`
+>`split merkkijono*`
 
-Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan (-s, **s**eparator) osoittamista kohdista tai
-oletuksena välilyöntien perusteella. Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
+Jakaa merkkijonon osiin välilyöntien perusteella.
+Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
 
-Valitsin `:c` (**c**ollect) määrittää, että ulostulovirtaan työnnetään merkkijonojen osien sijasta lista merkkijonon osista.
+Työntää ulostulovirtaan merkkijonon osat.
+
+### splitAt
+
+>`splitAt erotinmerkki, merkkijono*`
+
+Jakaa merkkijonon osiin annetun erottajan osoittamista kohdista.
+Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
+
+Työntää ulostulovirtaan merkkijonon osat.
+
+### splitAll
+
+>`splitAll merkkijono*`
+
+Palauttaa listan, jossa merkkijono on jaettu osiin välilyöntien perusteella.
+Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
+
+Työntää ulostulovirtaan listan merkkijonon osista tai useita listoja, jos merkkijonoja on useampi.
+
+### splitAllAt
+
+>`splitAllAt erotinmerkki, merkkijono*`
+
+Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan osoittamista kohdista.
+Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
+
+Työntää ulostulovirtaan listan merkkijonon osista tai useita listoja, jos merkkijonoja on useampi.
 
 ### stringToBytes
 
->`stob merkkijono*`
+>`stringToBytes merkkijono*`
 
 Muuntaa annetut merkkijonot (argumentit tai sisääntulovirta) listoiksi, jotka sisältävät lukuina merkkijonon UTF-8-esityksen.
 

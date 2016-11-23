@@ -148,7 +148,7 @@ filter condition {
 }
 
 lex {
-	split(:s, "(?<=[^a-zA-Z0-9_])|(?=[^a-zA-Z0-9_])") | filter({ |token|; [ token != " " ] })
+	splitAt("(?<=[^a-zA-Z0-9_])|(?=[^a-zA-Z0-9_])") | filter({ |token|; [ token != " " ] })
 	push("<EOF>")
 }
 
