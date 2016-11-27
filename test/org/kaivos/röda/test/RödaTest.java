@@ -533,11 +533,11 @@ public class RödaTest {
 
 	@Test
 	public void testMapContains() {
-		assertEquals("true",
+		assertEquals("<true>",
 			     eval("main{a:=new map;a[\"Reetta\"]=19;a[\"Vilma\"]=23;a[\"Susanna\"]=14;"
 				  + "push a[\"Vilma\"]?}"));
 		init();
-		assertEquals("false",
+		assertEquals("<false>",
 			     eval("main{a:=new map;a[\"Reetta\"]=19;a[\"Vilma\"]=23;a[\"Susanna\"]=14;"
 				  + "push a[\"Elina\"]?}"));
 	}
