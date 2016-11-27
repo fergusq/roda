@@ -118,7 +118,7 @@ public class Röda {
 			Interpreter c = new Interpreter(RödaStream.makeEmptyStream(),
 							new OSStream(out));
 
-			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, s, i, o) -> {
+			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, k, s, i, o) -> {
 						Interpreter.checkString("prompt", a.get(0));
 						in.setPrompt(a.get(0).str());
 					}, Arrays.asList(new Parameter("prompt_string", false)), false));

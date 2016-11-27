@@ -19,7 +19,7 @@ public final class ParseNumPopulator {
 	private ParseNumPopulator() {}
 
 	public static void populateParseNum(RödaScope S) {
-		S.setLocal("parseInteger", RödaNativeFunction.of("parseInteger", (typeargs, args, scope, in, out) -> {
+		S.setLocal("parseInteger", RödaNativeFunction.of("parseInteger", (typeargs, args, kwargs, scope, in, out) -> {
 			int radix = 10;
 			boolean tochr = false;
 			while (args.size() > 0 && args.get(0).is(RödaValue.FLAG)) {

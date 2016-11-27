@@ -14,7 +14,7 @@ public final class UndefinePopulator {
 	private UndefinePopulator() {}
 
 	public static void populateUndefine(RödaScope S) {
-		S.setLocal("undefine", RödaNativeFunction.of("undefine", (typeargs, args, scope, in, out) -> {
+		S.setLocal("undefine", RödaNativeFunction.of("undefine", (typeargs, args, kwargs, scope, in, out) -> {
 			for (RödaValue value : args) {
 				checkReference("undefine", value);
 

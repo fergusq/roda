@@ -19,7 +19,7 @@ public final class SearchPopulator {
 	private SearchPopulator() {}
 
 	public static void populateSearch(RödaScope S) {
-		S.setLocal("search", RödaNativeFunction.of("search", (typeargs, args, scope, in, out) -> {
+		S.setLocal("search", RödaNativeFunction.of("search", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() < 1)
 				argumentUnderflow("search", 1, 0);
 			while (true) {

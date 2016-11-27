@@ -19,7 +19,7 @@ public final class RandomPopulator {
 	private RandomPopulator() {}
 	
 	private static void addQueryType(RödaScope S, String name, Supplier<RödaValue> supplier) {
-		S.setLocal(name, RödaNativeFunction.of(name, (typeargs, args, scope, in, out) -> {
+		S.setLocal(name, RödaNativeFunction.of(name, (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() == 0) {
 				out.push(supplier.get());
 				return;

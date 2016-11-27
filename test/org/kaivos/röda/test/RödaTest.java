@@ -209,6 +209,20 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testKwargsFunction() {
+		assertEquals("abba,tuuli",
+			     eval("pushdef text=\"abba\"{push text}"
+				  + "main{pushdef;pushdef text=\"tuuli\"}"));
+	}
+
+	@Test
+	public void testVarargsKwargsFunction() {
+		assertEquals("hey abba,hey tuuli,hey joki,got pilvi",
+			     eval("give words...,text=\"got \"{for word in words;do push text..word;done}"
+				  + "main{give\"abba\",\"tuuli\",\"joki\",text=\"hey \";give\"pilvi\"}"));
+	}
+
+	@Test
 	public void testTypeparametrizationInFunctions() {
 		assertEquals("Leila", eval("f<<T>>{push new list<<T>>}main{"
 					   + "l:=f<<string>>();l+=\"Leila\";push l[0]}"));
@@ -562,7 +576,7 @@ public class RödaTest {
 	@Test
 	public void testSplit() {
 		assertEquals("[sanna, ja, teemu, jokela]",
-			     eval("main{push([splitAt(\"-\", \"sanna-ja-teemu-jokela\")])}"));
+			     eval("main{push([split(\"sanna-ja-teemu-jokela\", sep=\"-\")])}"));
 		init();
 		assertEquals("[sanna, ja, teemu, jokela]",
 			     eval("main{push([split(\"sanna ja teemu jokela\")])}"));

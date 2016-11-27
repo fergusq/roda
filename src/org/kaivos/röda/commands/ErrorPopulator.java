@@ -15,7 +15,7 @@ public class ErrorPopulator {
 	private ErrorPopulator() {}
 
 	public static void populateError(RödaScope S) {
-		S.setLocal("error", RödaNativeFunction.of("error", (typeargs, args, scope, in, out) -> {
+		S.setLocal("error", RödaNativeFunction.of("error", (typeargs, args, kwargs, scope, in, out) -> {
 			checkArgs("error", 1, args.size());
 			if (args.get(0).is(STRING)) {
 				error(args.get(0).str());

@@ -27,7 +27,7 @@ public final class BtosAndStobPopulator {
 	private BtosAndStobPopulator() {}
 
 	public static void populateBtosAndStob(RödaScope S) {
-		S.setLocal("bytesToString", RödaNativeFunction.of("bytesToString", (typeargs, args, scope, in, out) -> {
+		S.setLocal("bytesToString", RödaNativeFunction.of("bytesToString", (typeargs, args, kwargs, scope, in, out) -> {
 			Charset chrset = StandardCharsets.UTF_8;
 			Consumer<RödaValue> convert = v -> {
 				checkList("bytesToString", v);
@@ -49,7 +49,7 @@ public final class BtosAndStobPopulator {
 			}
 		}, Arrays.asList(new Parameter("lists", false, LIST)), true));
 
-		S.setLocal("stringToBytes", RödaNativeFunction.of("stringToBytes", (typeargs, args, scope, in, out) -> {
+		S.setLocal("stringToBytes", RödaNativeFunction.of("stringToBytes", (typeargs, args, kwargs, scope, in, out) -> {
 			Charset chrset = StandardCharsets.UTF_8;
 			Consumer<RödaValue> convert = v -> {
 				checkString("stringToBytes", v);

@@ -43,7 +43,7 @@ public final class ServerPopulator {
 				new Record.Field("localport", new Datatype("number"))), false);
 		I.registerRecord(socketRecord);
 
-		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, scope, in, out) -> {
+		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, kwargs, scope, in, out) -> {
 			long port = args.get(0).integer();
 			if (port > Integer.MAX_VALUE)
 				error("can't open port greater than " + Integer.MAX_VALUE);
@@ -53,7 +53,7 @@ public final class ServerPopulator {
 				ServerSocket server = new ServerSocket((int) port);
 
 				RödaValue serverObject = RödaRecordInstance.of(serverRecord, Collections.emptyList(), I.records);
-				serverObject.setField("accept", RödaNativeFunction.of("Server.accept", (ra, a, s, i, o) -> {
+				serverObject.setField("accept", RödaNativeFunction.of("Server.accept", (ra, a, k, s, i, o) -> {
 					checkArgs("Server.accept", 0, a.size());
 					Socket socket;
 					InputStream _in;
@@ -69,7 +69,7 @@ public final class ServerPopulator {
 					RödaValue socketObject = RödaRecordInstance.of(socketRecord, Collections.emptyList(), I.records);
 					socketObject.setField("read", Builtins.genericRead("Socket.read", _in, I));
 					socketObject.setField("write", Builtins.genericWrite("Socket.write", _out, I));
-					socketObject.setField("close", RödaNativeFunction.of("Socket.close", (r, A, z, j, u) -> {
+					socketObject.setField("close", RödaNativeFunction.of("Socket.close", (r, A, K, z, j, u) -> {
 						checkArgs("Socket.close", 0, A.size());
 						try {
 							_out.close();
@@ -85,7 +85,7 @@ public final class ServerPopulator {
 					socketObject.setField("localport", RödaInteger.of(socket.getLocalPort()));
 					o.push(socketObject);
 				}, Collections.emptyList(), false));
-				serverObject.setField("close", RödaNativeFunction.of("Server.close", (ra, a, s, i, o) -> {
+				serverObject.setField("close", RödaNativeFunction.of("Server.close", (ra, a, k, s, i, o) -> {
 					checkArgs("Server.close", 0, a.size());
 					try {
 						server.close();

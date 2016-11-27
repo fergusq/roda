@@ -13,7 +13,7 @@ public final class ErrprintPopulator {
 	private ErrprintPopulator() {}
 
 	public static void populateErrprint(RödaScope S) {
-		S.setLocal("errprint", RödaNativeFunction.of("errprint", (typeargs, args, scope, in, out) -> {
+		S.setLocal("errprint", RödaNativeFunction.of("errprint", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.isEmpty()) {
 				while (true) {
 					RödaValue input = in.pull();

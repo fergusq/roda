@@ -32,7 +32,7 @@ public final class FilePopulator {
 	}
 	
 	private static void addQueryType(Interpreter I, String name, BiConsumer<File, RödaStream> consumer) {
-		I.G.setLocal(name, RödaNativeFunction.of(name, (typeargs, args, scope, in, out) -> {
+		I.G.setLocal(name, RödaNativeFunction.of(name, (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() < 1) {
 				while (true) {
 					RödaValue value = in.pull();

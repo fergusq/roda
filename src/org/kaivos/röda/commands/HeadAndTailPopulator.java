@@ -19,7 +19,7 @@ public final class HeadAndTailPopulator {
 	}
 
 	public static void populateHeadAndTail(RödaScope S) {
-		S.setLocal("head", RödaNativeFunction.of("head", (typeargs, args, scope, in, out) -> {
+		S.setLocal("head", RödaNativeFunction.of("head", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() > 1)
 				argumentOverflow("head", 1, args.size());
 			if (args.size() == 0) {
@@ -38,7 +38,7 @@ public final class HeadAndTailPopulator {
 			}
 		}, Arrays.asList(new Parameter("number", false, INTEGER)), true));
 
-		S.setLocal("tail", RödaNativeFunction.of("tail", (typeargs, args, scope, in, out) -> {
+		S.setLocal("tail", RödaNativeFunction.of("tail", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() > 1)
 				argumentOverflow("tail", 1, args.size());
 

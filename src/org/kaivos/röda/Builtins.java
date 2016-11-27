@@ -58,7 +58,7 @@ public class Builtins {
 
 		/* Perusvirtaoperaatiot */
 
-		S.setLocal("print", RödaNativeFunction.of("print", (typeargs, args, scope, in, out) -> {
+		S.setLocal("print", RödaNativeFunction.of("print", (typeargs, args, kwargs, scope, in, out) -> {
 					if (args.isEmpty()) {
 						argumentUnderflow("print", 1, 0);
 						return;
@@ -134,7 +134,7 @@ public class Builtins {
 	public static RödaValue genericPush(String name, RödaStream _out) {
 		return RödaNativeFunction
 			.of(name,
-			    (ra, a, s, i, o) -> {
+			    (ra, a, k, s, i, o) -> {
 				    if (a.size() == 0) {
 					    while (true) {
 						    RödaValue v = i.pull();
@@ -153,7 +153,7 @@ public class Builtins {
 	public static RödaValue genericPull(String name, RödaStream _in) {
 		return RödaNativeFunction
 			.of(name,
-			    (ra, a, s, i, o) -> {
+			    (ra, a, k, s, i, o) -> {
 				    if (a.size() == 0) {
 					    while (true) {
 						    RödaValue v = _in.pull();
@@ -178,7 +178,7 @@ public class Builtins {
 	public static RödaValue genericWrite(String name, OutputStream _out, Interpreter I) {
 		return RödaNativeFunction
 			.of(name,
-			    (ra, args, scope, in, out) -> {
+			    (ra, args, kwargs, scope, in, out) -> {
 				    try {
 					    if (args.size() == 0) {
 						    while (true) {
@@ -229,7 +229,7 @@ public class Builtins {
 	public static RödaValue genericRead(String name, InputStream _in, Interpreter I) {
 		return RödaNativeFunction
 			.of(name,
-			    (ra, args, scope, in, out) -> {
+			    (ra, args, kwargs, scope, in, out) -> {
 				    try {
 					    if (args.size() == 0) {
 						    while (true) {

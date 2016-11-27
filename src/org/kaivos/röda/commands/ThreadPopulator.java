@@ -31,7 +31,7 @@ public final class ThreadPopulator {
 				false);
 		I.registerRecord(threadRecord);
 
-		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, scope, in, out) -> {
+		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, kwargs, scope, in, out) -> {
 			RödaValue function = args.get(0);
 
 			RödaScope newScope = !function.is(RödaValue.NFUNCTION) && function.localScope() != null
@@ -46,8 +46,9 @@ public final class ThreadPopulator {
 
 			Runnable task = () -> {
 				try {
-					I.exec("<Thread.start>", 0, function, Collections.emptyList(), Collections.emptyList(), newScope,
-							_in, _out);
+					I.exec("<Thread.start>", 0, function,
+							Collections.emptyList(), Collections.emptyList(), Collections.emptyMap(),
+							newScope, _in, _out);
 				} catch (RödaException e) {
 					System.err.println("[E] " + e.getMessage());
 					for (String step : e.getStack()) {
@@ -60,7 +61,7 @@ public final class ThreadPopulator {
 			};
 
 			RödaValue threadObject = RödaRecordInstance.of(threadRecord, Collections.emptyList(), I.records);
-			threadObject.setField("start", RödaNativeFunction.of("Thread.start", (ra, a, s, i, o) -> {
+			threadObject.setField("start", RödaNativeFunction.of("Thread.start", (ra, a, k, s, i, o) -> {
 				checkArgs("Thread.start", 0, a.size());
 				if (p.started)
 					error("Thread has already " + "been executed");

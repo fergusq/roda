@@ -1,25 +1,30 @@
 package org.kaivos.röda.type;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.Parser.Parameter;
 
 import static org.kaivos.röda.Interpreter.RödaScope;
-import static org.kaivos.röda.Parser.Parameter;
 
 public class RödaNativeFunction extends RödaValue {
 	public static class NativeFunction {
 		public String name;
 		public NativeFunctionBody body;
 		public boolean isVarargs;
-		public List<Parameter> parameters;
+		public List<Parameter> parameters, kwparameters;
 	}
 	
 	public static interface NativeFunctionBody {
-		public void exec(List<Datatype> typeargs, List<RödaValue> args, RödaScope scope,
-				 RödaStream in, RödaStream out);
+		public void exec(List<Datatype> typeargs,
+				List<RödaValue> args,
+				Map<String, RödaValue> kwargs,
+				RödaScope scope,
+				RödaStream in, RödaStream out);
 	}
 
 	private NativeFunction function;
@@ -49,14 +54,29 @@ public class RödaNativeFunction extends RödaValue {
 	public static RödaNativeFunction of(NativeFunction function) {
 		return new RödaNativeFunction(function);
 	}
+	
+	public static RödaNativeFunction of(String name, NativeFunctionBody body,
+			List<Parameter> parameters, boolean isVarargs) {
+		return of(name, body, parameters, isVarargs, Collections.emptyList());
+	}
 
 	public static RödaNativeFunction of(String name, NativeFunctionBody body,
-					    List<Parameter> parameters, boolean isVarargs) {
+			List<Parameter> parameters, boolean isVarargs, List<Parameter> kwparameters) {
+		
+		for (Parameter p : parameters)
+			if (p.defaultValue != null)
+				throw new IllegalArgumentException("non-kw parameters can't have default values");
+		
+		for (Parameter p : kwparameters)
+			if (p.defaultValue == null)
+				throw new IllegalArgumentException("kw parameters must have default values");
+		
 		NativeFunction function = new NativeFunction();
 		function.name = name;
 		function.body = body;
 		function.isVarargs = isVarargs;
 		function.parameters = parameters;
+		function.kwparameters = kwparameters;
 		return of(function);
 	}
 }

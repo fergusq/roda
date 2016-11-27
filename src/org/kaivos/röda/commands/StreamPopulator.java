@@ -33,13 +33,13 @@ public final class StreamPopulator {
 			RödaValue streamObject = RödaRecordInstance.of(streamRecord, Collections.emptyList(), I.records);
 			streamObject.setField("pull", Builtins.genericPull("Stream.pull", stream));
 			streamObject.setField("push", Builtins.genericPush("Stream.push", stream));
-			streamObject.setField("finish", RödaNativeFunction.of("Stream.finish", (ta, a, s, i, o) -> {
+			streamObject.setField("finish", RödaNativeFunction.of("Stream.finish", (ta, a, k, s, i, o) -> {
 				stream.finish();
 			}, Collections.emptyList(), false));
 			return streamObject;
 		};
 
-		S.setLocal("stream", RödaNativeFunction.of("stream", (typeargs, args, scope, in, out) -> {
+		S.setLocal("stream", RödaNativeFunction.of("stream", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() == 0) {
 				out.push(getStreamObj.get());
 				return;

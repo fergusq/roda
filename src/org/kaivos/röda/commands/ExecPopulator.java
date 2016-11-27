@@ -29,7 +29,7 @@ public final class ExecPopulator {
 	private ExecPopulator() {}
 
 	public static void populateExec(Interpreter I, RödaScope S) {
-		S.setLocal("exec", RödaNativeFunction.of("exec", (typeargs, args, scope, in, out) -> {
+		S.setLocal("exec", RödaNativeFunction.of("exec", (typeargs, args, kwargs, scope, in, out) -> {
 			HashMap<String, String> envVars = new HashMap<>();
 			class C {
 				boolean lineMode = false, enableInput = true;

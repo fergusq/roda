@@ -17,7 +17,7 @@ public final class ReplacePopulator {
 	private ReplacePopulator() {}
 
 	public static void populateReplace(RödaScope S) {
-		S.setLocal("replace", RödaNativeFunction.of("replace", (typeargs, args, scope, in, out) -> {
+		S.setLocal("replace", RödaNativeFunction.of("replace", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() % 2 != 0)
 				error("invalid arguments for replace: even number required (got " + args.size() + ")");
 			try {

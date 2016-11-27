@@ -17,7 +17,7 @@ public final class PushAndPullPopulator {
 	private PushAndPullPopulator() {}
 
 	public static void populatePushAndPull(RödaScope S) {
-		S.setLocal("push", RödaNativeFunction.of("push", (typeargs, args, scope, in, out) -> {
+		S.setLocal("push", RödaNativeFunction.of("push", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.isEmpty())
 				argumentUnderflow("push", 1, 0);
 			for (RödaValue value : args) {
@@ -25,7 +25,7 @@ public final class PushAndPullPopulator {
 			}
 		}, Arrays.asList(new Parameter("values", false)), true));
 	
-		S.setLocal("pull", RödaNativeFunction.of("pull", (typeargs, args, scope, in, out) -> {
+		S.setLocal("pull", RödaNativeFunction.of("pull", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.isEmpty()) {
 				RödaValue value = in.pull();
 				if (value == null) error("empty stream");
@@ -42,7 +42,7 @@ public final class PushAndPullPopulator {
 			}
 		}, Arrays.asList(new Parameter("variables", true)), true));
 	
-		S.setLocal("peek", RödaNativeFunction.of("peek", (typeargs, args, scope, in, out) -> {
+		S.setLocal("peek", RödaNativeFunction.of("peek", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.isEmpty()) {
 				RödaValue value = in.peek();
 				if (value == null) error("empty stream");

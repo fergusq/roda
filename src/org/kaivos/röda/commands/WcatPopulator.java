@@ -26,7 +26,7 @@ public final class WcatPopulator {
 	private WcatPopulator() {}
 
 	public static void populateWcat(RödaScope S) {
-		S.setLocal("wcat", RödaNativeFunction.of("wcat", (typeargs, args, scope, in, out) -> {
+		S.setLocal("wcat", RödaNativeFunction.of("wcat", (typeargs, args, kwargs, scope, in, out) -> {
 					if (args.size() < 1) argumentUnderflow("wcat", 1, args.size());
 					try {
 						String useragent = "";

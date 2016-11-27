@@ -14,7 +14,7 @@ public final class SeqPopulator {
 	private SeqPopulator() {}
 
 	public static void populateSeq(RödaScope S) {
-		S.setLocal("seq", RödaNativeFunction.of("seq", (typeargs, args, scope, in, out) -> {
+		S.setLocal("seq", RödaNativeFunction.of("seq", (typeargs, args, kwargs, scope, in, out) -> {
 			long from = args.get(0).integer();
 			long to = args.get(1).integer();
 			for (long i = from; i <= to; i++)

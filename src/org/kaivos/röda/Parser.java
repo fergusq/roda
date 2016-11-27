@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 import java.util.regex.Pattern;
-
+import java.util.stream.Stream;
 import java.util.function.BinaryOperator;
 
 import static java.util.stream.Collectors.joining;
@@ -212,8 +212,12 @@ public class Parser {
 				records.add(parseRecord(tl, annotations));
 			}
 			else if (isNext(tl, "{")) {
-				blocks.add(new Function("<block>", Collections.emptyList(), Collections.emptyList(),
-							false, parseBody(tl)));
+				blocks.add(new Function(
+						"<block>",
+						Collections.emptyList(),
+						Collections.emptyList(), false,
+						Collections.emptyList(),
+						parseBody(tl)));
 			}
 			else {
 				functions.add(parseFunction(tl, true));
@@ -224,10 +228,10 @@ public class Parser {
 
 	public static class Annotation {
 		public final String name;
-		public final List<Argument> args;
+		public final Arguments args;
 		final String file;
 		final int line;
-		public Annotation(String file, int line, String name, List<Argument> args) {
+		public Annotation(String file, int line, String name, Arguments args) {
 			this.file = file;
 			this.line = line;
 			this.name = name;
@@ -241,7 +245,7 @@ public class Parser {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
 			String name = "@" + identifier(tl);
-			List<Argument> arguments = parseArguments(tl, false);
+			Arguments arguments = parseArguments(tl, false);
 			annotations.add(new Annotation(file, line, name, arguments));
 		}
 		return annotations;
@@ -359,7 +363,7 @@ public class Parser {
 	public static class Function {
 		public String name;
 		public List<String> typeparams;
-		public List<Parameter> parameters;
+		public List<Parameter> parameters, kwparameters;
 		public boolean isVarargs;
 		public List<Statement> body;
 
@@ -367,27 +371,47 @@ public class Parser {
 			 List<String> typeparams,
 			 List<Parameter> parameters,
 			 boolean isVarargs,
+			 List<Parameter> kwparameters,
 			 List<Statement> body) {
+			
+			for (Parameter p : parameters)
+				if (p.defaultValue != null)
+					throw new IllegalArgumentException("non-kw parameters can't have default values");
+			
+			for (Parameter p : kwparameters)
+				if (p.defaultValue == null)
+					throw new IllegalArgumentException("kw parameters must have default values");
 
 			this.name = name;
 			this.typeparams = typeparams;
 			this.parameters = parameters;
+			this.kwparameters = kwparameters;
 			this.isVarargs = isVarargs;
 			this.body = body;
 		}
 	}
 
 	public static class Parameter {
-		String name;
-		boolean reference;
-		Datatype type;
-	        public Parameter(String name, boolean reference) {
-			this(name, reference, null);
+		public String name;
+		public boolean reference;
+		public Datatype type;
+		public Expression defaultValue;
+        public Parameter(String name, boolean reference) {
+			this(name, reference, null, null);
 		}
-	        public Parameter(String name, boolean reference, Datatype type) {
+        public Parameter(String name, boolean reference, Datatype type) {
+			this(name, reference, type, null);
+		}
+        public Parameter(String name, boolean reference, Expression dafaultValue) {
+			this(name, reference, null, dafaultValue);
+		}
+        public Parameter(String name, boolean reference, Datatype type, Expression defaultValue) {
+        	if (reference && defaultValue != null)
+        		throw new IllegalArgumentException("a reference parameter can't have a default value");
 			this.name = name;
 			this.reference = reference;
 			this.type = type;
+			this.defaultValue = defaultValue;
 		}
 	}
 
@@ -402,7 +426,11 @@ public class Parser {
 			accept(tl, ":");
 			type = parseType(tl);
 		}
-		return new Parameter(name, reference, type);
+		Expression expr = null;
+		if (!reference && acceptIfNext(tl, "=")) {
+			expr = parseExpression(tl);
+		}
+		return new Parameter(name, reference, type, expr);
 	}
 	
 	static Function parseFunction(TokenList tl, boolean mayBeAnnotation) {
@@ -413,10 +441,18 @@ public class Parser {
 		List<String> typeparams = parseTypeparameters(tl);
 
 		List<Parameter> parameters = new ArrayList<>();
+		List<Parameter> kwparameters = new ArrayList<>();
+		boolean kwargsMode = false;
 		boolean isVarargs = false;
 		boolean parentheses = acceptIfNext(tl, "(");
 		while (!isNext(tl, ":") && !isNext(tl, "{") && !isNext(tl, ")")) {
-			parameters.add(parseParameter(tl, parentheses));
+			Parameter p = parseParameter(tl, parentheses);
+			if (p.defaultValue != null || kwargsMode) {
+				kwargsMode = true;
+				kwparameters.add(p);
+			}
+			else if (!kwargsMode) parameters.add(p);
+			else accept(tl, "="); // kw-parametrin jälkeen ei voi tulla tavallisia parametreja
 			if (!isVarargs && acceptIfNext(tl, "...")) {
 				isVarargs = true;
 			}
@@ -428,7 +464,7 @@ public class Parser {
 
 		List<Statement> body = parseBody(tl);
 
-		return new Function(name, typeparams, parameters, isVarargs, body);
+		return new Function(name, typeparams, parameters, isVarargs, kwparameters, body);
 	}
 
 	static List<String> parseTypeparameters(TokenList tl) {
@@ -491,7 +527,7 @@ public class Parser {
 		Expression name;
 		String operator;
 		List<Datatype> typearguments;
-		List<Argument> arguments;
+		Arguments arguments;
 		boolean negation;
 		Statement cond;
 		String variable;
@@ -504,9 +540,11 @@ public class Parser {
 		int line;
 		
 		String argumentsAsString() {
-			return arguments.stream()
-					.map(arg -> (arg.flattened ? "*" : "") + arg.expr.asString())
-					.collect(joining(", "));
+			Stream<String> args = arguments.arguments.stream()
+					.map(arg -> (arg.flattened ? "*" : "") + arg.expr.asString());
+			Stream<String> kwargs = arguments.kwarguments.stream()
+					.map(arg -> arg.name + "=" + arg.expr.asString());
+			return Stream.concat(args, kwargs).collect(joining(", "));
 		}
 		
 		String asString() {
@@ -530,9 +568,19 @@ public class Parser {
 			}
 		}
 	}
+	
+	static class Arguments {
+		List<Argument> arguments;
+		List<KwArgument> kwarguments;
+	}
 
 	static class Argument {
 		boolean flattened;
+		Expression expr;
+	}
+	
+	static class KwArgument {
+		String name;
 		Expression expr;
 	}
 
@@ -542,10 +590,17 @@ public class Parser {
 		arg.expr = expr;
 		return arg;
 	}
+
+	static KwArgument _makeKwArgument(String name, Expression expr) {
+		KwArgument arg = new KwArgument();
+		arg.name = name;
+		arg.expr = expr;
+		return arg;
+	}
 	
 	static Command _makeNormalCommand(String file, int line, Expression name,
 					  List<Datatype> typearguments,
-					  List<Argument> arguments) {
+					  Arguments arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.NORMAL;
 		cmd.file = file;
@@ -557,7 +612,7 @@ public class Parser {
 	}
 	
 	static Command _makeVariableCommand(String file, int line, Expression name,
-					    String operator, List<Argument> arguments) {
+					    String operator, Arguments arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.VARIABLE;
 		cmd.file = file;
@@ -615,7 +670,7 @@ public class Parser {
 		return cmd;
 	}
 	
-	static Command _makeReturnCommand(String file, int line, List<Argument> arguments) {
+	static Command _makeReturnCommand(String file, int line, Arguments arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.RETURN;
 		cmd.file = file;
@@ -760,7 +815,7 @@ public class Parser {
 		}
 
 		if (acceptIfNext(tl, "return")) {
-			List<Argument> arguments = parseArguments(tl, false);
+			Arguments arguments = parseArguments(tl, false);
 			return _makeReturnCommand(file, line, arguments);
 		}
 
@@ -784,7 +839,7 @@ public class Parser {
 			} while (acceptIfNext(tl, ","));
 			accept(tl, ">>");
 		}
-		List<Argument> arguments;
+		Arguments arguments;
 		
 		if (acceptIfNext(tl, "(")) {
 			arguments = parseArguments(tl, true);
@@ -798,13 +853,25 @@ public class Parser {
 			return _makeVariableCommand(file, line, name, operator, arguments);
 	}
 
-	private static List<Argument> parseArguments(TokenList tl, boolean allowNewlines) {
-		List<Argument> arguments = new ArrayList<>();
-		while ((allowNewlines || !tl.isNext(";", "\n")) && !isNext(tl, "|", ")", "}", "in", "do", "done", "<EOF>")) {
-			boolean flattened = acceptIfNext(tl, "*");
-			arguments.add(_makeArgument(flattened,
-						    parseExpression(tl)));
+	private static Arguments parseArguments(TokenList tl, boolean allowNewlines) {
+		Arguments arguments = new Arguments();
+		arguments.arguments = new ArrayList<>();
+		arguments.kwarguments = new ArrayList<>();
+		boolean kwargMode = false;
+		while ((allowNewlines || !tl.isNext(";", "\n")) && !isNext(tl, "|", ")", "]", "}", "in", "do", "done", "<EOF>")) {
+			if (tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
+				kwargMode = true;
+				String name = nextString(tl);
+				accept(tl, "=");
+				arguments.kwarguments.add(_makeKwArgument(name, parseExpression(tl)));
+			}
+			else {
+				boolean flattened = acceptIfNext(tl, "*");
+				arguments.arguments.add(_makeArgument(flattened,
+							    parseExpression(tl)));
+			}
 			if (!acceptIfNext(tl, ",")) break;
+			else skipNewlines(tl);
 		}
 		return arguments;
 	}
@@ -939,7 +1006,7 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionString(String file, int line, String t) {
+	public static Expression expressionString(String file, int line, String t) {
 		Expression e = new Expression();
 		e.type = Expression.Type.STRING;
 		e.file = file;
@@ -957,7 +1024,7 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionInt(String file, int line, int d) {
+	public static Expression expressionInt(String file, int line, int d) {
 		Expression e = new Expression();
 		e.type = Expression.Type.INTEGER;
 		e.file = file;
@@ -966,7 +1033,7 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionFloat(String file, int line, double d) {
+	public static Expression expressionFloat(String file, int line, double d) {
 		Expression e = new Expression();
 		e.type = Expression.Type.FLOATING;
 		e.file = file;
@@ -1313,8 +1380,11 @@ public class Parser {
 				body.add(parseStatement(tl));
 			}
 			accept(tl, "}");
-			ans = expressionFunction(file, line, new Function("<block>", Collections.emptyList(), parameters,
-									  isVarargs, body));
+			ans = expressionFunction(file, line,
+					new Function("<block>",
+							Collections.emptyList(),
+							parameters, isVarargs,
+							Collections.emptyList(), body));
 		}
 		else if (acceptIfNext(tl, "\"")) {
 			String s = tl.nextString();

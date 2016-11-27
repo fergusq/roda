@@ -63,7 +63,7 @@ public final class JsonPopulator {
 	}
 
 	public static void populateJson(RödaScope S) {
-		S.setLocal("json", RödaNativeFunction.of("json", (typeargs, args, scope, in, out) -> {
+		S.setLocal("json", RödaNativeFunction.of("json", (typeargs, args, kwargs, scope, in, out) -> {
 					if (args.size() > 1) argumentOverflow("json", 1, args.size());
 					else if (args.size() == 1) {
 						RödaValue arg = args.get(0);
