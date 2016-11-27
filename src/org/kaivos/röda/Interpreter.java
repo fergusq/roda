@@ -589,7 +589,7 @@ public class Interpreter {
 		for (Parameter kwpar : getKwParameters(value)) {
 			if (!kwargs.containsKey(kwpar.name)) {
 				kwargs.put(kwpar.name,
-						evalExpression(kwpar.defaultValue, scope, RödaStream.makeEmptyStream(), RödaStream.makeStream()));
+						evalExpression(kwpar.defaultValue, G, RödaStream.makeEmptyStream(), RödaStream.makeStream()));
 			}
 		}
 		
