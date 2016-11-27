@@ -92,6 +92,8 @@ funktio2 parametrit {
 }
 ```
 
+#### Vaihteleva määrä argumentteja
+
 Funktiolla voi ottaa vaihtelevan määrän argumentteja, jolloin viimeiselle parametrille pitää antaa
 `...`-määrite:
 
@@ -102,6 +104,8 @@ duplicate_files files... {
 	done
 }
 ```
+
+#### Viittausparametrit
 
 Funktio voi ottaa myös muuttujaviittauksen, jolloin ko. parametrille pitää antaa `&`-määrite. Seuraava funktio
 lukee kaksi arvoa, tekee niistä listan ja asettaa sen muuttujaan.
@@ -114,14 +118,31 @@ pull_twice &variable {
 }
 ```
 
+#### Parametrin tyyppi
+
 Parametrille voi määritellä tyypin, joka tarkistetaan aina funktiota kutsuttaessa. Viittausparametreille
 ei voi kuitenkaan vielä määritellä tyyppiä.
 
 ```sh
-kappale (sisältö : string) {
+kappale(sisältö : string) {
 	push "<p>"..sisältö.."</p>"
 }
 ```
+
+#### Parametrin oletusarvo
+
+Funktion viimeisille parametreille voi antaa oletusarvon, jota käytetään, jos parametria vastaavaa argumenttia ei ole annettu.
+Oletusarvoparametreja vastaavat argumentit täytyy antaa nimettyinä argumentteina.
+
+```sh
+korostus sisältö, väri="#ff0000" {
+	push "<span style='color:"..väri..";'>"..sisältö.."</span>"
+}
+```
+
+Oletusarvoparametreja voi määritellä myös `...`-merkkien jälkeen.
+
+#### Tyyppiparametrit
 
 Muuttujaparametrien lisäksi funktiolla voi olla tyyppiparametreja, joille pitää antaa funktiokutsussa
 arvot muiden parametrien tapaan:
@@ -219,6 +240,8 @@ main {
 }
 ```
 
+##### *-argumentit
+
 Jos argumentin edessä on tähti `*`, oletetaan, että se on lista. Tällöin listan alkiot annetaan
 argumentteina funktiolle, eikä itse listaa.
 
@@ -235,6 +258,16 @@ sisarukset := ["Joonas", "Amelie"]
 tulosta_perheenjäsenet "Mikkola", *sisarukset
 ```
 
+##### Nimetyt argumentit
+
+Jos funktion joillakin parametreilla on oletusarvo, pitää näitä parametreja vastaavat argumentit nimetä.
+
+```sh
+korosta("kissa", väri="#2388ff")
+```
+
+##### Tyyppiargumentit
+
 Jos funktiolle on määritelty tyyppiparametreja, sille on annettava kutsun yhteydessä vastaava määrä
 tyyppiargumentteja:
 
@@ -244,14 +277,14 @@ sisarukset += "Joonas"
 sisarukset += "Amelie"
 ```
 
-#### Eri arvojen "kutsuminen"
-
-##### Listat
+#### Listan kutsuminen
 
 Listan "kutsuminen" työntää kaikki listan alkiot ulostulovirtaan:
 ```sh
 ["rivi1\n", "rivi2\n", "rivi3\n"] | writeLines tiedosto
 ```
+
+Listan kutsumiseen perustuu `[`- ja `]`-merkkien käyttö ehtolauseissa.
 
 #### Muuttujat
 
@@ -319,7 +352,7 @@ Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
 | `+=`        | `tytöt += "Nea"`   | Lisää listaan elementin.                           |
 | `.=`        | `tytöt .= ["Annabella", "Linn"]` | Yhdistää listaan toisen listan.       |
 | `.=`        | `nimi .= sukunimi` | Lisää tekstin merkkijonon loppuun.                 |
-| `~=`        | `nimi ~= "ae" "ä"` | Tekee annetut korvaukset merkkijonoon, toimii kuten funktio `replace`. |
+| `~=`        | `nimi ~= "ae", "ä"` | Tekee annetut korvaukset merkkijonoon, toimii kuten funktio `replace`. |
 | `+=`, `-=`, `*=`, `/=` | `pisteet *= 2` | Suorittaa laskutoimituksen lukumuuttujalla. |
 | `++`, `--`  | `varallisuus --`   | Kasvattaa tai vähentää lukumuuttujan arvoa.        |
 
@@ -327,7 +360,9 @@ Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
 
 Ohjausrakenteita ovat `if`, `unless`, `while`, `until`, `for`, `break`, `continue`, `try` ja `return`.
 
-**`if`**, **`unless`**, **`while`** ja **`until`** suorittavat annetun lauseen ja olettavat sen palauttavan joko arvon `true` tai arvon `false`.
+##### `if`, `unless`, `while` ja `until`
+
+`if`, `unless`, `while` ja `until` suorittavat annetun lauseen ja olettavat sen palauttavan joko arvon `true` tai arvon `false`.
 Muut arvot tulkitaan aina samoin kuin `true`. Jos lause palauttaa useita arvoja, pitää niiden kaikkien olla `true`, jotta ehto toteutuisi.
 
 Sisäänrakennetuista funktioista vain `true`, `false`, `test`, `random` ja `file` (ks. alempana) palauttavat totuusarvon.
@@ -345,7 +380,9 @@ while [ not ( vastaus =~ "kyllä|ei" ) ]; do
 done
 ```
 
-**`for`** käy läpi annetun listan kaikki arvot:
+##### `for`
+
+`for` käy läpi annetun listan kaikki arvot:
 
 ```sh
 tytöt := [["Annamari", 1996], ["Reetta", 1992], ["Vilma", 1999]]
@@ -374,7 +411,7 @@ done
 push "Yli neljätoistavuotiaiden tyttöjen pituuksien keskiarvo: "..(summa/määrä).."\n"
 ```
 
-**`break`**ia ja **`continue`**a voi käyttää silmukasta poistumiseen tai vuoron yli hyppäämiseen.
+##### Suffiksirakenteet
 
 `if`ille, `while`lle ja `for`ille on olemassa myös ns. suffiksimuoto:
 
@@ -395,7 +432,13 @@ haeViestit() | split(:s, "\\b") | { haeTytöt | push tyttö for tyttö if [ tytt
 done
 ```
 
-**`try`** suorittaa annetun komennon tai lohkon ja ohittaa hiljaisesti kaikki vastaan tulleet virheet.
+##### `break` ja `continue`
+
+`break`ia ja `continue`a voi käyttää silmukasta poistumiseen tai vuoron yli hyppäämiseen.
+
+##### `try`
+
+`try` suorittaa annetun komennon tai lohkon ja ohittaa hiljaisesti kaikki vastaan tulleet virheet.
 
 ```sh
 while true; do
@@ -418,7 +461,9 @@ catch virhe
 done
 ```
 
-**`return`** työntää sille annetut argumentit ulostulovirtaan ja lopettaa nykyisen funktion suorittamisen.
+##### `return`
+
+`return` työntää sille annetut argumentit ulostulovirtaan ja lopettaa nykyisen funktion suorittamisen.
 
 ```sh
 haeSyntymävuodellaYksiTyttö vuosi {
@@ -933,36 +978,19 @@ Sulkee yhteyden.
 
 ### split
 
->`split merkkijono*`
+>`split merkkijono*, sep=" "`
 
-Jakaa merkkijonon osiin välilyöntien perusteella.
+Jakaa merkkijonon osiin annetun erottajan osoittamista kohdista tai oletuksena välilyöntien kohdalta.
 Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
 
 Työntää ulostulovirtaan merkkijonon osat.
 
-### splitAt
+### splitMany
 
->`splitAt erotinmerkki, merkkijono*`
+>`splitMany merkkijono*, sep=" "`
 
-Jakaa merkkijonon osiin annetun erottajan osoittamista kohdista.
-Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
-
-Työntää ulostulovirtaan merkkijonon osat.
-
-### splitAll
-
->`splitAll merkkijono*`
-
-Palauttaa listan, jossa merkkijono on jaettu osiin välilyöntien perusteella.
-Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
-
-Työntää ulostulovirtaan listan merkkijonon osista tai useita listoja, jos merkkijonoja on useampi.
-
-### splitAllAt
-
->`splitAllAt erotinmerkki, merkkijono*`
-
-Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan osoittamista kohdista.
+Palauttaa listan, jossa merkkijono on jaettu osiin annetun erottajan osoittamista kohdista
+tai oletuksena välilyntien perusteella.
 Jos merkkijonoja ei ole annettu, komento lukee niitä sisääntulovirrastaan.
 
 Työntää ulostulovirtaan listan merkkijonon osista tai useita listoja, jos merkkijonoja on useampi.

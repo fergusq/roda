@@ -52,8 +52,8 @@ record HttpServer(port_value) {
 		request.form = new map<<string>>
 		if push(request.headers["Content-Type"]?); do
 			if [ request.headers["Content-Type"] = "application/x-www-form-urlencoded" ]; do
-				for param in [splitAt("&", request.content)] do
-					kv := [splitAt("=", param)]
+				for param in [split(request.content, sep="&")] do
+					kv := [split(param, sep="=")]
 					if [ #kv = 2 ]; do
 						key := kv[0]
 						val := kv[1]
