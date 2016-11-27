@@ -562,7 +562,7 @@ public class Interpreter {
 		  List<RödaValue> rawArgs, Map<String, RödaValue> rawKwArgs,
 		  RödaScope scope, RödaStream in, RödaStream out) {
 		List<RödaValue> args = new ArrayList<>();
-		Map<String, RödaValue> kwargs = new HashMap<>(rawKwArgs);
+		Map<String, RödaValue> kwargs = new HashMap<>();
 		int i = 0;
 		for (RödaValue val : rawArgs) {
 			if (val.is(REFERENCE)
@@ -587,10 +587,23 @@ public class Interpreter {
 		}
 		
 		for (Parameter kwpar : getKwParameters(value)) {
-			if (!kwargs.containsKey(kwpar.name)) {
-				kwargs.put(kwpar.name,
-						evalExpression(kwpar.defaultValue, G, RödaStream.makeEmptyStream(), RödaStream.makeStream()));
+			if (!rawKwArgs.containsKey(kwpar.name)) {
+				RödaValue defaultVal = evalExpression(kwpar.defaultValue, G,
+						RödaStream.makeEmptyStream(),
+						RödaStream.makeStream()).impliciteResolve();
+				kwargs.put(kwpar.name, defaultVal);
+				continue;
 			}
+			RödaValue val = rawKwArgs.get(kwpar.name);
+			if (val.is(REFERENCE)) {
+				RödaValue rval = val.resolve(true);
+				if (rval.is(REFERENCE)) rval = rval.resolve(true);
+				kwargs.put(kwpar.name, rval);
+			}
+			else if (val.is(LIST)) {
+				kwargs.put(kwpar.name, val.copy());
+			}
+			else kwargs.put(kwpar.name, val);
 		}
 		
 		if (args.size() > 0) {

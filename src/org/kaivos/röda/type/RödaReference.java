@@ -19,7 +19,8 @@ public class RödaReference extends RödaValue {
 	}
 
 	@Override public String str() {
-		return "&" + target;
+		RödaValue targetVal = unsafeResolve();
+		return "<reference &" + target + " to " + (targetVal == null ? "<nothing>" : targetVal.str()) + ">";
 	}
 
 	@Override public String target() {
