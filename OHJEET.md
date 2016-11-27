@@ -678,7 +678,7 @@ reflect R.fields /* palauttaa listan, jossa on kaksi field-oliota, yksi a:lle ja
 ## Esimerkkejä
 
 ```sh
-push env["PATH"] | split :s, ":" | exec :I, :l, "ls", dir for dir | createGlobal komento, { |a...|; exec komento, *a } for komento
+push ENV["PATH"] | split :s, ":" | exec :I, :l, "ls", dir for dir | createGlobal komento, { |a...|; exec komento, *a } for komento
 ```
 
 Etsii kaikki komentorivikomennot ja tekee jokaisesta funktion. Tämän jälkeen komentoja voi käyttää suoraan ilman

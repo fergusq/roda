@@ -182,7 +182,7 @@ public class Interpreter {
 		registerRecord(typeRecord);
 		registerRecord(fieldRecord);
 
-		G.setLocal("env", RödaMap.of(System.getenv().entrySet().stream()
+		G.setLocal("ENV", RödaMap.of(System.getenv().entrySet().stream()
 					     .collect(toMap(e -> e.getKey(),
 							    e -> RödaString.of(e.getValue())))));
 	}
