@@ -246,6 +246,11 @@ public class Parser {
 			int line = seek(tl).getLine();
 			String name = "@" + identifier(tl);
 			Arguments arguments = parseArguments(tl, false);
+			if (!arguments.sfvarguments.isEmpty()) {
+				throw new ParsingException(
+						"annotations can't have underscore arguments",
+						tl.seek());
+			}
 			annotations.add(new Annotation(file, line, name, arguments));
 		}
 		return annotations;
@@ -558,11 +563,20 @@ public class Parser {
 			case RETURN:
 				return "return " + argumentsAsString();
 			case IF:
-				return "if ... do ... done";
+				return (negation ? "unless " : "if ") + cond.asString()
+					+ " do ... done";
 			case WHILE:
-				return "while ... do ... done";
+				return (negation ? "until " : "while ") + cond.asString()
+					+ " do ... done";
 			case FOR:
-				return "for " + variables.stream().collect(joining(", ")) + (list != null ? " in " + list.asString() : "") + " do ... done";
+				return "for " + variables.stream().collect(joining(", "))
+						+ (list != null ? " in " + list.asString() : "") + " do ... done";
+			case TRY:
+				return "try " + cmd.asString();
+			case TRY_DO:
+				return "try do ... done";
+			case VARIABLE:
+				return name.asString() + operator + argumentsAsString();
 			default:
 				return "<" + type + ">";
 			}
@@ -572,6 +586,7 @@ public class Parser {
 	static class Arguments {
 		List<Argument> arguments;
 		List<KwArgument> kwarguments;
+		List<String> sfvarguments;
 	}
 
 	static class Argument {
@@ -847,19 +862,45 @@ public class Parser {
 		}
 		else arguments = parseArguments(tl, false);
 		
+		Command cmd;
+		
 		if (operator == null)
-			return _makeNormalCommand(file, line, name, typeargs, arguments);
+			cmd = _makeNormalCommand(file, line, name, typeargs, arguments);
 		else
-			return _makeVariableCommand(file, line, name, operator, arguments);
+			cmd = _makeVariableCommand(file, line, name, operator, arguments);
+		
+		if (!arguments.sfvarguments.isEmpty()) {
+			cmd = _makeForCommand(
+					cmd.file,
+					cmd.line,
+					arguments.sfvarguments,
+					null, null,
+					Arrays.asList(new Statement(Arrays.asList(cmd))));
+		}
+		
+		return cmd;
 	}
+	
+	private static int SUGAR_FOR_VARNUM_COUNTER = 1;
 
 	private static Arguments parseArguments(TokenList tl, boolean allowNewlines) {
 		Arguments arguments = new Arguments();
 		arguments.arguments = new ArrayList<>();
 		arguments.kwarguments = new ArrayList<>();
+		arguments.sfvarguments = new ArrayList<>();
 		boolean kwargMode = false;
 		while ((allowNewlines || !tl.isNext(";", "\n")) && !isNext(tl, "|", ")", "]", "}", "in", "do", "done", "<EOF>")) {
-			if (tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
+			if (seekString(tl).equals("_")) {
+				String sfvname = "<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">";
+				arguments.arguments.add(_makeArgument(false,
+						expressionVariable(
+								tl.seek().getFile(),
+								tl.seek().getLine(),
+								sfvname)));
+				accept(tl, "_");
+				arguments.sfvarguments.add(sfvname);
+			}
+			else if (tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
 				kwargMode = true;
 				String name = nextString(tl);
 				accept(tl, "=");
@@ -991,6 +1032,10 @@ public class Parser {
 				return sub.asString() + " is " + datatype.toString();
 			case IN:
 				return exprA.asString() + " in " + exprB.asString();
+			case CALCULATOR:
+				return "<" + ctype.toString() + " "
+					+ (isUnary ? sub.asString() : exprA.asString() + ", " + exprB.asString())
+					+ ">";
 			default:
 				return "<" + type + ">";
 			}
@@ -1254,7 +1299,12 @@ public class Parser {
 				}
 				accept(tl, "(");
 				List<Command> commands = new ArrayList<>();
-				Command cmd = _makeNormalCommand(file, line, ans, typeargs, parseArguments(tl, true));
+				Arguments args = parseArguments(tl, true);
+				if (!args.sfvarguments.isEmpty()) {
+					throw new ParsingException("the first command in the pipeline in an expression "
+							+ "can't have underscore arguments", tl.seek());
+				}
+				Command cmd = _makeNormalCommand(file, line, ans, typeargs, args);
 				accept(tl, ")");
 				commands.add(parseSuffix(tl, cmd));
 				while (acceptIfNext(tl, "|")) {

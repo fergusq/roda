@@ -390,6 +390,12 @@ public class RödaTest {
 				  + "push tyttö[0]..\" on kiireinen\" for tyttö in tytöt"
 				  + " if [ tyttö[1] = 1 ]}"));
 	}
+	
+	@Test
+	public void testSugarFor() {
+		assertEquals("got Maisa,got Anne",
+				eval("f x{push\"got \"..x;}main{push(\"Maisa\",\"Anne\")|f(_)}"));
+	}
 
 	@Test
 	public void testSuffixIf() {
