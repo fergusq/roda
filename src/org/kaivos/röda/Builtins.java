@@ -150,13 +150,13 @@ public class Builtins {
 			    }, Arrays.asList(new Parameter("values", false)), true);
 	}
 
-	public static RödaValue genericPull(String name, RödaStream _in) {
+	public static RödaValue genericPull(String name, RödaStream _in, boolean peek) {
 		return RödaNativeFunction
 			.of(name,
 			    (ra, a, k, s, i, o) -> {
 				    if (a.size() == 0) {
 					    while (true) {
-						    RödaValue v = _in.pull();
+						    RödaValue v = peek ? _in.peek() : _in.pull();
 						    if (v == null) break;
 						    o.push(v);
 					    }
@@ -165,11 +165,30 @@ public class Builtins {
 					    for (RödaValue v : a) {
 						    checkReference(name, v);
 						    RödaValue pulled
-							    = _in.pull();
+							    = peek ? _in.peek() : _in.pull();
 						    if (pulled == null) {
 							    continue;
 						    }
-						    v.assign(pulled);
+						    v.assignLocal(pulled);
+					    }
+				    }
+			    }, Arrays.asList(new Parameter("variables", true)), true);
+	}
+
+	public static RödaValue genericTryPull(String name, RödaStream _in, boolean peek) {
+		return RödaNativeFunction
+			.of(name,
+			    (ra, a, k, s, i, o) -> {
+				    for (RödaValue v : a) {
+					    checkReference(name, v);
+					    RödaValue pulled
+						    = peek ? _in.peek() : _in.pull();
+					    if (pulled == null) {
+					    	o.push(RödaBoolean.of(false));
+					    }
+					    else {
+					    	o.push(RödaBoolean.of(true));
+						    v.assignLocal(pulled);
 					    }
 				    }
 			    }, Arrays.asList(new Parameter("variables", true)), true);

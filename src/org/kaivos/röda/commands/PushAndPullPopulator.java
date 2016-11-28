@@ -38,7 +38,7 @@ public final class PushAndPullPopulator {
 
 				RödaValue pulled = in.pull();
 				if (pulled == null) error("empty stream");
-				value.assign(pulled);
+				value.assignLocal(pulled);
 			}
 		}, Arrays.asList(new Parameter("variables", true)), true));
 	
@@ -58,7 +58,7 @@ public final class PushAndPullPopulator {
 			
 			RödaValue value2 = in.peek();
 			if (value2 == null) error("empty stream");
-			value.assign(value2);
+			value.assignLocal(value2);
 		}, Arrays.asList(new Parameter("variable", true)), true));
 	}
 }

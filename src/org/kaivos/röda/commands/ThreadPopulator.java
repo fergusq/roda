@@ -27,6 +27,9 @@ public final class ThreadPopulator {
 		Record threadRecord = new Record("Thread", Collections.emptyList(), Collections.emptyList(),
 				Arrays.asList(new Record.Field("start", new Datatype("function")),
 						new Record.Field("pull", new Datatype("function")),
+						new Record.Field("tryPull", new Datatype("function")),
+						new Record.Field("peek", new Datatype("function")),
+						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function"))),
 				false);
 		I.registerRecord(threadRecord);
@@ -68,7 +71,10 @@ public final class ThreadPopulator {
 				p.started = true;
 				Interpreter.executor.execute(task);
 			}, Collections.emptyList(), false));
-			threadObject.setField("pull", Builtins.genericPull("Thread.pull", _out));
+			threadObject.setField("pull", Builtins.genericPull("Thread.pull", _out, false));
+			threadObject.setField("tryPull", Builtins.genericPull("Thread.tryPull", _out, false));
+			threadObject.setField("peek", Builtins.genericPull("Thread.peek", _out, true));
+			threadObject.setField("tryPeek", Builtins.genericPull("Thread.tryPeek", _out, true));
 			threadObject.setField("push", Builtins.genericPush("Thread.push", _in));
 			out.push(threadObject);
 		}, Arrays.asList(new Parameter("runnable", false, FUNCTION)), false));

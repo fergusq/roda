@@ -22,7 +22,11 @@ public final class StreamPopulator {
 
 	public static void populateStream(Interpreter I, RödaScope S) {
 		Record streamRecord = new Record("Stream", Collections.emptyList(), Collections.emptyList(),
-				Arrays.asList(new Record.Field("pull", new Datatype("function")),
+				Arrays.asList(
+						new Record.Field("pull", new Datatype("function")),
+						new Record.Field("tryPull", new Datatype("function")),
+						new Record.Field("peek", new Datatype("function")),
+						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function")),
 						new Record.Field("finish", new Datatype("function"))),
 				false);
@@ -31,7 +35,10 @@ public final class StreamPopulator {
 		Supplier<RödaValue> getStreamObj = () -> {
 			RödaStream stream = RödaStream.makeStream();
 			RödaValue streamObject = RödaRecordInstance.of(streamRecord, Collections.emptyList(), I.records);
-			streamObject.setField("pull", Builtins.genericPull("Stream.pull", stream));
+			streamObject.setField("pull", Builtins.genericPull("Stream.pull", stream, false));
+			streamObject.setField("tryPull", Builtins.genericTryPull("Stream.tryPull", stream, false));
+			streamObject.setField("peek", Builtins.genericPull("Stream.peek", stream, true));
+			streamObject.setField("tryPeek", Builtins.genericTryPull("Stream.tryPeek", stream, true));
 			streamObject.setField("push", Builtins.genericPush("Stream.push", stream));
 			streamObject.setField("finish", RödaNativeFunction.of("Stream.finish", (ta, a, k, s, i, o) -> {
 				stream.finish();

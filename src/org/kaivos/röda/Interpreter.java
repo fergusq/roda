@@ -1051,7 +1051,14 @@ public class Interpreter {
 						newScope.setLocal(firstVar, val);
 						for (String var : otherVars) {
 							val = _in.pull();
-							if (val == null) error("empty stream");
+							
+							if (val == null) {
+								String place = "for loop: "
+										+ "for " + cmd.variables.stream().collect(joining(", "))
+										+ (cmd.list != null ? " in " + cmd.list.asString() : "")
+										+ " at " + cmd.file + ":" + cmd.line;
+								error("empty stream in " + place);
+							}
 							newScope.setLocal(var, val);
 						}
 
@@ -1282,7 +1289,7 @@ public class Interpreter {
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
 			if (val == null)
-				error("empty stream");
+				error("empty stream in statement expression: " + exp.asString());
 			return val;
 		}
 		if (exp.type == Expression.Type.STATEMENT_SINGLE) {
@@ -1290,9 +1297,9 @@ public class Interpreter {
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
 			if (val.list().isEmpty())
-				error("empty stream");
+				error("empty stream in statement expression: " + exp.asString());
 			if (val.list().size() > 1)
-				error("stream is full");
+				error("stream is full in statement expression: " + exp.asString());
 			return val.list().get(0);
 		}
 		if (exp.type == Expression.Type.VARIABLE) {

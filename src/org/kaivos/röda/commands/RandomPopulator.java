@@ -26,7 +26,7 @@ public final class RandomPopulator {
 			}
 			for (RödaValue variable : args) {
 				checkReference(name, variable);
-				variable.assign(supplier.get());
+				variable.assignLocal(supplier.get());
 			}
 		}, Arrays.asList(new Parameter("variables", true)), true));
 	}

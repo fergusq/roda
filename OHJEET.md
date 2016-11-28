@@ -1012,6 +1012,9 @@ uuden virtaolion.
 record Stream {
 	finish : function
 	pull : function
+	tryPull : function
+	peek : function
+	tryPeek : function
 	push : function
 }
 ```
@@ -1041,6 +1044,9 @@ record Thread {
 	start : function
 	push : function
 	pull : function
+	tryPull : function
+	peek : function
+	tryPeek : function
 }
 ```
 
