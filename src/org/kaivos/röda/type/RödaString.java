@@ -3,6 +3,8 @@ package org.kaivos.röda.type;
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.Interpreter.error;
 
+import org.kaivos.röda.Parser.Expression.CType;
+
 public class RödaString extends RödaValue {
 	private String text;
 
@@ -41,6 +43,28 @@ public class RödaString extends RödaValue {
 		if (start > Integer.MAX_VALUE || end > Integer.MAX_VALUE)
 			error("string index out of bounds: too large number: " + (start > end ? start : end));
 		return of(text.substring((int) start, (int) end));
+	}
+	
+	@Override
+	public RödaValue callOperator(CType operator, RödaValue value) {
+		if (operator == CType.MUL ? !value.is(INTEGER) : !value.is(STRING))
+			error("can't " + operator.name() + " a " + typeString() + " and a " + value.typeString());
+		switch (operator) {
+		case MUL:
+			String a = "";
+			for (int i = 0; i < value.integer(); i++) a += this.str();
+			return RödaString.of(a);
+		case LT:
+			return RödaBoolean.of(this.str().compareTo(value.str()) < 0);
+		case GT:
+			return RödaBoolean.of(this.str().compareTo(value.str()) > 0);
+		case LE:
+			return RödaBoolean.of(this.str().compareTo(value.str()) <= 0);
+		case GE:
+			return RödaBoolean.of(this.str().compareTo(value.str()) >= 0);
+		default:
+			return super.callOperator(operator, value);
+		}
 	}
 
 	@Override public boolean strongEq(RödaValue value) {

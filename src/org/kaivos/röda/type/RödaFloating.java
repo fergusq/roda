@@ -27,7 +27,7 @@ public class RödaFloating extends RödaValue {
 	
 	@Override
 	public RödaValue callOperator(Parser.Expression.CType operator, RödaValue value) {
-		if (!value.is(NUMBER)) error("tried to " + operator.name() + " a " + typeString() + " and a " + value.typeString());
+		if (!value.is(NUMBER)) error("can't " + operator.name() + " a " + typeString() + " and a " + value.typeString());
 		switch (operator) {
 		case MUL:
 			return RödaFloating.of(this.floating()*value.floating());
