@@ -2,15 +2,13 @@ package org.kaivos.röda;
 
 import java.util.List;
 import java.util.Queue;
+import java.util.LinkedList;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Iterator;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import java.io.BufferedReader;
 import java.io.PrintWriter;
@@ -56,8 +54,9 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	/**
 	 * Closes the stream so that it can be opened again.
 	 */
-	public void pause() {
+	public synchronized void pause() {
 		paused = true;
+		notifyAll();
 	}
 
 	/**
@@ -201,19 +200,20 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	}
 
 	static class RödaStreamImpl extends RödaStream {
-		BlockingQueue<RödaValue> queue = new LinkedBlockingQueue<>();
+		Queue<RödaValue> queue = new LinkedList<>();
 		boolean finished = false;
 
 		@Override
-		public RödaValue get() {
+		public synchronized RödaValue get() {
 			// System.err.println("<PULL " + this + ">");
-			while (queue.isEmpty() && !closed())
-				;
-
-			if (closed())
-				return null;
 			try {
-				return queue.take();
+				while (queue.isEmpty() && !closed()) {
+					wait();
+				}
+				
+				if (closed())
+					return null;
+				return queue.poll();
 			} catch (InterruptedException e) {
 				error("threading error");
 				return null;
@@ -221,9 +221,10 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		}
 
 		@Override
-		public void put(RödaValue value) {
+		public synchronized void put(RödaValue value) {
 			// System.err.println("<PUSH " + value + " to " + this + ">");
 			queue.add(value);
+			notifyAll();
 		}
 
 		@Override
@@ -232,9 +233,10 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		}
 
 		@Override
-		public void finish() {
+		public synchronized void finish() {
 			// System.err.println("<FINISH " + this + ">");
 			finished = true;
+			notifyAll();
 		}
 
 		@Override
