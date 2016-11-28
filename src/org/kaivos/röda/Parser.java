@@ -120,7 +120,7 @@ public class Parser {
 	}
 
 	private static boolean validTypename(String applicant) {
-		if (applicant.matches("[<>()\\[\\]{}|&.,:;=#%!?\n+\\-*/~@%$]|[:~.+\\-*/!]=|\\+\\+|&&|\\|\\||^^|=~|<=|>=|<<|>>")) return false;
+		if (applicant.matches("[<>()\\[\\]{}|&.,:;=#%!?\n+\\-*/~@%$_]|[:~.+\\-*/!]=|\\+\\+|&&|\\|\\||^^|=~|<=|>=|<<|>>")) return false;
 		switch (applicant) {
 		case "if":
 		case "unless":
@@ -149,6 +149,14 @@ public class Parser {
 		default:
 			return true;
 		}
+	}
+
+	private static String varname(TokenList tl) {
+	        Token token = next(tl);
+		if (!validIdentifier(token.getToken()) && !token.getToken().equals("_"))
+			throw new ParsingException(TokenList.expected("identifier or _"),
+						   token);
+		return token.getToken();
 	}
 
 	private static String identifier(TokenList tl) {
@@ -425,7 +433,7 @@ public class Parser {
 		if (acceptIfNext(tl, "&")) {
 			reference = true;
 		}
-		String name = nextString(tl);
+		String name = varname(tl);
 		Datatype type = null;
 		if (!reference && allowTypes && isNext(tl, ":")) {
 			accept(tl, ":");
@@ -736,9 +744,9 @@ public class Parser {
 		}
 		else if (tl.acceptIfNext("for")) {
 			List<String> variables = new ArrayList<>();
-			variables.add(nextString(tl));
+			variables.add(varname(tl));
 			while (acceptIfNext(tl, ",")) {
-				variables.add(nextString(tl));
+				variables.add(varname(tl));
 			}
 			Expression list = null;
 			Statement cond = null;
@@ -782,9 +790,9 @@ public class Parser {
 
 		if (acceptIfNext(tl, "for")) {
 			List<String> variables = new ArrayList<>();
-			variables.add(nextString(tl));
+			variables.add(varname(tl));
 			while (acceptIfNext(tl, ",")) {
-				variables.add(nextString(tl));
+				variables.add(varname(tl));
 			}
 			Expression list = null;
 			Statement cond = null;
@@ -815,7 +823,7 @@ public class Parser {
 				String catchVar = null;
 				List<Statement> elseBody = null;
 				if (acceptIfNext(tl, "catch")) {
-					catchVar = identifier(tl);
+					catchVar = varname(tl);
 					elseBody = new ArrayList<>();
 					while (!isNext(tl, "done")) {
 						elseBody.add(parseStatement(tl));
@@ -902,7 +910,7 @@ public class Parser {
 			}
 			else if (tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
 				kwargMode = true;
-				String name = nextString(tl);
+				String name = identifier(tl);
 				accept(tl, "=");
 				arguments.kwarguments.add(_makeKwArgument(name, parseExpression(tl)));
 			}
