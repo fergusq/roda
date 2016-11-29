@@ -1418,13 +1418,20 @@ public class Parser {
 		}
 		else if (isNext(tl, "{")) {
 			List<Parameter> parameters = new ArrayList<>();
-			boolean isVarargs = false;
+			List<Parameter> kwparameters = new ArrayList<>();
+			boolean isVarargs = false, kwargsMode = false;
 			accept(tl, "{");
 			if (isNext(tl, "|")) {
 				accept(tl, "|");
 				while (!isNext(tl, "|")) {
-					parameters.add(parseParameter(tl, true));
-					if (isNext(tl, "...")) {
+					Parameter p = parseParameter(tl, true);
+					if (p.defaultValue != null || kwargsMode) {
+						kwargsMode = true;
+						kwparameters.add(p);
+					}
+					else if (!kwargsMode) parameters.add(p);
+					else accept(tl, "="); // kw-parametrin jälkeen ei voi tulla tavallisia parametreja
+					if (isNext(tl, "...") && !kwargsMode) {
 						accept(tl, "...");
 						isVarargs = true;
 						break;
@@ -1442,7 +1449,7 @@ public class Parser {
 					new Function("<block>",
 							Collections.emptyList(),
 							parameters, isVarargs,
-							Collections.emptyList(), body));
+							kwparameters, body));
 		}
 		else if (acceptIfNext(tl, "\"")) {
 			String s = tl.nextString();
