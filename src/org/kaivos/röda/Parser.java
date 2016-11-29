@@ -145,6 +145,8 @@ public class Parser {
 		case "and":
 		case "or":
 		case "xor":
+		case "try":
+		case "catch":
 			return false;
 		default:
 			return true;
