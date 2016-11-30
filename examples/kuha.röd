@@ -17,7 +17,7 @@ tee_pilakuva nettikuvat, ylä, ala, tiedosto {
 	"..nettikuvat.."
 	<text x='50%' y='14%'>"..ylä.."</text>
 	<text x='50%' y='98%'>"..ala.."</text>
-	</svg>" | writeLines "kuha.svg"
+	</svg>" | writeStrings "kuha.svg"
 	{} | exec "rsvg-convert", "-o", tiedosto, "kuha.svg"
 }
 
