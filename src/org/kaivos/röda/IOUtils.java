@@ -28,9 +28,7 @@ public final class IOUtils {
 			BufferedReader in = new BufferedReader(new FileReader(file));
 			return lineIterator(in);
 		} catch (FileNotFoundException e) {
-			System.err.println("FATAL ERROR: file not found " + e.getMessage());
-			System.exit(1);
-			return null; // todo virheenkäsittely
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -39,9 +37,7 @@ public final class IOUtils {
 			BufferedReader in = new BufferedReader(new FileReader(file));
 			return lineIterator(in);
 		} catch (FileNotFoundException e) {
-			System.err.println("FATAL ERROR: file not found " + e.getMessage());
-			System.exit(1);
-			return null; // todo virheenkäsittely
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -67,9 +63,7 @@ public final class IOUtils {
 						buffer = r.readLine();
 						if (buffer == null) r.close();
 					} catch (IOException e) {
-						e.printStackTrace();
-						System.err.println("FATAL ERROR: io error");
-						System.exit(1); // todo virheenkäsittely
+						throw new RuntimeException(e);
 					}
 				}
 
@@ -97,9 +91,7 @@ public final class IOUtils {
 						buffer = r.read();
 						if (buffer == -1) r.close();
 					} catch (IOException e) {
-						e.printStackTrace();
-						System.err.println("FATAL ERROR: io error");
-						System.exit(1); // todo virheenkäsittely
+						throw new RuntimeException(e);
 					}
 				}
 
