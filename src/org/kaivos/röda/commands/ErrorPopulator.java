@@ -19,7 +19,7 @@ public class ErrorPopulator {
 			checkArgs("error", 1, args.size());
 			if (args.get(0).is(STRING)) {
 				error(args.get(0).str());
-			} else if (!args.get(0).is("error")) {
+			} else if (!args.get(0).is("Error")) {
 				error("error: can't cast a " + args.get(0).typeString() + " to an error");
 			} else
 				error(args.get(0));
