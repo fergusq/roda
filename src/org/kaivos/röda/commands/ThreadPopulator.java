@@ -72,10 +72,13 @@ public final class ThreadPopulator {
 				p.started = true;
 				Interpreter.executor.execute(task);
 			}, Collections.emptyList(), false));
-			threadObject.setField("pull", Builtins.genericPull("Thread.pull", _out, false));
-			threadObject.setField("tryPull", Builtins.genericPull("Thread.tryPull", _out, false));
-			threadObject.setField("peek", Builtins.genericPull("Thread.peek", _out, true));
-			threadObject.setField("tryPeek", Builtins.genericPull("Thread.tryPeek", _out, true));
+			threadObject.setField("pull", Builtins.genericPull("Thread.pull", _out, false, true));
+			threadObject.setField("tryPull", Builtins.genericTryPull("Thread.tryPull", _out, false));
+			threadObject.setField("pullAll", Builtins.genericPull("Thread.pullAll", _out, false, false));
+			
+			threadObject.setField("peek", Builtins.genericPull("Thread.peek", _out, true, true));
+			threadObject.setField("tryPeek", Builtins.genericTryPull("Thread.tryPeek", _out, true));
+			
 			threadObject.setField("push", Builtins.genericPush("Thread.push", _in));
 			out.push(threadObject);
 		}, Arrays.asList(new Parameter("runnable", false, FUNCTION)), false));

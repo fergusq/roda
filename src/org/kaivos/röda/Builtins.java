@@ -150,13 +150,18 @@ public class Builtins {
 			    }, Arrays.asList(new Parameter("values", false)), true);
 	}
 
-	public static RödaValue genericPull(String name, RödaStream _in, boolean peek) {
+	public static RödaValue genericPull(String name, RödaStream _in, boolean peek, boolean oneOnly) {
 		return RödaNativeFunction
 			.of(name,
 			    (ra, a, k, s, i, o) -> {
 				    if (a.size() == 0) {
-					    while (true) {
-						    RödaValue v = peek ? _in.peek() : _in.pull();
+				    	if (oneOnly) {
+				    		RödaValue v = peek ? _in.peek() : _in.pull();
+						    if (v == null) error("empty stream");
+						    o.push(v);
+				    	}
+				    	else while (true) {
+					    	RödaValue v = peek ? _in.peek() : _in.pull();
 						    if (v == null) break;
 						    o.push(v);
 					    }
@@ -166,9 +171,8 @@ public class Builtins {
 						    checkReference(name, v);
 						    RödaValue pulled
 							    = peek ? _in.peek() : _in.pull();
-						    if (pulled == null) {
-							    continue;
-						    }
+						    if (pulled == null)
+						    	error("empty stream");
 						    v.assignLocal(pulled);
 					    }
 				    }
