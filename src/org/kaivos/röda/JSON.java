@@ -18,10 +18,10 @@ import org.kaivos.nept.parser.ParsingException;
 public class JSON {
 	private JSON() {}
 
-	private static final String NUMBER_REGEX = "-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE](\\+|-)?[0-9]+)";
+	private static final String NUMBER_REGEX = "-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE](\\+|-)?[0-9]+)?";
 	
 	public static final TokenScanner t = new TokenScanner()
-		.addOperators("[]{},:.")
+		.addOperators("[]{},:")
 		.addOperatorRule("true")
 		.addOperatorRule("false")
 		.addOperatorRule("null")
