@@ -154,6 +154,7 @@ public class Builtins {
 		return RödaNativeFunction
 			.of(name,
 			    (ra, a, k, s, i, o) -> {
+			    	if (!oneOnly) checkArgs(name, 0, a.size());
 				    if (a.size() == 0) {
 				    	if (oneOnly) {
 				    		RödaValue v = peek ? _in.peek() : _in.pull();
