@@ -180,6 +180,11 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testReflectFieldType() {
+		assertEquals("S", eval("record R{Miina:S}record S{}main{push reflect R.fields[0].type.name}"));
+	}
+
+	@Test
 	public void testReflectRecordAnnotation() {
 		assertEquals("Salli", eval("function @A{push\"Salli\"}"
 					   + "@A;record R{}main{push reflect R.annotations[0]}"));

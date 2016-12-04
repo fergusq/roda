@@ -30,7 +30,8 @@ public final class StreamPopulator {
 						new Record.Field("push", new Datatype("function")),
 						new Record.Field("finish", new Datatype("function"))),
 				false);
-		I.registerRecord(streamRecord);
+		I.preRegisterRecord(streamRecord);
+		I.postRegisterRecord(streamRecord);
 
 		Supplier<RödaValue> getStreamObj = () -> {
 			RödaStream stream = RödaStream.makeStream();

@@ -178,33 +178,43 @@ public class Interpreter {
 
 	{
 		Builtins.populate(this);
-		registerRecord(errorRecord);
-		registerRecord(typeRecord);
-		registerRecord(fieldRecord);
+		preRegisterRecord(errorRecord);
+		preRegisterRecord(typeRecord);
+		preRegisterRecord(fieldRecord);
+		postRegisterRecord(errorRecord);
+		postRegisterRecord(typeRecord);
+		postRegisterRecord(fieldRecord);
 
 		G.setLocal("ENV", RödaMap.of(System.getenv().entrySet().stream()
 					     .collect(toMap(e -> e.getKey(),
 							    e -> RödaString.of(e.getValue())))));
 	}
 	
-	public void registerRecord(Record record) {
+	public void preRegisterRecord(Record record) {
 		records.put(record.name, record);
 		typeReflections.put(record.name, createRecordClassReflection(record));
+	}
+	
+	public void postRegisterRecord(Record record) {
+		createFieldReflections(record, typeReflections.get(record.name));
 	}
 
 	private RödaValue createRecordClassReflection(Record record) {
 		RödaValue typeObj = RödaRecordInstance.of(typeRecord, Collections.emptyList(), records);
 		typeObj.setField("name", RödaString.of(record.name));
 		typeObj.setField("annotations", evalAnnotations(record.annotations));
-		typeObj.setField("fields", RödaList.of("Field", record.fields.stream()
-						       .map(f -> createFieldReflection(record, f))
-						       .collect(toList())));
 		typeObj.setField("newInstance", RödaNativeFunction
 				 .of("Type.newInstance",
 				     (ta, a, k, s, i, o) -> {
 					     o.push(newRecord(new Datatype(record.name), ta, a));
 				     }, Collections.emptyList(), false));
 		return typeObj;
+	}
+	
+	private void createFieldReflections(Record record, RödaValue typeObj) {
+		typeObj.setField("fields", RödaList.of("Field", record.fields.stream()
+			       .map(f -> createFieldReflection(record, f))
+			       .collect(toList())));
 	}
 
 	private RödaValue createFieldReflection(Record record, Record.Field field) {
@@ -233,6 +243,8 @@ public class Interpreter {
 					      obj.setField(field.name, val);
 				      }, Arrays.asList(new Parameter("object", false),
 						       new Parameter("value", false)), false));
+		if (typeReflections.containsKey(field.type.name))
+			fieldObj.setField("type", typeReflections.get(field.type.name));
 		return fieldObj;
 	}
 
@@ -383,8 +395,10 @@ public class Interpreter {
 				scope.setLocal(f.name, RödaFunction.of(f));
 			}
 			for (Record r : program.records) {
-				records.put(r.name, r);
-				typeReflections.put(r.name, createRecordClassReflection(r));
+				preRegisterRecord(r);
+			}
+			for (Record r : program.records) {
+				postRegisterRecord(r);
 			}
 		} catch (ParsingException|RödaException e) {
 			throw e;

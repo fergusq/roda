@@ -34,14 +34,17 @@ public final class ServerPopulator {
 				Arrays.asList(new Record.Field("accept", new Datatype("function")),
 						new Record.Field("close", new Datatype("function"))),
 				false);
-		I.registerRecord(serverRecord);
+		I.preRegisterRecord(serverRecord);
 
 		Record socketRecord = new Record("Socket", Collections.emptyList(), Collections.emptyList(), Arrays.asList(
 				new Record.Field("write", new Datatype("function")), new Record.Field("read", new Datatype("function")),
 				new Record.Field("close", new Datatype("function")), new Record.Field("ip", new Datatype("string")),
 				new Record.Field("hostname", new Datatype("string")), new Record.Field("port", new Datatype("number")),
 				new Record.Field("localport", new Datatype("number"))), false);
-		I.registerRecord(socketRecord);
+		I.preRegisterRecord(socketRecord);
+		
+		I.postRegisterRecord(serverRecord);
+		I.postRegisterRecord(socketRecord);
 
 		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, kwargs, scope, in, out) -> {
 			long port = args.get(0).integer();

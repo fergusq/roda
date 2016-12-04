@@ -32,7 +32,8 @@ public final class ThreadPopulator {
 						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function"))),
 				false);
-		I.registerRecord(threadRecord);
+		I.preRegisterRecord(threadRecord);
+		I.postRegisterRecord(threadRecord);
 
 		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, kwargs, scope, in, out) -> {
 			RödaValue function = args.get(0);
