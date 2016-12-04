@@ -1013,6 +1013,7 @@ record Stream {
 	finish : function
 	pull : function
 	tryPull : function
+	pullAll : function
 	peek : function
 	tryPeek : function
 	push : function

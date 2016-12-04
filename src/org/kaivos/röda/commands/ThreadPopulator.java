@@ -28,6 +28,7 @@ public final class ThreadPopulator {
 				Arrays.asList(new Record.Field("start", new Datatype("function")),
 						new Record.Field("pull", new Datatype("function")),
 						new Record.Field("tryPull", new Datatype("function")),
+						new Record.Field("pullAll", new Datatype("function")),
 						new Record.Field("peek", new Datatype("function")),
 						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function"))),
