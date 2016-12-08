@@ -1229,7 +1229,7 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionNew(String file, int line, Datatype datatype, List<Expression> args) {
+	public static Expression expressionNew(String file, int line, Datatype datatype, List<Expression> args) {
 		Expression e = new Expression();
 		e.type = Expression.Type.NEW;
 		e.file = file;

@@ -476,6 +476,13 @@ public class Interpreter {
 		}
 	}
 	
+	public static void checkMap(String function, RödaValue arg) {
+	        if (!arg.is(MAP)) {
+			error("illegal argument for '" + function
+			      + "': list expected (got " + arg.typeString() + ")");
+		}
+	}
+	
 	public static void checkListOrString(String function, RödaValue arg) {
 	        if (!arg.is(LIST) && !arg.is(STRING)) {
 			error("illegal argument for '" + function
