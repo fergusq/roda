@@ -26,6 +26,7 @@ import org.kaivos.röda.commands.GetenvPopulator;
 import org.kaivos.röda.commands.HeadAndTailPopulator;
 import org.kaivos.röda.commands.IdentityPopulator;
 import org.kaivos.röda.commands.ImportPopulator;
+import org.kaivos.röda.commands.InterleavePopulator;
 import org.kaivos.röda.commands.JsonPopulator;
 import org.kaivos.röda.commands.MatchPopulator;
 import org.kaivos.röda.commands.NamePopulator;
@@ -37,6 +38,7 @@ import org.kaivos.röda.commands.ReplacePopulator;
 import org.kaivos.röda.commands.SearchPopulator;
 import org.kaivos.röda.commands.SeqPopulator;
 import org.kaivos.röda.commands.ServerPopulator;
+import org.kaivos.röda.commands.ShiftPopulator;
 import org.kaivos.röda.commands.SplitPopulator;
 import org.kaivos.röda.commands.StreamPopulator;
 import org.kaivos.röda.commands.StrsizePopulator;
@@ -87,6 +89,7 @@ public class Builtins {
 		/* Täydentävät virtaoperaatiot */
 
 		HeadAndTailPopulator.populateHeadAndTail(S);
+		InterleavePopulator.populateInterleave(S);
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
@@ -108,6 +111,10 @@ public class Builtins {
 		TrueAndFalsePopulator.populateTrueAndFalse(S);
 		StreamPopulator.populateStream(I, S);
 
+		/* Listaoperaatiot */
+		
+		ShiftPopulator.populateShift(S);
+		
 		/* Apuoperaatiot */
 
 		CurrentTimePopulator.populateTime(S);

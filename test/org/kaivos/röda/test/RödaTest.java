@@ -584,6 +584,8 @@ public class RödaTest {
 		eval("t{push\"Elina\",\"Lilja\"}main{push t()}");
 	}
 
+	// Sisäänrakennetut funktiot
+	
 	@Test
 	public void testSplit() {
 		assertEquals("[sanna, ja, teemu, jokela]",
@@ -591,6 +593,16 @@ public class RödaTest {
 		init();
 		assertEquals("[sanna, ja, teemu, jokela]",
 			     eval("main{push([split(\"sanna ja teemu jokela\")])}"));
+	}
+	
+	@Test
+	public void testInterleave() {
+		assertEquals("1,4,7,2,5,8,3,6,9", eval("main{interleave([1,2,3],[4,5,6],[7,8,9])}"));
+	}
+	
+	@Test(expected=RödaException.class)
+	public void testInterleaveDifferentListSizes() {
+		eval("main{interleave([1,2,3],[4],[7,8,9,10])}");
 	}
 
 	// Nimettömät funktiot

@@ -60,6 +60,11 @@ public abstract class RödaValue {
 		return null;
 	}
 
+	public List<RödaValue> modifiableList() {
+		error("can't cast a " + typeString() + " to a list");
+		return null;
+	}
+
 	public Map<String, RödaValue> map() {
 		error("can't cast a " + typeString() + " to a list");
 		return null;
