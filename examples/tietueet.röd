@@ -1,5 +1,5 @@
-record Taulu<T> {
-	rivit : list<T> = new list<T>
+record Taulu<<T>> {
+	rivit : list<<T>> = new list<<T>>
 	laskuri : number = 0
 	function lisää_rivi rivi {
 		rivi.id = self.laskuri;
@@ -25,7 +25,7 @@ function asiakas nimi osoite {
 }
 
 main {
-	asiakkaat := new Taulu<Asiakas>;
+	asiakkaat := new Taulu<<Asiakas>>;
 	asiakkaat.lisää_rivi asiakas("Teppo", "Mäenpääntie 2");
 	for asiakas in asiakkaat.rivit; do
 		print asiakas.nimi, " ", asiakas.osoite;

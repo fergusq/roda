@@ -114,6 +114,6 @@ public final class ExecPopulator {
 
 	public static void populateExec(Interpreter I, RödaScope S) {
 		addExecFunction(I, "exec", false);
-		addExecFunction(I, "execL", true);
+		addExecFunction(I, "bufferedExec", true);
 	}
 }
