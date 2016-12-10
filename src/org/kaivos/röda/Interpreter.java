@@ -52,6 +52,7 @@ import static org.kaivos.röda.RödaStream.OSStream;
 import static org.kaivos.röda.Parser.*;
 
 import org.kaivos.nept.parser.ParsingException;
+import org.kaivos.nept.parser.TokenList;
 
 public class Interpreter {
 	
@@ -368,7 +369,7 @@ public class Interpreter {
 	
 	public void interpret(String code, List<RödaValue> args, String filename) {
 		try {
-		        load(code, filename, G);
+			load(code, filename, G);
 			
 			RödaValue main = G.resolve("main");
 			if (main == null) return;
@@ -379,7 +380,7 @@ public class Interpreter {
 		} catch (ParsingException|RödaException e) {
 			throw e;
 		} catch (Exception e) {
-		        error(e);
+			error(e);
 		}
 	}
 
@@ -424,7 +425,9 @@ public class Interpreter {
 
 	public void interpretStatement(String code, String filename) {
 		try {
-			Statement statement = parseStatement(t.tokenize(code, filename));
+			TokenList tl = t.tokenize(code, filename);
+			Statement statement = parseStatement(tl);
+			tl.accept("<EOF>");
 			evalStatement(statement, G, STDIN, STDOUT, false);
 		} catch (RödaException e) {
 			throw e;
