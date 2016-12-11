@@ -1,0 +1,220 @@
+case x {
+	default := TRUE
+	push { |ys...|; for y in ys if [ x =~ y ] do rval := default; default = FALSE; return rval; done; return FALSE }
+	push { return default }
+}
+
+function execPlan(file, data) {
+	error("file does not exist: `"..file.."'") unless fileExists(file)
+	error("is directory: `"..file.."'") unless isFile(file)
+	readLines(file) | lex() | parse() | interpret(data)
+}
+
+/*** LEXER ***/
+
+record Token {}
+
+record StringToken(str) : Token {
+	val : string = str
+}
+
+record IdentifierToken(id) : Token {
+	val : string = id
+}
+
+record KeywordToken(kw) : Token {
+	val : string = kw
+}
+
+record EOFToken : Token {
+	val : string = "<EOF>"
+}
+
+function lex() {
+	row_num := 1
+	splitMany(sep="\\|") | for row do
+		sec_num := 1
+		for section in row do
+			if [ sec_num % 2 = 1 ] do
+				push(new StringToken(section))
+			else
+				/* ensimmäinen split katkaisee välilyöntien kohdalta, jotta niitä ei tarvitse poistaa myöhemmin */
+				split(section) | split(sep="(?<=\\W)|(?=\\W)") | validateTokens()
+			done
+			sec_num ++
+		done
+		row_num ++
+		push(new StringToken("\n"))
+	done
+	push(new EOFToken)
+}
+
+function validateTokens() {
+	for token do
+		case(token) | pull(matches, somethingElse)
+		push(new KeywordToken(token)) if matches("for|end|in|block|include|\\.")
+		push(new IdentifierToken(token)) if matches("\\w+")
+		{}() if matches("")
+		error("illegal token: `"..token.."'") if somethingElse
+	done
+}
+
+/*** PARSER ***/
+
+function identifier(&var) {
+	pull(token)
+	error("expected identifier, got `"..token.val.."'") unless [ token is IdentifierToken ]
+	var := token.val
+}
+
+function expect(kw) {
+	pull(token)
+	error("syntax error at token `"..token.val.."', expected `"..kw.."'") unless [ token is KeywordToken and token.val = kw ]
+}
+
+record Command {}
+
+record PrintStringCommand(str) : Command {
+	val : string = str
+}
+
+record VarCommand(chain) : Command {
+	chain : list<<string>> = chain
+}
+
+record ForCommand(var, expr, body) : Command {
+	var : string = var
+	expr : VarCommand = expr
+	body : list<<Command>> = body
+}
+
+record BlockCommand(var, body) : Command {
+	var : string = var
+	body : list<<Command>> = body
+}
+
+record IncludeCommand(url) : Command {
+	val : string = url
+}
+
+function parse() {
+	until [ tryPeek(token) and token is EOFToken ] do
+		parseCommand()
+	done
+}
+
+function parseCommand() {
+	pull(token)
+	if [ token is StringToken ] do
+		push(new PrintStringCommand(token.val))
+		return
+	done
+	if [ token is KeywordToken and token.val = "for" ] do
+		parseFor()
+		return
+	done
+	if [ token is KeywordToken and token.val = "block" ] do
+		parseBlock()
+		return
+	done
+	if [ token is IdentifierToken ] do
+		parseVar(token)
+		return
+	done
+	error("syntax error at token `"..token.val.."'")
+}
+
+function parseBody() {
+	body := new list<<Command>>
+	until [ tryPeek(token) and token is KeywordToken and token.val = "end" ] do
+		body += parseCommand()
+	done
+	expect("end")
+	return body
+}
+
+function parseFor() {
+	identifier(var)
+	expect("in")
+	identifier(chain_start)
+	expr := parseVar(chain_start)
+	body := parseBody()
+	push(new ForCommand(var, expr, body))
+}
+
+function parseBlock() {
+	identifier(var)
+	body := parseBody()
+	push(new BlockCommand(var, body))
+}
+
+function parseVar(var) {
+	chain := new list<<string>>
+	chain += var.val
+	while [ peek() is IdentifierToken and peek().val = "." ] do
+		expect(".")
+		identifier(id)
+		chain += id
+	done
+	push(new VarCommand(chain))
+}
+
+/*** INTERPRETER ***/
+
+function interpret(scope) {
+	for command do
+		if [ command is PrintStringCommand ] do
+			push(command.val); continue
+		done
+		if [ command is VarCommand ] do
+			val := retrieveVar(scope, command.chain)
+			if [ val is string ] do
+				push(val)
+				continue
+			done
+			if [ val is list<<Command>> ] do
+				val() | interpret(scope)
+				continue
+			done
+			if [ val is list ] do
+				/* listoissa on se typerä ominaisuus kun ne liitetään merkkijonoihin */
+				error("not clear what to do with this: `["..command&", ".."]'")
+			done
+			error("not clear what to do with this: `"..command.."'")
+		done
+		if [ command is BlockCommand ] do
+			scope[command.var] = command.body
+			continue
+		done
+		if [ command is ForCommand ] do
+			vals := retrieveVar(scope, command.expr)
+			unless [ vals is list ] do
+				error("illegal use of for: `"..vals.."' is not iterable")
+			done
+			for val in vals do
+				scope[command.var] = val
+				command.body() | interpret(scope)
+			done
+			continue
+		done
+		if [ command is IncludeCommand ] do
+			execPlan(command.val, scope)
+		done
+	done
+}
+
+function retrieveVar(scope, chain) {
+	while [ #chain > 0 ] do
+		key := chain[0]
+		if [ scope is list ] do
+			key = parseInteger(key) /* TODO parempi virheenkäsittely */
+		done
+		if [ scope[key]? ] do
+			scope = scope[key]
+			shift chain
+		else /* oikeastaan onko tässä järkeä, sillä Röda-tulkin oletusvirhe on lähes sama... */
+			error("variable or key not found: `"..key.."'")
+		done
+	done
+	return scope
+}
