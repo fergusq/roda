@@ -146,7 +146,9 @@ public class Interpreter {
 						new Record.Field("stack",
 								new Datatype("list", Arrays.asList(new Datatype("string")))),
 						new Record.Field("javastack",
-								new Datatype("list", Arrays .asList(new Datatype("string"))))
+								new Datatype("list", Arrays.asList(new Datatype("string")))),
+						new Record.Field("causes",
+								new Datatype("list", Arrays.asList(new Datatype("Error"))))
 						),
 				false);
 		typeRecord = new Record("Type",
@@ -291,10 +293,12 @@ public class Interpreter {
 
 	@SuppressWarnings("serial")
 	public static class RödaException extends RuntimeException {
+		private Throwable[] causes;
 		private Deque<String> stack;
 		private RödaValue errorObject;
 		private RödaException(String message, Deque<String> stack, RödaValue errorObject) {
 			super(message);
+			this.causes = new Throwable[0];
 			this.stack = stack;
 			this.errorObject = errorObject;
 		}
@@ -303,6 +307,17 @@ public class Interpreter {
 			super(cause);
 			this.stack = stack;
 			this.errorObject = errorObject;
+		}
+
+		private RödaException(Throwable[] causes, Deque<String> stack, RödaValue errorObject) {
+			super("multiple threads crashed", causes[0]);
+			this.causes = causes;
+			this.stack = stack;
+			this.errorObject = errorObject;
+		}
+		
+		public Throwable[] getCauses() {
+			return causes;
 		}
 
 		public Deque<String> getStack() {
@@ -314,7 +329,7 @@ public class Interpreter {
 		}
 	}
 
-	private static RödaValue makeErrorObject(String message, StackTraceElement[] javaStackTrace) {
+	private static RödaValue makeErrorObject(String message, StackTraceElement[] javaStackTrace, Throwable... causes) {
 		RödaValue errorObject = RödaRecordInstance
 				.of(errorRecord,
 						Collections.emptyList(),
@@ -325,20 +340,39 @@ public class Interpreter {
 		errorObject.setField("javastack", RödaList.of("string", Arrays.stream(javaStackTrace)
 				.map(StackTraceElement::toString).map(RödaString::of)
 				.collect(toList())));
+		errorObject.setField("causes", RödaList.of("Error", Arrays.stream(causes)
+				.map(cause -> cause instanceof RödaException ? ((RödaException) cause).getErrorObject()
+						: makeErrorObject(cause.getClass().getName() + ": " + cause.getMessage(), cause.getStackTrace()))
+				.collect(toList())));
 		return errorObject;
 	}
 
-	public static void error(String message) {
+	private static RödaException createRödaException(String message) {
 		RödaValue errorObject = makeErrorObject(message, Thread.currentThread().getStackTrace());
-		RödaException e = new RödaException(message, new ArrayDeque<>(callStack.get()), errorObject);
-		throw e;
+		return new RödaException(message, new ArrayDeque<>(callStack.get()), errorObject);
+	}
+	
+	public static void error(String message) {
+		throw createRödaException(message);
+	}
+	
+	private static RödaException createRödaException(Throwable...causes) {
+		if (causes.length == 1 && causes[0] instanceof RödaException) return (RödaException) causes[0];
+		
+		String message;
+		if (causes.length == 1) message = causes[0].getClass().getName() + ": " + causes[0].getMessage();
+		else message = "multiple threads crashed";
+		
+		StackTraceElement[] javaStackTrace;
+		if (causes.length == 1) javaStackTrace = causes[0].getStackTrace();
+		else javaStackTrace = Thread.currentThread().getStackTrace();
+		
+		RödaValue errorObject = makeErrorObject(message, javaStackTrace, causes);
+		return new RödaException(causes, new ArrayDeque<>(callStack.get()), errorObject);
 	}
 
-	public static void error(Throwable cause) {
-		RödaValue errorObject = makeErrorObject(cause.getClass().getName() + ": " + cause.getMessage(),
-				cause.getStackTrace());
-		RödaException e = new RödaException(cause, new ArrayDeque<>(callStack.get()), errorObject);
-		throw e;
+	public static void error(Throwable... causes) {
+		throw createRödaException(causes);
 	}
 
 	public static void error(RödaValue errorObject) {
@@ -745,24 +779,33 @@ public class Interpreter {
 			for (Runnable r : runnables) {
 				futures[i++] = executor.submit(r);
 			}
+			List<ExecutionException> exceptions = new ArrayList<>();
 			try {
 				i = futures.length;
 				while (i --> 0) {
-					futures[i].get();
+					try {
+						futures[i].get();
+					} catch (ExecutionException e) {
+						exceptions.add(e);
+					}
 				}
 			} catch (InterruptedException e) {
 				error(e);
-			} catch (ExecutionException e) {
-				if (e.getCause() instanceof RödaException) {
-					throw (RödaException) e.getCause();
-				}
-				if (e.getCause() instanceof ReturnException) {
-					error("cannot pipe a return command");
-				}
-				if (e.getCause() instanceof BreakOrContinueException) {
-					error("cannot pipe a break or continue command");
-				}
-				error(e.getCause());
+			} 
+			
+			if (!exceptions.isEmpty()) {
+				error(exceptions.stream().map(e -> {
+					if (e.getCause() instanceof RödaException) {
+						return (RödaException) e.getCause();
+					}
+					if (e.getCause() instanceof ReturnException) {
+						return createRödaException("cannot pipe a return command");
+					}
+					if (e.getCause() instanceof BreakOrContinueException) {
+						return createRödaException("cannot pipe a break or continue command");
+					}
+					return createRödaException(e.getCause());
+				}).toArray(n -> new RödaException[n]));
 			}
 		}
 	}

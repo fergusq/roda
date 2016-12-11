@@ -1,6 +1,8 @@
 package org.kaivos.röda;
 
 import org.kaivos.röda.Interpreter;
+import org.kaivos.röda.Interpreter.RödaException;
+
 import static org.kaivos.röda.RödaStream.OSStream;
 import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.type.RödaString;
@@ -29,6 +31,20 @@ import jline.console.history.FileHistory;
  * A simple stream language
  */
 public class Röda {
+	
+	private static void printRödaException(Interpreter.RödaException e) {
+		System.err.println("[E] " + e.getMessage());
+		for (String step : e.getStack()) {
+			System.err.println(step);
+		}
+		if (e.getCauses() != null && e.getCauses().length > 0) {
+			System.err.println("caused by:");
+			for (Throwable cause : e.getCauses())
+				if (cause instanceof Interpreter.RödaException) printRödaException((RödaException) cause);
+				else cause.printStackTrace();
+		}
+	}
+	
 	public static void main(String[] args) throws IOException {
 		String file = null;
 		List<String> argsForRöda = new ArrayList<>();
@@ -96,11 +112,7 @@ public class Röda {
 			} catch (ParsingException e) {
 				System.err.println("[E] " + e.getMessage());
 			} catch (Interpreter.RödaException e) {
-				System.err.println("[E] " + e.getMessage());
-				for (String step : e.getStack()) {
-					System.err.println(step);
-				}
-				if (e.getCause() != null) e.getCause().printStackTrace();
+				printRödaException(e);
 			}
 		} else if (interactive && System.console() != null) {
 
@@ -146,11 +158,7 @@ public class Röda {
 					} catch (ParsingException e) {
 						out.println("[E] " + e.getMessage());
 					} catch (Interpreter.RödaException e) {
-						out.println("[E] " + e.getMessage());
-						for (String step : e.getStack()) {
-							out.println(step);
-						}
-						if (e.getCause() != null) e.getCause().printStackTrace();
+						printRödaException(e);
 					}
 				}
 			}
@@ -171,13 +179,9 @@ public class Röda {
 					try {
 						c.interpretStatement(line, "<line "+ i++ +">");
 					} catch (ParsingException e) {
-						System.out.println("[E] " + e.getMessage());
+						System.err.println("[E] " + e.getMessage());
 					} catch (Interpreter.RödaException e) {
-						System.out.println("[E] " + e.getMessage());
-						for (String step : e.getStack()) {
-							System.out.println(step);
-						}
-						if (e.getCause() != null) e.getCause().printStackTrace();
+						printRödaException(e);
 					}
 				}
 				System.out.print(prompt);
