@@ -55,7 +55,7 @@ function lex() {
 function validateTokens(line_num) {
 	for token do
 		case(token) | pull(matches, somethingElse)
-		push(new KeywordToken(line_num, token)) if matches("for|end|in|block|include|\\.")
+		push(new KeywordToken(line_num, token)) if matches("for|end|in|block|ifdef|include|\\.|\\[|\\]")
 		push(new IdentifierToken(line_num, token)) if matches("\\w+")
 		{}() if matches("")
 		error("illegal token: `"..token.."'") if somethingElse
@@ -87,11 +87,16 @@ record PrintStringCommand(str) : Command {
 }
 
 record VarCommand(chain) : Command {
-	chain : list<<string>> = chain
+	chain : list = chain
 }
 
 record ForCommand(var, expr, body) : Command {
 	var : string = var
+	expr : VarCommand = expr
+	body : list<<Command>> = body
+}
+
+record IfDefCommand(expr, body) : Command {
 	expr : VarCommand = expr
 	body : list<<Command>> = body
 }
@@ -119,6 +124,10 @@ function parseCommand() {
 	done
 	if [ token is KeywordToken and token.val = "for" ] do
 		parseFor()
+		return
+	done
+	if [ token is KeywordToken and token.val = "ifdef" ] do
+		parseIfDef()
 		return
 	done
 	if [ token is KeywordToken and token.val = "block" ] do
@@ -154,6 +163,13 @@ function parseFor() {
 	push(new ForCommand(var, expr, body))
 }
 
+function parseIfDef() {
+	identifier(chain_start)
+	expr := parseVar(chain_start)
+	body := parseBody()
+	push(new IfDefCommand(expr, body))
+}
+
 function parseBlock() {
 	identifier(var)
 	body := parseBody()
@@ -168,14 +184,25 @@ function parseInclude() {
 	error("syntax error at token `"..token.val.."' (line "..token.line_num..")")
 }
 
-function parseVar(var) {
-	chain := new list<<string>>
-	chain += var
-	while [ peek() is KeywordToken and peek().val = "." ] do
-		expect(".")
-		identifier(id)
-		chain += id
+function parseChain(&chain) {
+	while [ peek() is KeywordToken and peek().val =~ "\\.|\\[" ] do
+		if [ pull().val = "." ] do /* nimi esim. kartta.avain */
+			identifier(id)
+			chain += id
+		else /* alaketju esim. kartta[a.b] */
+			identifier(id)
+			chain2 := [id]
+			parseChain(chain2)
+			expect("]")
+			chain += chain2
+		done
 	done
+}
+
+function parseVar(var) {
+	chain := new list
+	chain += var
+	parseChain(chain)
 	push(new VarCommand(chain))
 }
 
@@ -198,12 +225,24 @@ function interpret(scope) {
 			done
 			if [ val is list ] do
 				/* listoissa on se typerä ominaisuus kun ne liitetään merkkijonoihin */
-				error("not clear what to do with this: `["..command&", ".."]'")
+				error("not clear what to do with this: `["..val&", ".."]'")
 			done
-			error("not clear what to do with this: `"..command.."'")
+			error("not clear what to do with this: `"..val.."'")
 		done
 		if [ command is BlockCommand ] do
 			scope[command.var] = command.body
+			continue
+		done
+		if [ command is IfDefCommand ] do
+			obj := retrieveVar(scope, command.expr.chain[:-1])
+			key := command.expr.chain[-1]
+			if [ obj is list ] do
+				continue if [ #obj > 0 ]
+				key = parseInteger(key) /* TODO parempi virheenkäsittely */
+			done
+			if [ obj[key]? ] do
+				command.body() | interpret(scope)
+			done
 			continue
 		done
 		if [ command is ForCommand ] do
@@ -224,16 +263,23 @@ function interpret(scope) {
 }
 
 function retrieveVar(scope, chain) {
+	current_val = scope
 	while [ #chain > 0 ] do
 		key := chain[0]
-		if [ scope is list ] do
+		if [ key is list ] do
+			key = retrieveVar(scope, key)
+			unless [ key is string ] do
+				error("not clear what to do with this: `"..key.."'")
+			done
+		done
+		if [ current_val is list ] do
 			case(key) | pull(matches, somethingElse)
 			if matches("[0-9]+") do
 				key = parseInteger(key)
 			done
 			if matches("sorted_by_\\w+") do
 				/* sort-funktiota ei vielä ole Rödassa, joten tämä ei toimi sitten */
-				scope = [scope() | sort(key={ |e|; return e[key[10:]]})]
+				current_val = [current_val() | sort(key={ |e|; return e[key[10:]]})]
 				shift chain
 				continue
 			done
@@ -241,12 +287,12 @@ function retrieveVar(scope, chain) {
 				error("unknown index or method: `"..key.."'")
 			done
 		done
-		if [ scope[key]? ] do
-			scope = scope[key]
+		if [ current_val[key]? ] do
+			current_val = current_val[key]
 			shift chain
 		else /* oikeastaan onko tässä järkeä, sillä Röda-tulkin oletusvirhe on lähes sama... */
 			error("variable or key not found: `"..key.."'")
 		done
 	done
-	return scope
+	return current_val
 }
