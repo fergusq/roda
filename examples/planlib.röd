@@ -55,7 +55,7 @@ function lex() {
 function validateTokens(line_num) {
 	for token do
 		case(token) | pull(matches, somethingElse)
-		push(new KeywordToken(line_num, token)) if matches("for|end|in|block|ifdef|include|\\.|\\[|\\]")
+		push(new KeywordToken(line_num, token)) if matches("for|end|in|block|ifdef|ifeq|include|\\.|\\[|\\]")
 		push(new IdentifierToken(line_num, token)) if matches("\\w+")
 		{}() if matches("")
 		error("illegal token: `"..token.."'") if somethingElse
@@ -101,6 +101,12 @@ record IfDefCommand(expr, body) : Command {
 	body : list<<Command>> = body
 }
 
+record IfEqCommand(expr1, expr2, body) : Command {
+	expr1 : Command = expr1
+	expr2 : Command = expr2
+	body : list<<Command>> = body
+}
+
 record BlockCommand(var, body) : Command {
 	var : string = var
 	body : list<<Command>> = body
@@ -118,8 +124,8 @@ function parse() {
 
 function parseCommand() {
 	pull(token)
-	if [ token is StringToken ] do
-		push(new PrintStringCommand(token.val))
+	if [ token is StringToken or token is IdentifierToken ] do
+		parseExpression(token)
 		return
 	done
 	if [ token is KeywordToken and token.val = "for" ] do
@@ -130,6 +136,10 @@ function parseCommand() {
 		parseIfDef()
 		return
 	done
+	if [ token is KeywordToken and token.val = "ifeq" ] do
+		parseIfEq()
+		return
+	done
 	if [ token is KeywordToken and token.val = "block" ] do
 		parseBlock()
 		return
@@ -138,9 +148,15 @@ function parseCommand() {
 		parseInclude()
 		return
 	done
+	error("syntax error at token `"..token.val.."' (line "..token.line_num..")")
+}
+
+function parseExpression(token) {
+	if [ token is StringToken ] do
+		return new PrintStringCommand(token.val)
+	done
 	if [ token is IdentifierToken ] do
-		parseVar(token.val)
-		return
+		return parseVar(token.val)
 	done
 	error("syntax error at token `"..token.val.."' (line "..token.line_num..")")
 }
@@ -168,6 +184,15 @@ function parseIfDef() {
 	expr := parseVar(chain_start)
 	body := parseBody()
 	push(new IfDefCommand(expr, body))
+}
+
+function parseIfEq() {
+	pull(token1)
+	expr1 := parseExpression(token1)
+	pull(token2)
+	expr2 := parseExpression(token2)
+	body := parseBody()
+	push(new IfEqCommand(expr1, expr2, body))
 }
 
 function parseBlock() {
@@ -241,6 +266,14 @@ function interpret(scope) {
 				key = parseInteger(key) /* TODO parempi virheenkäsittely */
 			done
 			if [ obj[key]? ] do
+				command.body() | interpret(scope)
+			done
+			continue
+		done
+		if [ command is IfEqCommand ] do
+			val1 := [push(command.expr1) | interpret(scope)]
+			val2 := [push(command.expr2) | interpret(scope)]
+			if [ val1 = val2 ] do
 				command.body() | interpret(scope)
 			done
 			continue
