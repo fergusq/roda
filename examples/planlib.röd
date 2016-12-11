@@ -14,15 +14,18 @@ function execPlan(file, data) {
 
 record Token {}
 
-record StringToken(str) : Token {
+record StringToken(line_num, str) : Token {
+	line_num : integer = line_num
 	val : string = str
 }
 
-record IdentifierToken(id) : Token {
+record IdentifierToken(line_num, id) : Token {
+	line_num : integer = line_num
 	val : string = id
 }
 
-record KeywordToken(kw) : Token {
+record KeywordToken(line_num, kw) : Token {
+	line_num : integer = line_num
 	val : string = kw
 }
 
@@ -31,29 +34,29 @@ record EOFToken : Token {
 }
 
 function lex() {
-	row_num := 1
+	line_num := 1
 	splitMany(sep="\\|") | for row do
 		sec_num := 1
 		for section in row do
 			if [ sec_num % 2 = 1 ] do
-				push(new StringToken(section))
+				push(new StringToken(line_num, section))
 			else
 				/* ensimmäinen split katkaisee välilyöntien kohdalta, jotta niitä ei tarvitse poistaa myöhemmin */
-				split(section) | split(sep="(?<=\\W)|(?=\\W)") | validateTokens()
+				split(section) | split(sep="(?<=\\W)|(?=\\W)") | validateTokens(line_num)
 			done
 			sec_num ++
 		done
-		row_num ++
-		push(new StringToken("\n"))
+		line_num ++
+		push(new StringToken(line_num, "\n"))
 	done
 	push(new EOFToken)
 }
 
-function validateTokens() {
+function validateTokens(line_num) {
 	for token do
 		case(token) | pull(matches, somethingElse)
-		push(new KeywordToken(token)) if matches("for|end|in|block|include|\\.")
-		push(new IdentifierToken(token)) if matches("\\w+")
+		push(new KeywordToken(line_num, token)) if matches("for|end|in|block|include|\\.")
+		push(new IdentifierToken(line_num, token)) if matches("\\w+")
 		{}() if matches("")
 		error("illegal token: `"..token.."'") if somethingElse
 	done
@@ -61,15 +64,20 @@ function validateTokens() {
 
 /*** PARSER ***/
 
-function identifier(&var) {
+function identifierToken(&var) {
 	pull(token)
-	error("expected identifier, got `"..token.val.."'") unless [ token is IdentifierToken ]
+	error("expected identifier, got `"..token.val.."' (line "..token.line_num..")") unless [ token is IdentifierToken ]
+	var := token
+}
+
+function identifier(&var) {
+	identifierToken(token)
 	var := token.val
 }
 
 function expect(kw) {
 	pull(token)
-	error("syntax error at token `"..token.val.."', expected `"..kw.."'") unless [ token is KeywordToken and token.val = kw ]
+	error("syntax error at token `"..token.val.."' (line "..token.line_num.."), expected `"..kw.."'") unless [ token is KeywordToken and token.val = kw ]
 }
 
 record Command {}
@@ -93,8 +101,8 @@ record BlockCommand(var, body) : Command {
 	body : list<<Command>> = body
 }
 
-record IncludeCommand(url) : Command {
-	val : string = url
+record IncludeCommand(file) : Command {
+	file : string = file
 }
 
 function parse() {
@@ -117,11 +125,15 @@ function parseCommand() {
 		parseBlock()
 		return
 	done
-	if [ token is IdentifierToken ] do
-		parseVar(token)
+	if [ token is KeywordToken and token.val = "include" ] do
+		parseInclude()
 		return
 	done
-	error("syntax error at token `"..token.val.."'")
+	if [ token is IdentifierToken ] do
+		parseVar(token.val)
+		return
+	done
+	error("syntax error at token `"..token.val.."' (line "..token.line_num..")")
 }
 
 function parseBody() {
@@ -148,10 +160,18 @@ function parseBlock() {
 	push(new BlockCommand(var, body))
 }
 
+function parseInclude() {
+	pull(token)
+	if [ token is StringToken ] do
+		return new IncludeCommand(token.val)
+	done
+	error("syntax error at token `"..token.val.."' (line "..token.line_num..")")
+}
+
 function parseVar(var) {
 	chain := new list<<string>>
-	chain += var.val
-	while [ peek() is IdentifierToken and peek().val = "." ] do
+	chain += var
+	while [ peek() is KeywordToken and peek().val = "." ] do
 		expect(".")
 		identifier(id)
 		chain += id
@@ -187,7 +207,7 @@ function interpret(scope) {
 			continue
 		done
 		if [ command is ForCommand ] do
-			vals := retrieveVar(scope, command.expr)
+			vals := retrieveVar(scope, command.expr.chain)
 			unless [ vals is list ] do
 				error("illegal use of for: `"..vals.."' is not iterable")
 			done
@@ -198,7 +218,7 @@ function interpret(scope) {
 			continue
 		done
 		if [ command is IncludeCommand ] do
-			execPlan(command.val, scope)
+			execPlan(command.file, scope)
 		done
 	done
 }
