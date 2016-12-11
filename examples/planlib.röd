@@ -227,7 +227,19 @@ function retrieveVar(scope, chain) {
 	while [ #chain > 0 ] do
 		key := chain[0]
 		if [ scope is list ] do
-			key = parseInteger(key) /* TODO parempi virheenkäsittely */
+			case(key) | pull(matches, somethingElse)
+			if matches("[0-9]+") do
+				key = parseInteger(key)
+			done
+			if matches("sorted_by_\\w+") do
+				/* sort-funktiota ei vielä ole Rödassa, joten tämä ei toimi sitten */
+				scope = [scope() | sort(key={ |e|; return e[key[10:]]})]
+				shift chain
+				continue
+			done
+			if somethingElse do
+				error("unknown index or method: `"..key.."'")
+			done
 		done
 		if [ scope[key]? ] do
 			scope = scope[key]
