@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.Collections;
 import java.util.Arrays;
 
-import static java.util.stream.Collectors.joining;
-
 import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
 
@@ -47,8 +45,7 @@ public class RödaMap extends RödaValue {
 	}
 
 	@Override public String str() {
-		return "@(" + map.entrySet().stream()
-			.map(e -> e.getKey() + " => " + e.getValue().str()).collect(joining("\n  ")) + ")";
+		return "<map instance "+hashCode()+">";
 	}
 
 	@Override public Map<String, RödaValue> map() {

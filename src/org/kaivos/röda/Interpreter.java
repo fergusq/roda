@@ -662,9 +662,8 @@ public class Interpreter {
 			callStack.get().push("calling " + value.str()
 			+ " with argument" + (args.size() == 1 ? " " : "s ")
 			+ args.stream()
-			.map(RödaValue::str)
-			.map(s -> s.length() < 20 ? s : s.substring(0, 20))
-			.collect(joining(", "))
+				.map(RödaValue::str)
+				.collect(joining(", "))
 			+ "\n\tat " + file + ":" + line);
 		}
 		else {
@@ -1053,7 +1052,9 @@ public class Interpreter {
 			}
 			Runnable finalR = () -> {
 				callStack.get().push("variable command " + e.asString() + " " + cmd.operator + " "
-						+ args.stream().map(RödaValue::str).collect(joining(" "))
+						+ args.stream()
+							.map(RödaValue::str)
+							.collect(joining(" "))
 						+ "\n\tat " + cmd.file + ":" + cmd.line);
 				try {
 					r.run();
