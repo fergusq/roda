@@ -662,7 +662,9 @@ public class Interpreter {
 			callStack.get().push("calling " + value.str()
 			+ " with argument" + (args.size() == 1 ? " " : "s ")
 			+ args.stream()
-			.map(RödaValue::str).collect(joining(", "))
+			.map(RödaValue::str)
+			.map(s -> s.length() < 20 ? s : s.substring(0, 20))
+			.collect(joining(", "))
 			+ "\n\tat " + file + ":" + line);
 		}
 		else {
