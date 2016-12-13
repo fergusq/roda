@@ -681,7 +681,8 @@ public class Interpreter {
 	}
 
 	@SuppressWarnings("serial")
-	private static class ReturnException extends RuntimeException { }
+	private static class ReturnException extends RuntimeException {}
+	private static ReturnException RETURN_EXCEPTION = new ReturnException();
 
 	public void execWithoutErrorHandling(
 			RödaValue value,
@@ -748,14 +749,27 @@ public class Interpreter {
 		}
 		error("can't execute a value of type " + value.typeString());
 	}
-
+	
 	private void evalStatement(Statement statement, RödaScope scope,
 			RödaStream in, RödaStream out, boolean redirected) {
 		RödaStream _in = in;
 		int i = 0;
-		Runnable[] runnables = new Runnable[statement.commands.size()];
-		for (Command command : statement.commands) {
+		for (List<Command> unbufferedStatement : statement.commands) {
 			boolean last = i == statement.commands.size()-1;
+			RödaStream _out = last ? out : RödaStream.makeStream();
+			evalUnbufferedStatement(unbufferedStatement, scope, _in, _out, !last || redirected);
+			_in = _out;
+			i++;
+		}
+	}
+
+	private void evalUnbufferedStatement(List<Command> commands, RödaScope scope,
+			RödaStream in, RödaStream out, boolean redirected) {
+		RödaStream _in = in;
+		int i = 0;
+		Runnable[] runnables = new Runnable[commands.size()];
+		for (Command command : commands) {
+			boolean last = i == commands.size()-1;
 			RödaStream _out = last ? out : RödaStream.makeStream();
 			Runnable tr = evalCommand(command, scope,
 					in, out,
@@ -815,6 +829,8 @@ public class Interpreter {
 		private boolean isBreak;
 		private BreakOrContinueException(boolean isBreak) { this.isBreak = isBreak; }
 	}
+	private static BreakOrContinueException BREAK_EXCEPTION = new BreakOrContinueException(true);
+	private static BreakOrContinueException CONTINUE_EXCEPTION = new BreakOrContinueException(false);
 
 	private List<RödaValue> flattenArguments(List<Argument> arguments,
 			RödaScope scope,
@@ -1188,7 +1204,7 @@ public class Interpreter {
 			List<RödaValue> args = flattenArguments(cmd.arguments.arguments, scope, in, out, true);
 			Runnable r = () -> {
 				for (RödaValue arg : args) out.push(arg);
-				throw new ReturnException();
+				throw RETURN_EXCEPTION;
 			};
 			return r;
 		}
@@ -1196,7 +1212,7 @@ public class Interpreter {
 		if (cmd.type == Command.Type.BREAK
 				|| cmd.type == Command.Type.CONTINUE) {
 			Runnable r = () -> {
-				throw new BreakOrContinueException(cmd.type == Command.Type.BREAK);
+				throw cmd.type == Command.Type.BREAK ? BREAK_EXCEPTION : CONTINUE_EXCEPTION;
 			};
 			return r;
 		}

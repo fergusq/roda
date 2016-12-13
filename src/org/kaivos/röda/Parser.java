@@ -45,6 +45,7 @@ public class Parser {
 		.addOperatorRule(">=")
 		.addOperatorRule("<<")
 		.addOperatorRule(">>")
+		.addOperatorRule("*|")
 		.addPatternRule(Pattern.compile(NUMBER_REGEX))
 		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$")
 		.separateIdentifiersAndPunctuation(false)
@@ -505,23 +506,39 @@ public class Parser {
 	}
 
 	static class Statement {
-		List<Command> commands;
-		Statement(List<Command> commands) {
+		/** ensimmäinen lista *| -operaattoria varten ja sisempi lista | -operaattoria varten **/
+		List<List<Command>> commands;
+		Statement(List<List<Command>> commands) {
 			this.commands = commands;
+		}
+		static Statement ofList(List<Command> commands) {
+			return new Statement(Arrays.asList(commands));
+		}
+		static Statement ofCommand(Command commands) {
+			return ofList(Arrays.asList(commands));
 		}
 		
 		String asString() {
-			return commands.stream().map(Command::asString).collect(joining(" | "));
+			return commands.stream().map(cs -> cs.stream().map(Command::asString).collect(joining(" | "))).collect(joining(" *| "));
 		}
 	}
 
 	static Statement parseStatement(TokenList tl) {
+		List<List<Command>> commands = new ArrayList<>();
+		commands.add(_parseStatement(tl));
+		while (acceptIfNext(tl, "*|")) {
+			commands.add(_parseStatement(tl));
+		}
+		return new Statement(commands);
+	}
+	
+	private static List<Command> _parseStatement(TokenList tl) {
 		List<Command> commands = new ArrayList<>();
 		commands.add(parseCommand(tl));
 		while (acceptIfNext(tl, "|")) {
 			commands.add(parseCommand(tl));
 		}
-		return new Statement(commands);
+		return commands;
 	}
 
 	static class Command {
@@ -742,7 +759,7 @@ public class Parser {
 			boolean isUnless = commandName.equals("unless") || commandName.equals("until");
 			Statement cond = parseStatement(tl);
 			return _makeIfOrWhileCommand(cmd.file, cmd.line, isWhile, isUnless, cond,
-						     Arrays.asList(new Statement(Arrays.asList(cmd))), null);
+						     Arrays.asList(Statement.ofCommand(cmd)), null);
 		}
 		else if (tl.acceptIfNext("for")) {
 			List<String> variables = new ArrayList<>();
@@ -759,7 +776,7 @@ public class Parser {
 				cond = parseStatement(tl);
 			}
 			return _makeForCommand(cmd.file, cmd.line, variables, list, cond,
-					       Arrays.asList(new Statement(Arrays.asList(cmd))));
+					       Arrays.asList(Statement.ofCommand(cmd)));
 		}
 		else return cmd;
 	}
@@ -885,7 +902,7 @@ public class Parser {
 					cmd.line,
 					arguments.sfvarguments,
 					null, null,
-					Arrays.asList(new Statement(Arrays.asList(cmd))));
+					Arrays.asList(Statement.ofCommand(cmd)));
 		}
 		
 		return cmd;
@@ -1320,7 +1337,12 @@ public class Parser {
 				while (acceptIfNext(tl, "|")) {
 					commands.add(parseCommand(tl));
 				}
-				ans = expressionStatementSingle(file,  line, new Statement(commands));
+				List<List<Command>> bufferedCommands = new ArrayList<>();
+				bufferedCommands.add(commands);
+				while (acceptIfNext(tl, "*|")) {
+					bufferedCommands.add(_parseStatement(tl));
+				}
+				ans = expressionStatementSingle(file,  line, new Statement(bufferedCommands));
 			}
 			else if (acceptIfNext(tl, ".")) {
 				String field = identifier(tl);
