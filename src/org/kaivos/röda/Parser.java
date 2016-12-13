@@ -910,7 +910,7 @@ public class Parser {
 				accept(tl, "_");
 				arguments.sfvarguments.add(sfvname);
 			}
-			else if (tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
+			else if (validIdentifier(tl.seekString()) && tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
 				kwargMode = true;
 				String name = identifier(tl);
 				accept(tl, "=");
