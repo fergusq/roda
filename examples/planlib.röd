@@ -41,8 +41,7 @@ function lex() {
 			if [ sec_num % 2 = 1 ] do
 				push(new StringToken(line_num, section))
 			else
-				/* ensimmäinen split katkaisee välilyöntien kohdalta, jotta niitä ei tarvitse poistaa myöhemmin */
-				split(section) | split(sep="(?<=\\W)|(?=\\W)") | validateTokens(line_num)
+				split(section, sep="(?<=[^\\wäöå])|(?=[^\\wäöå])") | validateTokens(line_num)
 			done
 			sec_num ++
 		done
@@ -54,10 +53,19 @@ function lex() {
 
 function validateTokens(line_num) {
 	for token do
-		case(token) | pull(matches, somethingElse)
-		push(new KeywordToken(line_num, token)) if matches("for|end|in|block|ifdef|ifeq|include|\\.|\\[|\\]")
-		push(new IdentifierToken(line_num, token)) if matches("\\w+")
-		{}() if matches("")
+		case(token) *| pull(matches, somethingElse)
+		push(new KeywordToken(line_num, token)) if matches("for|end|in|eq|block|ifdef|ifndef|if|ifn|include|\\.|\\[|\\]")
+		push(new IdentifierToken(line_num, token)) if matches("[\\wäöå]+")
+		if matches("\"") do
+			l := []
+			pull(token2)
+			while [ token2 != "\"" ] do
+				l += token2
+				token2 = pull()
+			done
+			push(new StringToken(line_num, l&""))
+		done
+		{}() if matches("\\s*")
 		error("illegal token: `"..token.."'") if somethingElse
 	done
 }
@@ -80,6 +88,12 @@ function expect(kw) {
 	error("syntax error at token `"..token.val.."' (line "..token.line_num.."), expected `"..kw.."'") unless [ token is KeywordToken and token.val = kw ]
 }
 
+function expectMatch(kw_regex) {
+	pull(token)
+	error("syntax error at token `"..token.val.."' (line "..token.line_num.."), expected `"..kw.."'") unless [ token is KeywordToken and token.val =~ kw_regex ]
+	push(token.val)
+}
+
 record Command {}
 
 record PrintStringCommand(str) : Command {
@@ -96,14 +110,17 @@ record ForCommand(var, expr, body) : Command {
 	body : list<<Command>> = body
 }
 
-record IfDefCommand(expr, body) : Command {
+record IfDefCommand(expr, positive, body) : Command {
 	expr : VarCommand = expr
+	positive : boolean = positive
 	body : list<<Command>> = body
 }
 
-record IfEqCommand(expr1, expr2, body) : Command {
+record IfCommand(expr1, expr2, op, positive, body) : Command {
 	expr1 : Command = expr1
 	expr2 : Command = expr2
+	op : string = op
+	positive : boolean = positive
 	body : list<<Command>> = body
 }
 
@@ -132,12 +149,12 @@ function parseCommand() {
 		parseFor()
 		return
 	done
-	if [ token is KeywordToken and token.val = "ifdef" ] do
-		parseIfDef()
+	if [ token is KeywordToken and token.val =~ "ifn?def" ] do
+		parseIfDef(token.val =~ "ifdef")
 		return
 	done
-	if [ token is KeywordToken and token.val = "ifeq" ] do
-		parseIfEq()
+	if [ token is KeywordToken and token.val =~ "ifn?" ] do
+		parseIf(token.val =~ "if")
 		return
 	done
 	if [ token is KeywordToken and token.val = "block" ] do
@@ -179,20 +196,21 @@ function parseFor() {
 	push(new ForCommand(var, expr, body))
 }
 
-function parseIfDef() {
+function parseIfDef(positive) {
 	identifier(chain_start)
 	expr := parseVar(chain_start)
 	body := parseBody()
-	push(new IfDefCommand(expr, body))
+	push(new IfDefCommand(expr, positive, body))
 }
 
-function parseIfEq() {
+function parseIf(positive) {
 	pull(token1)
 	expr1 := parseExpression(token1)
+	op := expectMatch("in|eq")
 	pull(token2)
 	expr2 := parseExpression(token2)
 	body := parseBody()
-	push(new IfEqCommand(expr1, expr2, body))
+	push(new IfCommand(expr1, expr2, op, positive, body))
 }
 
 function parseBlock() {
@@ -245,12 +263,13 @@ function interpret(scope) {
 				continue
 			done
 			if [ val is list<<Command>> ] do
-				val() | interpret(scope)
+				val() *| interpret(scope)
 				continue
 			done
 			if [ val is list ] do
-				/* listoissa on se typerä ominaisuus kun ne liitetään merkkijonoihin */
-				error("not clear what to do with this: `["..val&", ".."]'")
+				/* listat käsitellään if in -rakennetta varten */
+				push(val)
+				continue
 			done
 			error("not clear what to do with this: `"..val.."'")
 		done
@@ -265,16 +284,26 @@ function interpret(scope) {
 				continue if [ #obj > 0 ]
 				key = parseInteger(key) /* TODO parempi virheenkäsittely */
 			done
-			if [ obj[key]? ] do
-				command.body() | interpret(scope)
+			if [ command.positive = obj[key]? ] do
+				command.body() *| interpret(scope)
 			done
 			continue
 		done
-		if [ command is IfEqCommand ] do
-			val1 := [push(command.expr1) | interpret(scope)]
-			val2 := [push(command.expr2) | interpret(scope)]
-			if [ val1 = val2 ] do
-				command.body() | interpret(scope)
+		if [ command is IfCommand ] do
+			val1 := [push(command.expr1) *| interpret(scope)]
+			val2 := [push(command.expr2) *| interpret(scope)]
+			cond := FALSE
+			if [ command.op = "eq" ] do
+				cond = [ val1 = val2 ]()
+			done
+			if [ command.op = "in" ] do
+				unless [ #val1 = 1 and #val2 = 1 and val2[0] is list ] do
+					error("illegal use of if-in: the operands should single values and the second operand should be a list")
+				done
+				cond = [ val1[0] in val2[0] ]()
+			done
+			if [ command.positive = cond ] do
+				command.body() *| interpret(scope)
 			done
 			continue
 		done
@@ -285,7 +314,7 @@ function interpret(scope) {
 			done
 			for val in vals do
 				scope[command.var] = val
-				command.body() | interpret(scope)
+				command.body() *| interpret(scope)
 			done
 			continue
 		done
@@ -306,13 +335,13 @@ function retrieveVar(scope, chain) {
 			done
 		done
 		if [ current_val is list ] do
-			case(key) | pull(matches, somethingElse)
+			case(key) *| pull(matches, somethingElse)
 			if matches("[0-9]+") do
 				key = parseInteger(key)
 			done
 			if matches("sorted_by_\\w+") do
 				/* sort-funktiota ei vielä ole Rödassa, joten tämä ei toimi sitten */
-				current_val = [current_val() | sort(key={ |e|; return e[key[10:]]})]
+				current_val = [current_val() *| sort(key={ |e|; return e[key[10:]]})]
 				shift chain
 				continue
 			done

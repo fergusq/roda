@@ -42,6 +42,9 @@ main {
 		for page in classdata do
 			errprint("\rInitializing "..pageclass["name"].."/"..page["name"].."...".." "*20)
 			
+			/* asetetaan pageclass-kenttä */
+			page["pageclass"] = pageclass["name"]
+			
 			/* selvitetään malline, jonka pohjalta sivu generoidaan */
 			if [ page["templatefile"]? ] do
 				push(page["templatefile"])
