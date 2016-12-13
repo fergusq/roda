@@ -683,6 +683,7 @@ public class Interpreter {
 
 	@SuppressWarnings("serial")
 	private static class ReturnException extends RuntimeException { }
+	private static final ReturnException RETURN_EXCEPTION = new ReturnException();
 
 	public void execWithoutErrorHandling(
 			RödaValue value,
@@ -816,6 +817,8 @@ public class Interpreter {
 		private boolean isBreak;
 		private BreakOrContinueException(boolean isBreak) { this.isBreak = isBreak; }
 	}
+	private static final BreakOrContinueException BREAK_EXCEPTION = new BreakOrContinueException(true);
+	private static final BreakOrContinueException CONTINUE_EXCEPTION = new BreakOrContinueException(false);
 
 	private List<RödaValue> flattenArguments(List<Argument> arguments,
 			RödaScope scope,
@@ -1191,7 +1194,7 @@ public class Interpreter {
 			List<RödaValue> args = flattenArguments(cmd.arguments.arguments, scope, in, out, true);
 			Runnable r = () -> {
 				for (RödaValue arg : args) out.push(arg);
-				throw new ReturnException();
+				throw RETURN_EXCEPTION;
 			};
 			return r;
 		}
@@ -1199,7 +1202,7 @@ public class Interpreter {
 		if (cmd.type == Command.Type.BREAK
 				|| cmd.type == Command.Type.CONTINUE) {
 			Runnable r = () -> {
-				throw new BreakOrContinueException(cmd.type == Command.Type.BREAK);
+				throw cmd.type == Command.Type.BREAK ? BREAK_EXCEPTION : CONTINUE_EXCEPTION;
 			};
 			return r;
 		}
