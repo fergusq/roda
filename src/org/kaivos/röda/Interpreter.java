@@ -290,6 +290,8 @@ public class Interpreter {
 	};
 
 	static { callStack.set(new ArrayDeque<>()); }
+	
+	public boolean enableDebug = true;
 
 	@SuppressWarnings("serial")
 	public static class RödaException extends RuntimeException {
@@ -658,18 +660,20 @@ public class Interpreter {
 			else kwargs.put(kwpar.name, val);
 		}
 
-		if (args.size() > 0) {
-			callStack.get().push("calling " + value.str()
-			+ " with argument" + (args.size() == 1 ? " " : "s ")
-			+ args.stream()
-				.map(RödaValue::str)
-				.collect(joining(", "))
-			+ "\n\tat " + file + ":" + line);
-		}
-		else {
-			callStack.get().push("calling " + value.str()
-			+ " with no arguments\n"
-			+ "\tat " + file + ":" + line);
+		if (enableDebug) {
+			if (args.size() > 0) {
+				callStack.get().push("calling " + value.str()
+					+ " with argument" + (args.size() == 1 ? " " : "s ")
+					+ args.stream()
+						.map(RödaValue::str)
+						.collect(joining(", "))
+					+ "\n\tat " + file + ":" + line);
+			}
+			else {
+				callStack.get().push("calling " + value.str()
+					+ " with no arguments\n"
+					+ "\tat " + file + ":" + line);
+			}
 		}
 		try {
 			execWithoutErrorHandling(value, typeargs, args, kwargs, scope, in, out);
@@ -677,7 +681,7 @@ public class Interpreter {
 		catch (RödaException e) { throw e; }
 		catch (Throwable e) { error(e); }
 		finally {
-			callStack.get().pop();
+			if (enableDebug) callStack.get().pop();
 		}
 	}
 
@@ -1038,18 +1042,20 @@ public class Interpreter {
 				r = null;
 			}
 			Runnable finalR = () -> {
-				callStack.get().push("variable command " + e.asString() + " " + cmd.operator + " "
+				if (enableDebug) {
+					callStack.get().push("variable command " + e.asString() + " " + cmd.operator + " "
 						+ args.stream()
 							.map(RödaValue::str)
 							.collect(joining(" "))
 						+ "\n\tat " + cmd.file + ":" + cmd.line);
+				}
 				try {
 					r.run();
 				}
 				catch (RödaException ex) { throw ex; }
 				catch (Throwable ex) { error(ex); }
 				finally {
-					callStack.get().pop();
+					if (enableDebug) callStack.get().pop();
 				}
 			};
 			return finalR;
@@ -1236,7 +1242,7 @@ public class Interpreter {
 
 	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out,
 			boolean variablesAreReferences) {
-		callStack.get().push("expression " + exp.asString() + "\n\tat " + exp.file + ":" + exp.line);
+		if (enableDebug) callStack.get().push("expression " + exp.asString() + "\n\tat " + exp.file + ":" + exp.line);
 		RödaValue value;
 		try {
 			value = evalExpressionWithoutErrorHandling(exp, scope, in, out,
@@ -1245,7 +1251,7 @@ public class Interpreter {
 		catch (RödaException e) { throw e; }
 		catch (Throwable e) { error(e); value = null; }
 		finally {
-			callStack.get().pop();
+			if (enableDebug) callStack.get().pop();
 		}
 		return value;
 	}
