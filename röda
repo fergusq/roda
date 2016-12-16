@@ -1,2 +1,0 @@
-#!/bin/bash
-java -ea -cp nept:bin org.kaivos.röda.Röda $@
