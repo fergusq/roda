@@ -82,7 +82,6 @@ public class Röda {
 				System.out.println("-i         Enable interactive mode");
 				System.out.println("-I         Disable interactive mode");
 				System.out.println("-D         Disable stack tracing (may speed up execution a little)");
-                                System.out.println("-I         Disable interactive mode");
 				System.out.println("-h, --help Show this help text");
 				return;
 			}
