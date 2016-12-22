@@ -61,15 +61,15 @@ public class Builtins {
 		/* Perusvirtaoperaatiot */
 
 		S.setLocal("print", RödaNativeFunction.of("print", (typeargs, args, kwargs, scope, in, out) -> {
-					if (args.isEmpty()) {
-						argumentUnderflow("print", 1, 0);
-						return;
-					}
-					for (RödaValue value : args) {
-						out.push(value);
-					}
-					out.push(RödaString.of("\n"));
-				}, Arrays.asList(new Parameter("values", false)), true));
+			if (args.isEmpty()) {
+				argumentUnderflow("print", 1, 0);
+				return;
+			}
+			for (RödaValue value : args) {
+				out.push(value);
+			}
+			out.push(RödaString.of("\n"));
+		}, Arrays.asList(new Parameter("values", false)), true));
 		
 		PushAndPullPopulator.populatePushAndPull(S);
 
@@ -139,71 +139,59 @@ public class Builtins {
 	}
 
 	public static RödaValue genericPush(String name, RödaStream _out) {
-		return RödaNativeFunction
-			.of(name,
-			    (ra, a, k, s, i, o) -> {
-				    if (a.size() == 0) {
-					    while (true) {
-						    RödaValue v = i.pull();
-						    if (v == null) break;
-						    _out.push(v);
-					    }
-				    }
-				    else {
-					    for (RödaValue v : a) {
-						    _out.push(v);
-					    }
-				    }
-			    }, Arrays.asList(new Parameter("values", false)), true);
+		return RödaNativeFunction.of(name, (ra, a, k, s, i, o) -> {
+			if (a.size() == 0) {
+				while (true) {
+					RödaValue v = i.pull();
+					if (v == null) break;
+					_out.push(v);
+				}
+			} else {
+				for (RödaValue v : a) {
+					_out.push(v);
+				}
+			}
+		}, Arrays.asList(new Parameter("values", false)), true);
 	}
 
 	public static RödaValue genericPull(String name, RödaStream _in, boolean peek, boolean oneOnly) {
-		return RödaNativeFunction
-			.of(name,
-			    (ra, a, k, s, i, o) -> {
-			    	if (!oneOnly) checkArgs(name, 0, a.size());
-				    if (a.size() == 0) {
-				    	if (oneOnly) {
-				    		RödaValue v = peek ? _in.peek() : _in.pull();
-						    if (v == null) error("empty stream");
-						    o.push(v);
-				    	}
-				    	else while (true) {
-					    	RödaValue v = peek ? _in.peek() : _in.pull();
-						    if (v == null) break;
-						    o.push(v);
-					    }
-				    }
-				    else {
-					    for (RödaValue v : a) {
-						    checkReference(name, v);
-						    RödaValue pulled
-							    = peek ? _in.peek() : _in.pull();
-						    if (pulled == null)
-						    	error("empty stream");
-						    v.assignLocal(pulled);
-					    }
-				    }
-			    }, Arrays.asList(new Parameter("variables", true)), true);
+		return RödaNativeFunction.of(name, (ra, a, k, s, i, o) -> {
+			if (!oneOnly) checkArgs(name, 0, a.size());
+			if (a.size() == 0) {
+				if (oneOnly) {
+					RödaValue v = peek ? _in.peek() : _in.pull();
+					if (v == null) error("empty stream");
+					o.push(v);
+				} else
+					while (true) {
+						RödaValue v = peek ? _in.peek() : _in.pull();
+						if (v == null) break;
+						o.push(v);
+					}
+			} else {
+				for (RödaValue v : a) {
+					checkReference(name, v);
+					RödaValue pulled = peek ? _in.peek() : _in.pull();
+					if (pulled == null) error("empty stream");
+					v.assignLocal(pulled);
+				}
+			}
+		}, Arrays.asList(new Parameter("variables", true)), true);
 	}
 
 	public static RödaValue genericTryPull(String name, RödaStream _in, boolean peek) {
-		return RödaNativeFunction
-			.of(name,
-			    (ra, a, k, s, i, o) -> {
-				    for (RödaValue v : a) {
-					    checkReference(name, v);
-					    RödaValue pulled
-						    = peek ? _in.peek() : _in.pull();
-					    if (pulled == null) {
-					    	o.push(RödaBoolean.of(false));
-					    }
-					    else {
-					    	o.push(RödaBoolean.of(true));
-						    v.assignLocal(pulled);
-					    }
-				    }
-			    }, Arrays.asList(new Parameter("variables", true)), true);
+		return RödaNativeFunction.of(name, (ra, a, k, s, i, o) -> {
+			for (RödaValue v : a) {
+				checkReference(name, v);
+				RödaValue pulled = peek ? _in.peek() : _in.pull();
+				if (pulled == null) {
+					o.push(RödaBoolean.of(false));
+				} else {
+					o.push(RödaBoolean.of(true));
+					v.assignLocal(pulled);
+				}
+			}
+		}, Arrays.asList(new Parameter("variables", true)), true);
 	}
 
 	public static RödaValue genericWriteStrings(String name, OutputStream _out, Interpreter I) {
