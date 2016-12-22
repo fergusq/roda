@@ -2,8 +2,8 @@ package org.kaivos.röda;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -206,113 +206,107 @@ public class Builtins {
 			    }, Arrays.asList(new Parameter("variables", true)), true);
 	}
 
-	public static RödaValue genericWrite(String name, OutputStream _out, Interpreter I) {
-		return RödaNativeFunction
-			.of(name,
-			    (ra, args, kwargs, scope, in, out) -> {
-				    try {
-					    if (args.size() == 0) {
-						    while (true) {
-							    RödaValue v = in.pull();
-							    if (v == null) break;
-							    checkString(name, v);
-							    _out.write(v.str().getBytes(StandardCharsets.UTF_8));
-							    _out.flush();
-						    }
-					    }
-					    else {
-						    for (int i = 0; i < args.size(); i++) {
-							    RödaValue v = args.get(i);
-							    if (v.isFlag("-f")) {
-								    RödaValue _file = args.get(++i);
-								    checkString(name, _file);
-								    File file = IOUtils
-									    .getMaybeRelativeFile(I.currentDir,
-												  _file.str());
-								    try {
-									    byte[] buf = new byte[2048];
-									    InputStream is =
-										    new FileInputStream(file);
-									    int c = 0;
-									    while ((c=is.read(buf, 0, buf.length))
-										   > 0) {
-										    _out.write(buf, 0, c);
-										    _out.flush();
-									    }
-									    is.close();
-								    } catch (IOException e) {
-									    error(e);
-								    }
-								    
-								    continue;
-							    }
-							    checkString(name, v);
-							    _out.write(v.str().getBytes(StandardCharsets.UTF_8));
-							    _out.flush();
-						    }
-					    }
-				    } catch (IOException e) {
-					    error(e);
-				    }
-			    }, Arrays.asList(new Parameter("values", false)), true);
+	public static RödaValue genericWriteStrings(String name, OutputStream _out, Interpreter I) {
+		return RödaNativeFunction.of(name, (ra, args, kwargs, scope, in, out) -> {
+			Consumer<Consumer<RödaValue>> forAll;
+			if (args.size() == 0) {
+				forAll = in::forAll;
+			} else {
+				forAll = args.stream()::forEach;
+			}
+			forAll.accept(v -> {
+				try {
+					checkString(name, v);
+					_out.write(v.str().getBytes(StandardCharsets.UTF_8));
+					_out.flush();
+				} catch (IOException e) {
+					error(e);
+				}
+			});
+		}, Arrays.asList(new Parameter("values", false)), true);
+	}
+	
+	public static RödaValue genericWriteFile(String name, OutputStream _out, Interpreter I) {
+		return RödaNativeFunction.of(name, (ra, args, kwargs, scope, in, out) -> {
+			RödaValue _file = args.get(0);
+			checkString(name, _file);
+			File file = IOUtils.getMaybeRelativeFile(I.currentDir, _file.str());
+			try {
+				byte[] buf = new byte[2048];
+				InputStream is = new FileInputStream(file);
+				int c = 0;
+				while ((c = is.read(buf, 0, buf.length)) > 0) {
+					_out.write(buf, 0, c);
+					_out.flush();
+				}
+				is.close();
+			} catch (IOException e) {
+				error(e);
+			}
+		}, Arrays.asList(new Parameter("file", false, RödaValue.STRING)), false);
 	}
 
-	public static RödaValue genericRead(String name, InputStream _in, Interpreter I) {
-		return RödaNativeFunction
-			.of(name,
-			    (ra, args, kwargs, scope, in, out) -> {
-				    try {
-					    if (args.size() == 0) {
-						    while (true) {
-							    int i = _in.read();
-							    if (i == -1) break;
-							    out.push(RödaInteger.of(i));
-						    }
-					    }
-					    else {
-						    Iterator<RödaValue> it = args.iterator();
-						    while (it.hasNext()) {
-							    RödaValue v = it.next();
-							    checkFlag(name, v);
-							    String option = v.str();
-							    RödaValue value;
-							    switch (option) {
-							    case "-b": {
-								    RödaValue sizeVal = it.next().impliciteResolve();
-								    checkNumber(name, sizeVal);
-								    long size = sizeVal.integer();
-								    if (size > Integer.MAX_VALUE)
-									    error(name + ": can't read more than "
-										  + Integer.MAX_VALUE + " bytes "
-										  + "at time");
-								    byte[] data = new byte[(int) size];
-								    _in.read(data);
-								    value = RödaString.of(new String(data, StandardCharsets.UTF_8));
-							    } break;
-							    case "-l": {
-								    List<Byte> bytes = new ArrayList<>(256);
-								    int i;
-								    do {
-									    i = _in.read();
-									    if (i == -1) break;
-									    bytes.add((byte) i);
-								    } while (i != '\n');
-								    byte[] byteArr = new byte[bytes.size()];
-								    for (int j = 0; j < bytes.size(); j++) byteArr[j] = bytes.get(j);
-								    value = RödaString.of(new String(byteArr, StandardCharsets.UTF_8));
-							    } break;
-							    default:
-								    error(name + ": unknown option '" + option + "'");
-								    value = null;
-							    }
-							    RödaValue refVal = it.next();
-							    checkReference(name, refVal);
-							    refVal.assign(value);
-						    }
-					    }
-				    } catch (IOException e) {
-					    error(e);
-				    }
-			    }, Arrays.asList(new Parameter("variables", true)), true);
+	public static RödaValue genericReadBytesOrString(String name, InputStream _in, Interpreter I, boolean toString) {
+		return RödaNativeFunction.of(name, (ra, args, kwargs, scope, in, out) -> {
+			try {
+				RödaValue sizeVal = args.get(0);
+				checkNumber(name, sizeVal);
+				long size = sizeVal.integer();
+				if (size > Integer.MAX_VALUE)
+					error(name + ": can't read more than " + Integer.MAX_VALUE + " bytes " + "at time");
+				byte[] data = new byte[(int) size];
+				_in.read(data);
+				RödaValue output;
+				if (toString) {
+					output = RödaString.of(new String(data, StandardCharsets.UTF_8));
+				} else {
+					List<RödaValue> list = new ArrayList<>();
+					for (byte b : data) {
+						list.add(RödaInteger.of(b));
+					}
+					output = RödaList.of(list);
+				}
+				if (args.size() == 1) {
+					out.push(output);
+				} else if (args.size() == 2) {
+					args.get(1).assignLocal(output);
+				} else {
+					argumentOverflow(name, 2, args.size());
+				}
+			} catch (IOException e) {
+				error(e);
+			}
+		}, Arrays.asList(new Parameter("number_of_bytes", false, RödaValue.INTEGER), new Parameter("variable", true)), true);
+	}
+	
+	private static RödaValue readLine(InputStream in) throws IOException {
+		List<Byte> bytes = new ArrayList<>(256);
+		int i;
+		do {
+			i = in.read();
+			if (i == -1)
+				break;
+			bytes.add((byte) i);
+		} while (i != '\n');
+		byte[] byteArr = new byte[bytes.size()];
+		for (int j = 0; j < bytes.size(); j++)
+			byteArr[j] = bytes.get(j);
+		return RödaString.of(new String(byteArr, StandardCharsets.UTF_8));
+	}
+
+	public static RödaValue genericReadLine(String name, InputStream _in, Interpreter I) {
+		return RödaNativeFunction.of(name, (ra, args, kwargs, scope, in, out) -> {
+			try {
+				if (args.isEmpty()) {
+					out.push(readLine(_in));
+				}
+				else for (RödaValue refVal : args) {
+					checkReference(name, refVal);
+					refVal.assignLocal(readLine(_in));
+				}
+			} catch (IOException e) {
+				error(e);
+			}
+		}, Arrays.asList(new Parameter("variables", true)), true);
 	}
 }

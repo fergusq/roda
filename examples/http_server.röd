@@ -9,7 +9,7 @@ record HttpServer(port_value) {
 		request := new Request
 		request.server = self
 		request.connection = connection
-		connection.read(:l, line)
+		connection.readLine(line)
 		things := [split(line)]
 		if [ #things >= 3 ]; do
 			request.command = things[0]
@@ -29,7 +29,7 @@ record HttpServer(port_value) {
 		request.as_text = ""
 		while [ not (line =~ "\r?\n") ]; do
 			request.as_text .= line
-			connection.read(:l, line)
+			line = connection.readLine()
 			if [ line =~ "[A-Za-z\\-]+:[ \t]*.*\r?\n" ]; do
 				header_name := line
 				header_name ~= ":[ \t]*.*\r?\n$", ""
@@ -45,8 +45,7 @@ record HttpServer(port_value) {
 		done
 		request.content = ""
 		if [ length > 0 ]; do
-			content := ""
-			connection.read(:b, length, content)
+			connection.readString(length, content)
 			request.content = content
 		done
 		request.form = new map<<string>>
@@ -227,14 +226,14 @@ record Response(request) {
 		if [ self.request.command != "HEAD" ]; do
 			response .= data
 		done
-		self.connection.write(response)
+		self.connection.writeStrings(response)
 	}
 	
 	function sendFile mime, name {
 		response := self.createHeaders(self.contentHeaders(mime, fileLength(name)), "200 OK")
-		self.connection.write(response)
+		self.connection.writeStrings(response)
 		if [ self.request.command != "HEAD" ]; do
-			self.connection.write(:f, name)
+			self.connection.writeFile(name)
 		done
 	}
 	
@@ -256,7 +255,7 @@ record Response(request) {
 		if [ self.request.command != "HEAD" ]; do
 			response .= data
 		done
-		self.connection.write(response)
+		self.connection.writeStrings(response)
 	}
 	
 	function send403 {

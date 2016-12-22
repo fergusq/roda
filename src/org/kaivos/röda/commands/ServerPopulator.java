@@ -37,7 +37,11 @@ public final class ServerPopulator {
 		I.preRegisterRecord(serverRecord);
 
 		Record socketRecord = new Record("Socket", Collections.emptyList(), Collections.emptyList(), Arrays.asList(
-				new Record.Field("write", new Datatype("function")), new Record.Field("read", new Datatype("function")),
+				new Record.Field("writeStrings", new Datatype("function")),
+				new Record.Field("writeFile", new Datatype("function")),
+				new Record.Field("readBytes", new Datatype("function")),
+				new Record.Field("readString", new Datatype("function")),
+				new Record.Field("readLine", new Datatype("function")),
 				new Record.Field("close", new Datatype("function")), new Record.Field("ip", new Datatype("string")),
 				new Record.Field("hostname", new Datatype("string")), new Record.Field("port", new Datatype("number")),
 				new Record.Field("localport", new Datatype("number"))), false);
@@ -70,8 +74,11 @@ public final class ServerPopulator {
 						return;
 					}
 					RödaValue socketObject = RödaRecordInstance.of(socketRecord, Collections.emptyList(), I.records);
-					socketObject.setField("read", Builtins.genericRead("Socket.read", _in, I));
-					socketObject.setField("write", Builtins.genericWrite("Socket.write", _out, I));
+					socketObject.setField("readBytes", Builtins.genericReadBytesOrString("Socket.readBytes", _in, I, false));
+					socketObject.setField("readString", Builtins.genericReadBytesOrString("Socket.readString", _in, I, true));
+					socketObject.setField("readLine", Builtins.genericReadLine("Socket.readLine", _in, I));
+					socketObject.setField("writeStrings", Builtins.genericWriteStrings("Socket.writeStrings", _out, I));
+					socketObject.setField("writeFile", Builtins.genericWriteFile("Socket.writeFile", _out, I));
 					socketObject.setField("close", RödaNativeFunction.of("Socket.close", (r, A, K, z, j, u) -> {
 						checkArgs("Socket.close", 0, A.size());
 						try {
