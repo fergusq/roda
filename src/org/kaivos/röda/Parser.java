@@ -899,7 +899,7 @@ public class Parser {
 		arguments.kwarguments = new ArrayList<>();
 		arguments.sfvarguments = new ArrayList<>();
 		boolean kwargMode = false;
-		while ((allowNewlines || !tl.isNext(";", "\n")) && !isNext(tl, "|", ")", "]", "}", "in", "do", "done", "<EOF>")) {
+		while ((allowNewlines || !tl.isNext(";", "\n")) && !isNext(tl, "|", ")", "]", "}", "in", "do", "else", "done", "<EOF>")) {
 			if (seekString(tl).equals("_")) {
 				String sfvname = "<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">";
 				arguments.arguments.add(_makeArgument(false,
