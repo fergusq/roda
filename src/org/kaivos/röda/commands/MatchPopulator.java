@@ -22,7 +22,7 @@ public final class MatchPopulator {
 	private MatchPopulator() {}
 
 	public static void populateMatch(RödaScope S) {
-		S.setLocal("match", RödaNativeFunction.of("match", (typeargs, args, scope, in, out) -> {
+		S.setLocal("match", RödaNativeFunction.of("match", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() < 1)
 				argumentUnderflow("match", 1, 0);
 			String regex = args.get(0).str();

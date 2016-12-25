@@ -22,24 +22,37 @@ public final class StreamPopulator {
 
 	public static void populateStream(Interpreter I, RödaScope S) {
 		Record streamRecord = new Record("Stream", Collections.emptyList(), Collections.emptyList(),
-				Arrays.asList(new Record.Field("pull", new Datatype("function")),
+				Arrays.asList(
+						new Record.Field("pull", new Datatype("function")),
+						new Record.Field("tryPull", new Datatype("function")),
+						new Record.Field("pullAll", new Datatype("function")),
+						new Record.Field("peek", new Datatype("function")),
+						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function")),
 						new Record.Field("finish", new Datatype("function"))),
 				false);
-		I.registerRecord(streamRecord);
+		I.preRegisterRecord(streamRecord);
+		I.postRegisterRecord(streamRecord);
 
 		Supplier<RödaValue> getStreamObj = () -> {
 			RödaStream stream = RödaStream.makeStream();
 			RödaValue streamObject = RödaRecordInstance.of(streamRecord, Collections.emptyList(), I.records);
-			streamObject.setField("pull", Builtins.genericPull("Stream.pull", stream));
+			
+			streamObject.setField("pull", Builtins.genericPull("Stream.pull", stream, false, true));
+			streamObject.setField("tryPull", Builtins.genericTryPull("Stream.tryPull", stream, false));
+			streamObject.setField("pullAll", Builtins.genericPull("Stream.pullAll", stream, false, false));
+			
+			streamObject.setField("peek", Builtins.genericPull("Stream.peek", stream, true, true));
+			streamObject.setField("tryPeek", Builtins.genericTryPull("Stream.tryPeek", stream, true));
+			
 			streamObject.setField("push", Builtins.genericPush("Stream.push", stream));
-			streamObject.setField("finish", RödaNativeFunction.of("Stream.finish", (ta, a, s, i, o) -> {
+			streamObject.setField("finish", RödaNativeFunction.of("Stream.finish", (ta, a, k, s, i, o) -> {
 				stream.finish();
 			}, Collections.emptyList(), false));
 			return streamObject;
 		};
 
-		S.setLocal("stream", RödaNativeFunction.of("stream", (typeargs, args, scope, in, out) -> {
+		S.setLocal("stream", RödaNativeFunction.of("stream", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() == 0) {
 				out.push(getStreamObj.get());
 				return;

@@ -15,7 +15,7 @@ public final class NamePopulator {
 	private NamePopulator() {}
 
 	public static void populateName(RödaScope S) {
-		S.setLocal("name", RödaNativeFunction.of("name", (typeargs, args, scope, in, out) -> {
+		S.setLocal("name", RödaNativeFunction.of("name", (typeargs, args, kwargs, scope, in, out) -> {
 			for (RödaValue value : args) {
 				if (!value.is(RödaValue.REFERENCE))
 					error("invalid argument for undefine: " + "only references accepted");

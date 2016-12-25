@@ -20,7 +20,7 @@ import org.kaivos.röda.type.RödaString;
 public final class ReadAndWritePopulator {
 
 	public static void populateReadAndWrite(Interpreter I, RödaScope S) {
-		S.setLocal("readLines", RödaNativeFunction.of("readLines", (typeargs, args, scope, in, out) -> {
+		S.setLocal("readLines", RödaNativeFunction.of("readLines", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() < 1) argumentUnderflow("readLines", 1, args.size());
 			for (RödaValue value : args) {
 				String filename = value.str();
@@ -31,7 +31,7 @@ public final class ReadAndWritePopulator {
 			}
 		}, Arrays.asList(new Parameter("files", false, STRING)), true));
 		
-		S.setLocal("writeLines", RödaNativeFunction.of("writeLines", (typeargs, args, scope, in, out) -> {
+		S.setLocal("writeStrings", RödaNativeFunction.of("writeStrings", (typeargs, args, kwargs, scope, in, out) -> {
 			String filename = args.get(0).str();
 			File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
 			try {

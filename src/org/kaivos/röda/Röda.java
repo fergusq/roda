@@ -1,6 +1,8 @@
 package org.kaivos.röda;
 
 import org.kaivos.röda.Interpreter;
+import org.kaivos.röda.Interpreter.RödaException;
+
 import static org.kaivos.röda.RödaStream.OSStream;
 import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.type.RödaString;
@@ -29,10 +31,26 @@ import jline.console.history.FileHistory;
  * A simple stream language
  */
 public class Röda {
+	
+	public static final String RÖDA_VERSION_STRING = "0.11-alpha";
+	
+	private static void printRödaException(Interpreter.RödaException e) {
+		System.err.println("[E] " + e.getMessage());
+		for (String step : e.getStack()) {
+			System.err.println(step);
+		}
+		if (e.getCauses() != null && e.getCauses().length > 0) {
+			System.err.println("caused by:");
+			for (Throwable cause : e.getCauses())
+				if (cause instanceof Interpreter.RödaException) printRödaException((RödaException) cause);
+				else cause.printStackTrace();
+		}
+	}
+	
 	public static void main(String[] args) throws IOException {
 		String file = null;
 		List<String> argsForRöda = new ArrayList<>();
-		boolean interactive = System.console() != null, forcedI = false;
+		boolean interactive = System.console() != null, forcedI = false, enableDebug = true;
 		String prompt = null;
 		
 		for (int i = 0; i < args.length; i++) {
@@ -54,15 +72,24 @@ public class Röda {
 			case "-I":
 				interactive = false;
 				continue;
+			case "-D":
+				enableDebug = false;
+				continue;
+			case "-v":
+			case "--version":
+				System.out.println("Röda " + RÖDA_VERSION_STRING);
+				return;
 			case "-h":
 			case "--help": {
 				System.out.println("Usage: röda [options] file | röda [options] -i | röda [options]");
 				System.out.println("Available options:");
-				System.out.println("-p prompt  Change the prompt in interactive mode");
-				System.out.println("-P         Disable prompt in interactive mode");
-				System.out.println("-i         Enable interactive mode");
-                                System.out.println("-I         Disable interactive mode");
-				System.out.println("-h, --help Show this help text");
+				System.out.println("-p prompt     Change the prompt in interactive mode");
+				System.out.println("-P            Disable prompt in interactive mode");
+				System.out.println("-i            Enable interactive mode");
+				System.out.println("-I            Disable interactive mode");
+				System.out.println("-D            Disable stack tracing (may speed up execution a little)");
+				System.out.println("-v, --version Show the version number of the interpreter");
+				System.out.println("-h, --help    Show this help text");
 				return;
 			}
 			default:
@@ -88,6 +115,7 @@ public class Röda {
 			}
 			in.close();
 			Interpreter c = new Interpreter();
+			c.enableDebug = enableDebug;
 			List<RödaValue> valueArgs = argsForRöda.stream()
 				.map(RödaString::of)
 				.collect(Collectors.toList());
@@ -96,11 +124,7 @@ public class Röda {
 			} catch (ParsingException e) {
 				System.err.println("[E] " + e.getMessage());
 			} catch (Interpreter.RödaException e) {
-				System.err.println("[E] " + e.getMessage());
-				for (String step : e.getStack()) {
-					System.err.println(step);
-				}
-				if (e.getCause() != null) e.getCause().printStackTrace();
+				printRödaException(e);
 			}
 		} else if (interactive && System.console() != null) {
 
@@ -117,8 +141,10 @@ public class Röda {
 
 			Interpreter c = new Interpreter(RödaStream.makeEmptyStream(),
 							new OSStream(out));
+			
+			c.enableDebug = enableDebug;
 
-			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, s, i, o) -> {
+			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, k, s, i, o) -> {
 						Interpreter.checkString("prompt", a.get(0));
 						in.setPrompt(a.get(0).str());
 					}, Arrays.asList(new Parameter("prompt_string", false)), false));
@@ -146,11 +172,7 @@ public class Röda {
 					} catch (ParsingException e) {
 						out.println("[E] " + e.getMessage());
 					} catch (Interpreter.RödaException e) {
-						out.println("[E] " + e.getMessage());
-						for (String step : e.getStack()) {
-							out.println(step);
-						}
-						if (e.getCause() != null) e.getCause().printStackTrace();
+						printRödaException(e);
 					}
 				}
 			}
@@ -163,6 +185,7 @@ public class Röda {
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 			Interpreter c = new Interpreter();
+			c.enableDebug = enableDebug;
 			String line = "";
 			int i = 1;
 			System.out.print(prompt);
@@ -171,13 +194,9 @@ public class Röda {
 					try {
 						c.interpretStatement(line, "<line "+ i++ +">");
 					} catch (ParsingException e) {
-						System.out.println("[E] " + e.getMessage());
+						System.err.println("[E] " + e.getMessage());
 					} catch (Interpreter.RödaException e) {
-						System.out.println("[E] " + e.getMessage());
-						for (String step : e.getStack()) {
-							System.out.println(step);
-						}
-						if (e.getCause() != null) e.getCause().printStackTrace();
+						printRödaException(e);
 					}
 				}
 				System.out.print(prompt);

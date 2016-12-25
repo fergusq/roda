@@ -18,7 +18,7 @@ public final class ImportPopulator {
 	private ImportPopulator() {}
 
 	public static void populateImport(Interpreter I, RödaScope S) {
-		S.setLocal("import", RödaNativeFunction.of("import", (typeargs, args, scope, in, out) -> {
+		S.setLocal("import", RödaNativeFunction.of("import", (typeargs, args, kwargs, scope, in, out) -> {
 			for (RödaValue value : args) {
 				checkString("import", value);
 				String filename = value.str();

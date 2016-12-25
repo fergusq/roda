@@ -53,6 +53,10 @@ public class RödaList extends RödaValue {
 		return Collections.unmodifiableList(list);
 	}
 
+	@Override public List<RödaValue> modifiableList() {
+		return list;
+	}
+
 	@Override public RödaValue get(RödaValue indexVal) {
 		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;

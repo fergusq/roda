@@ -34,16 +34,23 @@ public final class ServerPopulator {
 				Arrays.asList(new Record.Field("accept", new Datatype("function")),
 						new Record.Field("close", new Datatype("function"))),
 				false);
-		I.registerRecord(serverRecord);
+		I.preRegisterRecord(serverRecord);
 
 		Record socketRecord = new Record("Socket", Collections.emptyList(), Collections.emptyList(), Arrays.asList(
-				new Record.Field("write", new Datatype("function")), new Record.Field("read", new Datatype("function")),
+				new Record.Field("writeStrings", new Datatype("function")),
+				new Record.Field("writeFile", new Datatype("function")),
+				new Record.Field("readBytes", new Datatype("function")),
+				new Record.Field("readString", new Datatype("function")),
+				new Record.Field("readLine", new Datatype("function")),
 				new Record.Field("close", new Datatype("function")), new Record.Field("ip", new Datatype("string")),
 				new Record.Field("hostname", new Datatype("string")), new Record.Field("port", new Datatype("number")),
 				new Record.Field("localport", new Datatype("number"))), false);
-		I.registerRecord(socketRecord);
+		I.preRegisterRecord(socketRecord);
+		
+		I.postRegisterRecord(serverRecord);
+		I.postRegisterRecord(socketRecord);
 
-		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, scope, in, out) -> {
+		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, kwargs, scope, in, out) -> {
 			long port = args.get(0).integer();
 			if (port > Integer.MAX_VALUE)
 				error("can't open port greater than " + Integer.MAX_VALUE);
@@ -53,7 +60,7 @@ public final class ServerPopulator {
 				ServerSocket server = new ServerSocket((int) port);
 
 				RödaValue serverObject = RödaRecordInstance.of(serverRecord, Collections.emptyList(), I.records);
-				serverObject.setField("accept", RödaNativeFunction.of("Server.accept", (ra, a, s, i, o) -> {
+				serverObject.setField("accept", RödaNativeFunction.of("Server.accept", (ra, a, k, s, i, o) -> {
 					checkArgs("Server.accept", 0, a.size());
 					Socket socket;
 					InputStream _in;
@@ -67,9 +74,12 @@ public final class ServerPopulator {
 						return;
 					}
 					RödaValue socketObject = RödaRecordInstance.of(socketRecord, Collections.emptyList(), I.records);
-					socketObject.setField("read", Builtins.genericRead("Socket.read", _in, I));
-					socketObject.setField("write", Builtins.genericWrite("Socket.write", _out, I));
-					socketObject.setField("close", RödaNativeFunction.of("Socket.close", (r, A, z, j, u) -> {
+					socketObject.setField("readBytes", Builtins.genericReadBytesOrString("Socket.readBytes", _in, I, false));
+					socketObject.setField("readString", Builtins.genericReadBytesOrString("Socket.readString", _in, I, true));
+					socketObject.setField("readLine", Builtins.genericReadLine("Socket.readLine", _in, I));
+					socketObject.setField("writeStrings", Builtins.genericWriteStrings("Socket.writeStrings", _out, I));
+					socketObject.setField("writeFile", Builtins.genericWriteFile("Socket.writeFile", _out, I));
+					socketObject.setField("close", RödaNativeFunction.of("Socket.close", (r, A, K, z, j, u) -> {
 						checkArgs("Socket.close", 0, A.size());
 						try {
 							_out.close();
@@ -85,7 +95,7 @@ public final class ServerPopulator {
 					socketObject.setField("localport", RödaInteger.of(socket.getLocalPort()));
 					o.push(socketObject);
 				}, Collections.emptyList(), false));
-				serverObject.setField("close", RödaNativeFunction.of("Server.close", (ra, a, s, i, o) -> {
+				serverObject.setField("close", RödaNativeFunction.of("Server.close", (ra, a, k, s, i, o) -> {
 					checkArgs("Server.close", 0, a.size());
 					try {
 						server.close();

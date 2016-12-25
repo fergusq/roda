@@ -144,11 +144,11 @@ compileBlock {
 }
 
 filter condition {
-	push(item) for item if condition()
+	push(item) for item if condition(item)
 }
 
 lex {
-	splitAt("(?<=[^a-zA-Z0-9_])|(?=[^a-zA-Z0-9_])") | filter({ |token|; [ token != " " ] })
+	split(sep="(?<=[^a-zA-Z0-9_])|(?=[^a-zA-Z0-9_])") | filter({ |token|; [ token != " " ] })
 	push("<EOF>")
 }
 

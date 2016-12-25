@@ -9,7 +9,7 @@ record HttpServer(port_value) {
 		request := new Request
 		request.server = self
 		request.connection = connection
-		connection.read(:l, line)
+		connection.readLine(line)
 		things := [split(line)]
 		if [ #things >= 3 ]; do
 			request.command = things[0]
@@ -29,7 +29,7 @@ record HttpServer(port_value) {
 		request.as_text = ""
 		while [ not (line =~ "\r?\n") ]; do
 			request.as_text .= line
-			connection.read(:l, line)
+			line = connection.readLine()
 			if [ line =~ "[A-Za-z\\-]+:[ \t]*.*\r?\n" ]; do
 				header_name := line
 				header_name ~= ":[ \t]*.*\r?\n$", ""
@@ -45,15 +45,14 @@ record HttpServer(port_value) {
 		done
 		request.content = ""
 		if [ length > 0 ]; do
-			content := ""
-			connection.read(:b, length, content)
+			connection.readString(length, content)
 			request.content = content
 		done
 		request.form = new map<<string>>
 		if push(request.headers["Content-Type"]?); do
 			if [ request.headers["Content-Type"] = "application/x-www-form-urlencoded" ]; do
-				for param in [splitAt("&", request.content)] do
-					kv := [splitAt("=", param)]
+				for param in [split(request.content, sep="&")] do
+					kv := [split(param, sep="=")]
 					if [ #kv = 2 ]; do
 						key := kv[0]
 						val := kv[1]
@@ -62,7 +61,7 @@ record HttpServer(port_value) {
 						i := 0
 						while [ i < #val ] do
 							if [ val[i:i+1] = "%" and i < #val-2 ]; do
-								code += parseInteger(:r, 16, val[i+1:i+3])
+								code += parseInteger(val[i+1:i+3], radix=16)
 								i += 3
 							else
 								code .= stringToBytes(val[i:i+1])
@@ -102,7 +101,7 @@ record HttpServer(port_value) {
 	
 	function update {
 		connection := self.socket.accept()
-		date := "["..[exec(:l, "date", "+%d.%m.%Y/%H:%M")][0].."]"
+		date := "["..[bufferedExec("date", "+%d.%m.%Y/%H:%M")][0].."]"
 		print(date.." Connection from "..connection.hostname.." ("..connection.ip..":"..connection.port..").")
 		handler := thread({ self.handle(connection) })
 		handler.start()
@@ -205,7 +204,9 @@ record Response(request) {
 			headers = "HTTP/1.1 "..status.."\r\n"
 			headers .= "Server: http_server.roed\r\n"
 			headers .= "Date: "
-			headers .= [exec(:E, "LC_TIME", "c.UTF-8", "date", "-u", "+%a, %b %d %Y %H:%M:%S GMT")][:-1]&"".."\r\n"
+			env := new map
+			env["LC_TIME"] = "c.UTF-8"
+			headers .= [exec("date", "-u", "+%a, %b %d %Y %H:%M:%S GMT", env=env)][:-1]&"".."\r\n"
 			headers .= content_headers
 			headers .= self.cookieHeaders()
 			headers .= "Connection: keep-alive\r\n"
@@ -225,14 +226,14 @@ record Response(request) {
 		if [ self.request.command != "HEAD" ]; do
 			response .= data
 		done
-		self.connection.write(response)
+		self.connection.writeStrings(response)
 	}
 	
 	function sendFile mime, name {
 		response := self.createHeaders(self.contentHeaders(mime, fileLength(name)), "200 OK")
-		self.connection.write(response)
+		self.connection.writeStrings(response)
 		if [ self.request.command != "HEAD" ]; do
-			self.connection.write(:f, name)
+			self.connection.writeFile(name)
 		done
 	}
 	
@@ -254,7 +255,7 @@ record Response(request) {
 		if [ self.request.command != "HEAD" ]; do
 			response .= data
 		done
-		self.connection.write(response)
+		self.connection.writeStrings(response)
 	}
 	
 	function send403 {

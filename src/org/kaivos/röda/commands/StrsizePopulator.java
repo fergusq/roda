@@ -19,7 +19,7 @@ public final class StrsizePopulator {
 	private StrsizePopulator() {}
 
 	public static void populateStrsize(RödaScope S) {
-		S.setLocal("strsize", RödaNativeFunction.of("strsize", (typeargs, args, scope, in, out) -> {
+		S.setLocal("strsize", RödaNativeFunction.of("strsize", (typeargs, args, kwargs, scope, in, out) -> {
 			Charset chrset = StandardCharsets.UTF_8;
 			Consumer<RödaValue> convert = v -> {
 				checkString("strsize", v);

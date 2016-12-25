@@ -1,0 +1,53 @@
+record Optional<<T>> {
+	present : boolean
+	val : T
+	
+	function ifPresent(f) {
+		f(self.val) if [ self.present ]
+	}
+}
+
+function optionalOf<<T>>(t : T) {
+	optional := new Optional<<T>>
+	optional.val = t
+	optional.present = TRUE
+	return optional
+}
+
+function emptyOptional<<T>>() {
+	optional := new Optional<<T>>
+	optional.present = FALSE
+	return optional
+}
+
+record Tree<<T>>(left, right, val) {
+	left : Optional<< Tree<<T>> >> = left
+	right : Optional<< Tree<<T>> >> = right
+	val : T = val
+}
+
+function createTree<<T>>(left, right, val) {
+	return new Tree<<T>>(optionalOf<< Tree<<T>> >>(left), optionalOf<< Tree<<T>> >>(right), val)
+}
+
+function createLeaf<<T>>(val) {
+	return new Tree<<T>>(emptyOptional<< Tree<<T>> >>(), emptyOptional<< Tree<<T>> >>(), val)
+}
+
+function walk(t) {
+	t.left.ifPresent(walk)
+	push t.val
+	t.right.ifPresent(walk)
+}
+
+function same(t1, t2) {
+	return [walk(t1)] = [walk(t2)]
+}
+
+main {
+	nl := { |i|; createLeaf<<integer>>(i) }
+	nt := { |l, i, r|; createTree<<integer>>(l, r, i) }
+	t1 := nt(nt(nl(1), 2, nl(3)), 4, nl(5))
+	t2 := nt(nl(1), 2, nt(nl(3), 4, nl(5)))
+	print same(t1, t2)
+}

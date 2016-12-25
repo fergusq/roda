@@ -15,7 +15,7 @@ public class RödaBoolean extends RödaValue {
 	}
 
 	@Override public String str() {
-		return bool ? "true" : "false";
+		return bool ? "<true>" : "<false>";
 	}
 
 	@Override public boolean bool() {

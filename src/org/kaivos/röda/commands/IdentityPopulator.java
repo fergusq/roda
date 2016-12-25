@@ -10,7 +10,7 @@ public final class IdentityPopulator {
 	private IdentityPopulator() {}
 
 	public static void populateIdentity(RödaScope S) {
-		S.setLocal("identity", RödaNativeFunction.of("identity", (typeargs, args, scope, in, out) -> {
+		S.setLocal("identity", RödaNativeFunction.of("identity", (typeargs, args, kwargs, scope, in, out) -> {
 			in.forAll(out::push);
 		}, Collections.emptyList(), false));
 	}

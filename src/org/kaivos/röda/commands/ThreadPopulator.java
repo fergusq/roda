@@ -27,11 +27,16 @@ public final class ThreadPopulator {
 		Record threadRecord = new Record("Thread", Collections.emptyList(), Collections.emptyList(),
 				Arrays.asList(new Record.Field("start", new Datatype("function")),
 						new Record.Field("pull", new Datatype("function")),
+						new Record.Field("tryPull", new Datatype("function")),
+						new Record.Field("pullAll", new Datatype("function")),
+						new Record.Field("peek", new Datatype("function")),
+						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function"))),
 				false);
-		I.registerRecord(threadRecord);
+		I.preRegisterRecord(threadRecord);
+		I.postRegisterRecord(threadRecord);
 
-		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, scope, in, out) -> {
+		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, kwargs, scope, in, out) -> {
 			RödaValue function = args.get(0);
 
 			RödaScope newScope = !function.is(RödaValue.NFUNCTION) && function.localScope() != null
@@ -46,8 +51,9 @@ public final class ThreadPopulator {
 
 			Runnable task = () -> {
 				try {
-					I.exec("<Thread.start>", 0, function, Collections.emptyList(), Collections.emptyList(), newScope,
-							_in, _out);
+					I.exec("<Thread.start>", 0, function,
+							Collections.emptyList(), Collections.emptyList(), Collections.emptyMap(),
+							newScope, _in, _out);
 				} catch (RödaException e) {
 					System.err.println("[E] " + e.getMessage());
 					for (String step : e.getStack()) {
@@ -60,14 +66,20 @@ public final class ThreadPopulator {
 			};
 
 			RödaValue threadObject = RödaRecordInstance.of(threadRecord, Collections.emptyList(), I.records);
-			threadObject.setField("start", RödaNativeFunction.of("Thread.start", (ra, a, s, i, o) -> {
+			threadObject.setField("start", RödaNativeFunction.of("Thread.start", (ra, a, k, s, i, o) -> {
 				checkArgs("Thread.start", 0, a.size());
 				if (p.started)
 					error("Thread has already " + "been executed");
 				p.started = true;
 				Interpreter.executor.execute(task);
 			}, Collections.emptyList(), false));
-			threadObject.setField("pull", Builtins.genericPull("Thread.pull", _out));
+			threadObject.setField("pull", Builtins.genericPull("Thread.pull", _out, false, true));
+			threadObject.setField("tryPull", Builtins.genericTryPull("Thread.tryPull", _out, false));
+			threadObject.setField("pullAll", Builtins.genericPull("Thread.pullAll", _out, false, false));
+			
+			threadObject.setField("peek", Builtins.genericPull("Thread.peek", _out, true, true));
+			threadObject.setField("tryPeek", Builtins.genericTryPull("Thread.tryPeek", _out, true));
+			
 			threadObject.setField("push", Builtins.genericPush("Thread.push", _in));
 			out.push(threadObject);
 		}, Arrays.asList(new Parameter("runnable", false, FUNCTION)), false));

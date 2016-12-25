@@ -11,7 +11,7 @@ public final class CurrentTimePopulator {
 	private CurrentTimePopulator() {}
 
 	public static void populateTime(RödaScope S) {
-		S.setLocal("currentTime", RödaNativeFunction.of("currentTime", (typeargs, args, scope, in, out) -> {
+		S.setLocal("currentTime", RödaNativeFunction.of("currentTime", (typeargs, args, kwargs, scope, in, out) -> {
 			out.push(RödaInteger.of((int) System.currentTimeMillis()));
 		}, Arrays.asList(), false));
 	}

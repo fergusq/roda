@@ -180,6 +180,11 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testReflectFieldType() {
+		assertEquals("S", eval("record R{Miina:S}record S{}main{push reflect R.fields[0].type.name}"));
+	}
+
+	@Test
 	public void testReflectRecordAnnotation() {
 		assertEquals("Salli", eval("function @A{push\"Salli\"}"
 					   + "@A;record R{}main{push reflect R.annotations[0]}"));
@@ -206,6 +211,20 @@ public class RödaTest {
 		assertEquals("got abba,got tuuli,got joki",
 			     eval("give words...{for word in words;do push\"got \"..word;done}"
 				  + "main{give\"abba\",\"tuuli\",\"joki\"}"));
+	}
+
+	@Test
+	public void testKwargsFunction() {
+		assertEquals("abba,tuuli",
+			     eval("pushdef text=\"abba\"{push text}"
+				  + "main{pushdef;pushdef text=\"tuuli\"}"));
+	}
+
+	@Test
+	public void testVarargsKwargsFunction() {
+		assertEquals("hey abba,hey tuuli,hey joki,got pilvi",
+			     eval("give words...,text=\"got \"{for word in words;do push text..word;done}"
+				  + "main{give\"abba\",\"tuuli\",\"joki\",text=\"hey \";give\"pilvi\"}"));
 	}
 
 	@Test
@@ -376,6 +395,12 @@ public class RödaTest {
 				  + "push tyttö[0]..\" on kiireinen\" for tyttö in tytöt"
 				  + " if [ tyttö[1] = 1 ]}"));
 	}
+	
+	@Test
+	public void testSugarFor() {
+		assertEquals("got Maisa,got Anne",
+				eval("f x{push\"got \"..x;}main{push(\"Maisa\",\"Anne\")|f(_)}"));
+	}
 
 	@Test
 	public void testSuffixIf() {
@@ -519,11 +544,11 @@ public class RödaTest {
 
 	@Test
 	public void testMapContains() {
-		assertEquals("true",
+		assertEquals("<true>",
 			     eval("main{a:=new map;a[\"Reetta\"]=19;a[\"Vilma\"]=23;a[\"Susanna\"]=14;"
 				  + "push a[\"Vilma\"]?}"));
 		init();
-		assertEquals("false",
+		assertEquals("<false>",
 			     eval("main{a:=new map;a[\"Reetta\"]=19;a[\"Vilma\"]=23;a[\"Susanna\"]=14;"
 				  + "push a[\"Elina\"]?}"));
 	}
@@ -559,13 +584,25 @@ public class RödaTest {
 		eval("t{push\"Elina\",\"Lilja\"}main{push t()}");
 	}
 
+	// Sisäänrakennetut funktiot
+	
 	@Test
 	public void testSplit() {
 		assertEquals("[sanna, ja, teemu, jokela]",
-			     eval("main{push([splitAt(\"-\", \"sanna-ja-teemu-jokela\")])}"));
+			     eval("main{push([split(\"sanna-ja-teemu-jokela\", sep=\"-\")])}"));
 		init();
 		assertEquals("[sanna, ja, teemu, jokela]",
 			     eval("main{push([split(\"sanna ja teemu jokela\")])}"));
+	}
+	
+	@Test
+	public void testInterleave() {
+		assertEquals("1,4,7,2,5,8,3,6,9", eval("main{interleave([1,2,3],[4,5,6],[7,8,9])}"));
+	}
+	
+	@Test(expected=RödaException.class)
+	public void testInterleaveDifferentListSizes() {
+		eval("main{interleave([1,2,3],[4],[7,8,9,10])}");
 	}
 
 	// Nimettömät funktiot

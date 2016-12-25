@@ -8,6 +8,7 @@ import java.util.Arrays;
 
 import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.JSON;
+import org.kaivos.röda.JSON.JSONDouble;
 import org.kaivos.röda.JSON.JSONElement;
 import org.kaivos.röda.JSON.JSONInteger;
 import org.kaivos.röda.JSON.JSONList;
@@ -16,6 +17,7 @@ import org.kaivos.röda.JSON.JSONString;
 import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.type.RödaFloating;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaNativeFunction;
@@ -37,6 +39,9 @@ public final class JsonPopulator {
 			RödaValue value;
 			if (json instanceof JSONInteger) {
 				value = RödaInteger.of(((JSONInteger) json).getValue());
+			}
+			else if (json instanceof JSONDouble) {
+				value = RödaFloating.of(((JSONDouble) json).getValue());
 			}
 			else if (json instanceof JSONString) {
 				value = RödaString.of(((JSONString) json).getValue());
@@ -63,7 +68,7 @@ public final class JsonPopulator {
 	}
 
 	public static void populateJson(RödaScope S) {
-		S.setLocal("json", RödaNativeFunction.of("json", (typeargs, args, scope, in, out) -> {
+		S.setLocal("json", RödaNativeFunction.of("json", (typeargs, args, kwargs, scope, in, out) -> {
 					if (args.size() > 1) argumentOverflow("json", 1, args.size());
 					else if (args.size() == 1) {
 						RödaValue arg = args.get(0);

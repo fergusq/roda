@@ -1,0 +1,38 @@
+function toRödaObj(json_tree) {
+	if [ json_tree[0] = "LIST" ] do
+		return [toRödaObj(elem) for elem in json_tree[1]]
+	done
+	if [ json_tree[0] = "MAP" ] do
+		objmap := new map
+		for elem in json_tree[1] do
+			objmap[elem[0]] = toRödaObj(elem[1])
+		done
+		return objmap
+	done
+	if [ json_tree[0] = "STRING" or json_tree[0] = "NUMBER" ] do
+		return json_tree[1]
+	done
+	if [ json_tree[0] = "BOOLEAN" ] do
+		return TRUE if [ json_tree[1] = "true" ]
+		return FALSE
+	done
+	if [ json_tree[0] = "NULL" ] do
+		error("null is not supported")
+	done
+}
+
+function toRecord(class, json_obj) {
+	return [ toRecord(element, class) for element in json_obj ] if [ json_obj is list ]
+	instance := class.newInstance()
+	for field in class.fields do
+		for annotation in field.annotations do
+			if [ annotation is list and #annotation > 1 and annotation[0] = "JSON_FIELD" ] do
+				if [ not json_obj[field.name]? ] do
+					error("illegal json object, key " .. field.name .. " not found")
+				done
+				field.set(instance, annotation[1](json_obj[field.name]))
+			done
+		done
+	done
+	return instance
+}
