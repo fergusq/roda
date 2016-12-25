@@ -39,7 +39,6 @@ import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
 import org.kaivos.röda.type.RödaString;
-import org.kaivos.röda.type.RödaFlag;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaFloating;
 import org.kaivos.röda.type.RödaBoolean;
@@ -538,13 +537,6 @@ public class Interpreter {
 		}
 	}
 
-	public static void checkFlag(String function, RödaValue arg) {
-		if (!arg.is(FLAG)) {
-			error("illegal argument for '" + function
-					+ "': flag expected (got " + arg.typeString() + ")");
-		}
-	}
-
 	public static void checkNumber(String function, RödaValue arg) {
 		if (!arg.is(INTEGER)) {
 			error("illegal argument for '" + function
@@ -914,18 +906,8 @@ public class Interpreter {
 			switch (cmd.operator) {
 			case ":=": {
 				r = () -> {
-					if (args.size() > 0 && args.get(0).isFlag("-G")) {
-						args.remove(0);
-						if (e.type != Expression.Type.VARIABLE)
-							error("bad lvalue for ':=': " + e.asString());
-						if (args.size() > 1)
-							argumentOverflow(":=", 1, args.size());
-						G.setLocal(e.variable, args.get(0));
-					}
-					else {
-						if (args.size() > 1) argumentOverflow(":=", 1, args.size());
-						assignLocal.accept(args.get(0));
-					}
+					if (args.size() > 1) argumentOverflow(":=", 1, args.size());
+					assignLocal.accept(args.get(0));
 				};
 			} break;
 			case "=": {
@@ -1006,11 +988,7 @@ public class Interpreter {
 				r = () -> {
 					RödaValue rval = resolve.get();
 					checkString(".=", rval);
-					boolean quoteMode = false;
-					if (args.size() > 0 && args.get(0).isFlag("-q")) {
-						args.remove(0);
-						quoteMode = true;
-					}
+					boolean quoteMode = false; // TODO: päätä, pitääkö tämä toteuttaa myöhemmin
 					if (args.size() % 2 != 0) error("illegal arguments for '~=': even number required (got " + (args.size()-1) + ")");
 					String text = rval.str();
 					try {
@@ -1262,7 +1240,6 @@ public class Interpreter {
 			RödaStream in, RödaStream out,
 			boolean variablesAreReferences) {
 		if (exp.type == Expression.Type.STRING) return RödaString.of(exp.string);
-		if (exp.type == Expression.Type.FLAG) return RödaFlag.of(exp.string);
 		if (exp.type == Expression.Type.INTEGER) return RödaInteger.of(exp.integer);
 		if (exp.type == Expression.Type.FLOATING) return RödaFloating.of(exp.floating);
 		if (exp.type == Expression.Type.BLOCK) return RödaFunction.of(exp.block, scope);

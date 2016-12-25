@@ -18,7 +18,6 @@ public abstract class RödaValue {
 	public static final Datatype INTEGER = new Datatype("integer");
 	public static final Datatype FLOATING = new Datatype("floating");
 	public static final Datatype BOOLEAN = new Datatype("boolean");
-	public static final Datatype FLAG = new Datatype("flag");
 	public static final Datatype LIST = new Datatype("list");
 	public static final Datatype MAP = new Datatype("map");
 	public static final Datatype FUNCTION = new Datatype("function");
@@ -220,10 +219,6 @@ public abstract class RödaValue {
 	/** Viittauksien vertaileminen kielletty **/
 	public boolean strongEq(RödaValue value) {
 	        return false;
-	}
-	
-	public final boolean isFlag(String value) {
-		return is(FLAG) && str().equals(value);
 	}
 
 	public final String typeString() {

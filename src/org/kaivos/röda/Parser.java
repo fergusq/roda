@@ -931,7 +931,6 @@ public class Parser {
 		enum Type {
 			VARIABLE,
 			STRING,
-			FLAG,
 			INTEGER,
 			FLOATING,
 			STATEMENT_LIST,
@@ -1003,8 +1002,6 @@ public class Parser {
 				return variable;
 			case STRING:
 				return "\"" + string.replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
-			case FLAG:
-				return string;
 			case INTEGER:
 				return String.valueOf(integer);
 			case SLICE: {
@@ -1064,15 +1061,6 @@ public class Parser {
 	public static Expression expressionString(String file, int line, String t) {
 		Expression e = new Expression();
 		e.type = Expression.Type.STRING;
-		e.file = file;
-		e.line = line;
-		e.string = t;
-		return e;
-	}
-
-	private static Expression expressionFlag(String file, int line, String t) {
-		Expression e = new Expression();
-		e.type = Expression.Type.FLAG;
 		e.file = file;
 		e.line = line;
 		e.string = t;
@@ -1496,10 +1484,6 @@ public class Parser {
 		else if (isNext(tl, "if", "while", "unless", "until", "for", "try")) {
 			Statement s = parseStatement(tl);
 			ans = expressionStatementSingle(file, line, s);
-		}
-		else if (acceptIfNext(tl, ":")) {
-			String flag = nextString(tl);
-			ans = expressionFlag(file, line, "-"+flag);
 		}
 		else {
 			String name = identifier(tl);
