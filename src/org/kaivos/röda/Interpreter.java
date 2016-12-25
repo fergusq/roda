@@ -312,7 +312,8 @@ public class Interpreter {
 		}
 
 		private RödaException(Throwable[] causes, Deque<String> stack, RödaValue errorObject) {
-			super("multiple threads crashed", causes[0]);
+			super(causes.length == 1 ? causes[0].getClass().getName() + ": " + causes[0].getMessage()
+					: "multiple threads crashed", causes[0]);
 			this.causes = causes;
 			this.stack = stack;
 			this.errorObject = errorObject;
