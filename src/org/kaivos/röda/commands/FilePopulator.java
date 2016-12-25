@@ -1,5 +1,6 @@
 package org.kaivos.röda.commands;
 
+import static org.kaivos.röda.Interpreter.argumentUnderflow;
 import static org.kaivos.röda.Interpreter.checkString;
 import static org.kaivos.röda.Interpreter.error;
 
@@ -33,12 +34,8 @@ public final class FilePopulator {
 	
 	private static void addQueryType(Interpreter I, String name, BiConsumer<File, RödaStream> consumer) {
 		I.G.setLocal(name, RödaNativeFunction.of(name, (typeargs, args, kwargs, scope, in, out) -> {
-			if (args.size() < 1) {
-				while (true) {
-					RödaValue value = in.pull();
-					if (value == null) break;
-					processQuery(I, name, out, consumer, value);
-				}
+			if (args.isEmpty()) {
+				argumentUnderflow(name, 1, 0);
 			}
 			else {
 				for (int i = 0; i < args.size(); i++) {
