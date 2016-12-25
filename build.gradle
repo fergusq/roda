@@ -2,7 +2,7 @@ apply plugin: 'java'
 
 targetCompatibility = 1.8
 sourceCompatibility = 1.8
-version = '0.11-alpha'
+version = '0.12-alpha'
 
 repositories {
     mavenCentral()
