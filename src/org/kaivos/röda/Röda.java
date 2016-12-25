@@ -75,17 +75,21 @@ public class Röda {
 			case "-D":
 				enableDebug = false;
 				continue;
+			case "-v":
+			case "--version":
+				System.out.println("Röda " + RÖDA_VERSION_STRING);
+				return;
 			case "-h":
 			case "--help": {
 				System.out.println("Usage: röda [options] file | röda [options] -i | röda [options]");
 				System.out.println("Available options:");
-				System.out.println("-p prompt    Change the prompt in interactive mode");
-				System.out.println("-P           Disable prompt in interactive mode");
-				System.out.println("-i           Enable interactive mode");
-				System.out.println("-I           Disable interactive mode");
-				System.out.println("-D           Disable stack tracing (may speed up execution a little)");
-				System.out.println("-v --version Show the version number of the interpreter");
-				System.out.println("-h, --help   Show this help text");
+				System.out.println("-p prompt     Change the prompt in interactive mode");
+				System.out.println("-P            Disable prompt in interactive mode");
+				System.out.println("-i            Enable interactive mode");
+				System.out.println("-I            Disable interactive mode");
+				System.out.println("-D            Disable stack tracing (may speed up execution a little)");
+				System.out.println("-v, --version Show the version number of the interpreter");
+				System.out.println("-h, --help    Show this help text");
 				return;
 			}
 			default:
