@@ -61,7 +61,7 @@ record HttpServer(port_value) {
 						i := 0
 						while [ i < #val ] do
 							if [ val[i:i+1] = "%" and i < #val-2 ]; do
-								code += parseInteger(:r, 16, val[i+1:i+3])
+								code += parseInteger(val[i+1:i+3], radix=16)
 								i += 3
 							else
 								code .= stringToBytes(val[i:i+1])
