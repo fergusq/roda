@@ -22,7 +22,7 @@ record TelegramBot {
 		base_url := "https://api.telegram.org/bot"..self.token
 		update_url = base_url.."/getUpdates?offset="
 		
-		code := [wcat(update_url..self.offset)]&" "
+		code := [loadResourceLines(update_url..self.offset)]&" "
 		tree := json(code)
 		json_search tree, ["result", { |updates|
 			for update in updates[1]; do

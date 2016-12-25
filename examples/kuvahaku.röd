@@ -8,7 +8,7 @@ hae_kuva sana, tiedosto {
 	etsitty_url := "http://t[0-9]\\.gstatic.com/images\\?q=tbn:[a-zA-Z0-9_-]*"
 	
 	/* haetaan lista kuvista */
-	kuvat := [wcat(:U, user_agent, hakukone) | search(etsitty_url)]
+	kuvat := [loadResourceLines(hakukone, ua=user_agent) | search(etsitty_url)]
 	
 	/* jos kuvia löytyi... */
 	if [ #kuvat > 0 ]; do
@@ -16,6 +16,6 @@ hae_kuva sana, tiedosto {
 		kuva := kuvat[0]
 		
 		/* ladataan kuva */
-		wcat :O, tiedosto, kuva	
+		saveResource(kuva, tiedosto)	
 	done
 }
