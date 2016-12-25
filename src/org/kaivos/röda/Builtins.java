@@ -17,6 +17,7 @@ import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.commands.AssignGlobalPopulator;
 import org.kaivos.röda.commands.BtosAndStobPopulator;
 import org.kaivos.röda.commands.CdAndPwdPopulator;
+import org.kaivos.röda.commands.ChrAndOrdPopulator;
 import org.kaivos.röda.commands.CurrentTimePopulator;
 import org.kaivos.röda.commands.ErrorPopulator;
 import org.kaivos.röda.commands.ErrprintPopulator;
@@ -104,6 +105,7 @@ public class Builtins {
 		ParseNumPopulator.populateParseNum(S);
 		BtosAndStobPopulator.populateBtosAndStob(S);
 		StrsizePopulator.populateStrsize(S);
+		ChrAndOrdPopulator.populateChrAndOrd(S);
 
 		/* Konstruktorit */
 
