@@ -741,8 +741,12 @@ public class Parser {
 			boolean isWhile = commandName.equals("while") || commandName.equals("until");
 			boolean isUnless = commandName.equals("unless") || commandName.equals("until");
 			Statement cond = parseStatement(tl);
+			List<Statement> elseBody = null;
+			if (tl.acceptIfNext("else")) {
+				elseBody = Arrays.asList(new Statement(Arrays.asList(parseCommand(tl))));
+			}
 			return _makeIfOrWhileCommand(cmd.file, cmd.line, isWhile, isUnless, cond,
-						     Arrays.asList(new Statement(Arrays.asList(cmd))), null);
+						     Arrays.asList(new Statement(Arrays.asList(cmd))), elseBody);
 		}
 		else if (tl.acceptIfNext("for")) {
 			List<String> variables = new ArrayList<>();
