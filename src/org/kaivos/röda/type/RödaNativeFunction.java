@@ -17,6 +17,7 @@ public class RödaNativeFunction extends RödaValue {
 		public NativeFunctionBody body;
 		public boolean isVarargs;
 		public List<Parameter> parameters, kwparameters;
+		public boolean disableParallelism;
 	}
 	
 	public static interface NativeFunctionBody {
@@ -57,11 +58,12 @@ public class RödaNativeFunction extends RödaValue {
 	
 	public static RödaNativeFunction of(String name, NativeFunctionBody body,
 			List<Parameter> parameters, boolean isVarargs) {
-		return of(name, body, parameters, isVarargs, Collections.emptyList());
+		return of(name, body, parameters, isVarargs, Collections.emptyList(), false);
 	}
 
 	public static RödaNativeFunction of(String name, NativeFunctionBody body,
-			List<Parameter> parameters, boolean isVarargs, List<Parameter> kwparameters) {
+			List<Parameter> parameters, boolean isVarargs, List<Parameter> kwparameters,
+			boolean disableParallelism) {
 		
 		for (Parameter p : parameters)
 			if (p.defaultValue != null)
@@ -77,6 +79,7 @@ public class RödaNativeFunction extends RödaValue {
 		function.isVarargs = isVarargs;
 		function.parameters = parameters;
 		function.kwparameters = kwparameters;
+		function.disableParallelism = disableParallelism;
 		return of(function);
 	}
 }

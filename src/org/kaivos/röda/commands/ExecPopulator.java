@@ -109,7 +109,9 @@ public final class ExecPopulator {
 			}
 		}, Arrays.asList(new Parameter("command", false), new Parameter("args", false)), true,
 				Arrays.asList(new Parameter("env", false,
-						Parser.expressionNew("<exec populator>", -1, new Datatype("map"), Collections.emptyList())))));
+						Parser.expressionNew("<exec populator>", -1, new Datatype("map"), Collections.emptyList()))),
+				false
+				));
 	}
 
 	public static void populateExec(Interpreter I, RödaScope S) {

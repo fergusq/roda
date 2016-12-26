@@ -58,7 +58,8 @@ public final class SplitPopulator {
 				true,
 				Arrays.asList(
 						new Parameter("sep", false, Parser.expressionString("<split populator>", 0, " "))
-						)));
+						),
+				false));
 	}
 
 	public static void populateSplit(RödaScope S) {

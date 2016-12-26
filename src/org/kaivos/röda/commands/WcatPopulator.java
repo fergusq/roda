@@ -56,7 +56,8 @@ public final class WcatPopulator {
 				? Arrays.asList(new Parameter("url", false, STRING))
 				: Arrays.asList(new Parameter("url", false, STRING), new Parameter("filename", false, STRING)), true,
 				Arrays.asList(new Parameter("ua", false,
-						Parser.expressionString("<wcat populator>", 0, "Roeda/"+Röda.RÖDA_VERSION_STRING)))));
+						Parser.expressionString("<wcat populator>", 0, "Roeda/"+Röda.RÖDA_VERSION_STRING))),
+				false));
 	}
 
 	public static void populateWcat(RödaScope S) {

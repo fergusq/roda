@@ -224,7 +224,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		public synchronized void put(RödaValue value) {
 			// System.err.println("<PUSH " + value + " to " + this + ">");
 			queue.add(value);
-			notifyAll();
+			notify();
 		}
 
 		@Override
@@ -236,7 +236,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 		public synchronized void finish() {
 			// System.err.println("<FINISH " + this + ">");
 			finished = true;
-			notifyAll();
+			notify();
 		}
 
 		@Override

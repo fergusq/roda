@@ -41,6 +41,7 @@ public final class ParseNumPopulator {
 				}
 			}
 		}, Arrays.asList(new Parameter("strings", false)), true,
-				Arrays.asList(new Parameter("radix", false, Parser.expressionInt("<parseInteger populator>", 0, 10)))));
+				Arrays.asList(new Parameter("radix", false, Parser.expressionInt("<parseInteger populator>", 0, 10))),
+				false));
 	}
 }

@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import java.util.Optional;
-
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -750,31 +750,59 @@ public class Interpreter {
 
 	private void evalStatement(Statement statement, RödaScope scope,
 			RödaStream in, RödaStream out, boolean redirected) {
+		CommandRunnable[] consumers = new CommandRunnable[statement.commands.size()];
 		RödaStream _in = in;
-		int i = 0;
-		Runnable[] runnables = new Runnable[statement.commands.size()];
+		int start = 0, end = 0;
 		for (Command command : statement.commands) {
-			boolean last = i == statement.commands.size()-1;
+			CommandEvaluation ce = evalCommand(command, scope, in, out);
+			consumers[end] = ce.runnable;
+			if (ce.parallel) {
+				end++;
+			} else {
+				if (start != end) {
+					RödaStream _out = RödaStream.makeStream();
+					evalParallelCommands(consumers, start, end, scope, _in, _out, true);
+					_in = _out;
+				}
+				boolean last = end == statement.commands.size()-1;
+				RödaStream _out = last ? out : RödaStream.makeStream();
+				ce.runnable.accept(_in, _out);
+				if (!last || redirected) _out.finish();
+				start = ++end;
+				_in = _out;
+			}
+		}
+		if (start != end) {
+			RödaStream _out = RödaStream.makeStream();
+			evalParallelCommands(consumers, start, end, scope, _in, out, redirected);
+			_in = _out;
+		}
+	}
+	
+	private void evalParallelCommands(CommandRunnable[] commandRunnables, int start, int end, RödaScope scope,
+			RödaStream in, RödaStream out, boolean redirected) {
+		RödaStream __in = in;
+		Runnable[] runnables = new Runnable[end-start];
+		for (int i = start; i < end; i++) {
+			boolean last = i == end-1;
 			RödaStream _out = last ? out : RödaStream.makeStream();
-			Runnable tr = evalCommand(command, scope,
-					in, out,
-					_in, _out);
-			runnables[i] = () -> {
+			RödaStream _in = __in;
+			CommandRunnable r = commandRunnables[i];
+			runnables[i-start] = () -> {
 				try {
-					tr.run();
+					r.accept(_in, _out);
 				} finally {
 					// sulje virta jos se on putki tai muulla tavalla uudelleenohjaus
 					if (!last || redirected)
 						_out.finish();
 				}
 			};
-			_in = _out;
-			i++;
+			__in = _out;
 		}
 		if (runnables.length == 1) runnables[0].run();
 		else {
 			Future<?>[] futures = new Future<?>[runnables.length];
-			i = 0;
+			int i = 0;
 			for (Runnable r : runnables) {
 				futures[i++] = executor.submit(r);
 			}
@@ -806,6 +834,17 @@ public class Interpreter {
 					return createRödaException(e.getCause());
 				}).toArray(n -> new RödaException[n]));
 			}
+		}
+	}
+	
+	private interface CommandRunnable extends BiConsumer<RödaStream, RödaStream> {}
+	
+	private static class CommandEvaluation {
+		private CommandRunnable runnable;
+		private boolean parallel;
+		private CommandEvaluation(CommandRunnable runnable, boolean parallel) {
+			this.runnable = runnable;
+			this.parallel = parallel;
 		}
 	}
 
@@ -847,20 +886,24 @@ public class Interpreter {
 		return map;
 	}
 
-	public Runnable evalCommand(Command cmd,
+	public CommandEvaluation evalCommand(Command cmd,
 			RödaScope scope,
-			RödaStream in, RödaStream out,
-			RödaStream _in, RödaStream _out) {
+			RödaStream in, RödaStream out) {
 		if (cmd.type == Command.Type.NORMAL) {
 			RödaValue function = evalExpression(cmd.name, scope, in, out);
 			List<Datatype> typeargs = cmd.typearguments.stream()
 					.map(scope::substitute).collect(toList());
 			List<RödaValue> args = flattenArguments(cmd.arguments.arguments, scope, in, out, false);
 			Map<String, RödaValue> kwargs = kwargsToMap(cmd.arguments.kwarguments, scope, in, out, false);
-			Runnable r = () -> {
+			CommandRunnable r = (_in, _out) -> {
 				exec(cmd.file, cmd.line, function, typeargs, args, kwargs, scope, _in, _out);
 			};
-			return r;
+			boolean parallel = true;
+			if (function.is(NFUNCTION) && function.nfunction().disableParallelism) parallel = false;
+			else if (function.is(LIST)) parallel = false;
+			else if (cmd.name != null && cmd.name.type == Expression.Type.BLOCK && cmd.name.block.body.isEmpty())
+				parallel = false;
+			return new CommandEvaluation(r, parallel);
 		}
 
 		if (cmd.type == Command.Type.VARIABLE) {
@@ -902,36 +945,36 @@ public class Interpreter {
 				assignLocal = assign;
 			}
 			Supplier<RödaValue> resolve = () -> evalExpression(e, scope, in, out).impliciteResolve();
-			Runnable r;
+			CommandRunnable r;
 			switch (cmd.operator) {
 			case ":=": {
-				r = () -> {
+				r = (_in, _out) -> {
 					if (args.size() > 1) argumentOverflow(":=", 1, args.size());
 					assignLocal.accept(args.get(0));
 				};
 			} break;
 			case "=": {
-				r = () -> {
+				r = (_in, _out) -> {
 					if (args.size() > 1) argumentOverflow("=", 1, args.size());
 					assign.accept(args.get(0));
 				};
 			} break;
 			case "++": {
-				r = () -> {
+				r = (_in, _out) -> {
 					RödaValue v = resolve.get();
 					checkNumber("++", v);
 					assign.accept(RödaInteger.of(v.integer()+1));
 				};
 			} break;
 			case "--": {
-				r = () -> {
+				r = (_in, _out) -> {
 					RödaValue v = resolve.get();
 					checkNumber("--", v);
 					assign.accept(RödaInteger.of(v.integer()-1));
 				};
 			} break;
 			case "+=": {
-				r = () -> {
+				r = (_in, _out) -> {
 					RödaValue v = resolve.get();
 					checkListOrNumber("+=", v);
 					if (v.is(LIST)) {
@@ -944,7 +987,7 @@ public class Interpreter {
 				};
 			} break;
 			case "-=": {
-				r = () -> {
+				r = (_in, _out) -> {
 					RödaValue v = resolve.get();
 					checkNumber("-=", v);
 					checkNumber("-=", args.get(0));
@@ -952,7 +995,7 @@ public class Interpreter {
 				};
 			} break;
 			case "*=": {
-				r = () -> {
+				r = (_in, _out) -> {
 					RödaValue v = resolve.get();
 					checkNumber("*=", v);
 					checkNumber("*=", args.get(0));
@@ -960,7 +1003,7 @@ public class Interpreter {
 				};
 			} break;
 			case "/=": {
-				r = () -> {
+				r = (_in, _out) -> {
 					RödaValue v = resolve.get();
 					checkNumber("/=", v);
 					checkNumber("/=", args.get(0));
@@ -968,7 +1011,7 @@ public class Interpreter {
 				};
 			} break;
 			case ".=": {
-				r = () -> {
+				r = (_in, _out) -> {
 					RödaValue v = resolve.get();
 					checkListOrString(".=", v);
 					if (v.is(LIST)) {
@@ -985,7 +1028,7 @@ public class Interpreter {
 				};
 			} break;
 			case "~=": {
-				r = () -> {
+				r = (_in, _out) -> {
 					RödaValue rval = resolve.get();
 					checkString(".=", rval);
 					boolean quoteMode = false; // TODO: päätä, pitääkö tämä toteuttaa myöhemmin
@@ -1010,7 +1053,7 @@ public class Interpreter {
 				};
 			} break;
 			case "?": {
-				r = () -> {
+				r = (_in, _out) -> {
 					if (e.type != Expression.Type.VARIABLE)
 						error("bad lvalue for '?': " + e.asString());
 					_out.push(RödaBoolean.of(scope.resolve(e.variable) != null));
@@ -1020,7 +1063,7 @@ public class Interpreter {
 				error("unknown operator " + cmd.operator);
 				r = null;
 			}
-			Runnable finalR = () -> {
+			CommandRunnable finalR = (_in, _out) -> {
 				if (enableDebug) {
 					callStack.get().push("variable command " + e.asString() + " " + cmd.operator + " "
 						+ args.stream()
@@ -1029,7 +1072,7 @@ public class Interpreter {
 						+ "\n\tat " + cmd.file + ":" + cmd.line);
 				}
 				try {
-					r.run();
+					r.accept(_in, _out);
 				}
 				catch (RödaException ex) { throw ex; }
 				catch (Throwable ex) { error(ex); }
@@ -1037,14 +1080,14 @@ public class Interpreter {
 					if (enableDebug) callStack.get().pop();
 				}
 			};
-			return finalR;
+			return new CommandEvaluation(finalR, false);
 		}
 
 		if (cmd.type == Command.Type.WHILE || cmd.type == Command.Type.IF) {
 			boolean isWhile = cmd.type == Command.Type.WHILE;
 			boolean neg = cmd.negation;
 			String commandName = isWhile?(neg?"until":"while"):(neg?"unless":"if");
-			Runnable r = () -> {
+			CommandRunnable r = (_in, _out) -> {
 				boolean goToElse = true;
 				do {
 					RödaScope newScope = new RödaScope(scope);
@@ -1066,16 +1109,16 @@ public class Interpreter {
 					}
 				}
 			};
-			return r;
+			return new CommandEvaluation(r, true);
 		}
 
 		if (cmd.type == Command.Type.FOR) {
-			Runnable r;
+			CommandRunnable r;
 			if (cmd.list != null) {
 				if (cmd.variables.size() != 1) error("invalid for statement: there must be only 1 variable when iterating a list");
 				RödaValue list = evalExpression(cmd.list, scope, in, out).impliciteResolve();
 				checkList("for", list);
-				r = () -> {
+				r = (_in, _out) -> {
 					for (RödaValue val : list.list()) {
 						RödaScope newScope = new RödaScope(scope);
 						newScope.setLocal(cmd.variables.get(0), val);
@@ -1091,7 +1134,7 @@ public class Interpreter {
 					}
 				};
 			} else {
-				r = () -> {
+				r = (_in, _out) -> {
 					String firstVar = cmd.variables.get(0);
 					List<String> otherVars = cmd.variables.subList(1, cmd.variables.size());
 					while (true) {
@@ -1126,11 +1169,11 @@ public class Interpreter {
 					}
 				};
 			}
-			return r;
+			return new CommandEvaluation(r, true);
 		}
 
 		if (cmd.type == Command.Type.TRY_DO) {
-			Runnable r = () -> {
+			CommandRunnable r = (_in, _out) -> {
 				try {
 					RödaScope newScope = new RödaScope(scope);
 					for (Statement s : cmd.body) {
@@ -1156,46 +1199,46 @@ public class Interpreter {
 					}
 				}
 			};
-			return r;
+			return new CommandEvaluation(r, true);
 		}
 
 		if (cmd.type == Command.Type.TRY) {
-			Runnable tr = evalCommand(cmd.cmd, scope, in, out, _in, _out);
-			Runnable r = () -> {
+			CommandEvaluation tr = evalCommand(cmd.cmd, scope, in, out);
+			CommandRunnable r = (_in, _out) -> {
 				try {
-					tr.run();
+					tr.runnable.accept(_in, _out);
 				} catch (ReturnException e) {
 					throw e;
 				} catch (BreakOrContinueException e) {
 					throw e;
 				} catch (Exception e) {} // virheet ohitetaan TODO virheenkäsittely
 			};
-			return r;
+			return new CommandEvaluation(r, true);
 		}
 
 		if (cmd.type == Command.Type.RETURN) {
 			if (!cmd.arguments.kwarguments.isEmpty())
 				error("all arguments of return must be non-kw");
 			List<RödaValue> args = flattenArguments(cmd.arguments.arguments, scope, in, out, true);
-			Runnable r = () -> {
+			CommandRunnable r = (_in, _out) -> {
 				for (RödaValue arg : args) out.push(arg);
 				throw RETURN_EXCEPTION;
 			};
-			return r;
+			return new CommandEvaluation(r, false);
 		}
 
 		if (cmd.type == Command.Type.BREAK
 				|| cmd.type == Command.Type.CONTINUE) {
-			Runnable r = () -> {
+			CommandRunnable r = (_in, _out) -> {
 				throw cmd.type == Command.Type.BREAK ? BREAK_EXCEPTION : CONTINUE_EXCEPTION;
 			};
-			return r;
+			return new CommandEvaluation(r, false);
 		}
 
 		if (cmd.type == Command.Type.EXPRESSION) {
-			return () -> {
+			return new CommandEvaluation((_in, _out) -> {
 				_out.push(evalExpression(cmd.name, scope, _in, _out));
-			};
+			}, false);
 		}
 
 		error("unknown command");

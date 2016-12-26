@@ -5,6 +5,7 @@ import static org.kaivos.röda.Interpreter.checkReference;
 import static org.kaivos.röda.Interpreter.error;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.function.Function;
 
 import org.kaivos.röda.Interpreter.RödaScope;
@@ -39,7 +40,7 @@ public final class PushAndPullPopulator {
 				else if (pulled == null) error("empty stream");
 				value.assignLocal(pulled);
 			}
-		}, Arrays.asList(new Parameter("variables", true)), true));
+		}, Arrays.asList(new Parameter("variables", true)), true, Collections.emptyList(), true));
 	}
 	
 	public static void populatePushAndPull(RödaScope S) {
@@ -49,7 +50,7 @@ public final class PushAndPullPopulator {
 			for (RödaValue value : args) {
 				out.push(value);
 			}
-		}, Arrays.asList(new Parameter("values", false)), true));
+		}, Arrays.asList(new Parameter("values", false)), true, Collections.emptyList(), true));
 	
 		addPullingFunction(S, "pull", false, RödaStream::pull);
 		addPullingFunction(S, "tryPull", true, RödaStream::pull);

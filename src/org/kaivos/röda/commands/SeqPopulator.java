@@ -32,6 +32,7 @@ public final class SeqPopulator {
 				error("illegal use of seq: step must be non-zero");
 			}
 		}, Arrays.asList(new Parameter("from", false, INTEGER), new Parameter("to", false, INTEGER)), false,
-				Arrays.asList(new Parameter("step", false, expressionInt("<seq populator>", 0, 1)))));
+				Arrays.asList(new Parameter("step", false, expressionInt("<seq populator>", 0, 1))),
+				false));
 	}
 }
