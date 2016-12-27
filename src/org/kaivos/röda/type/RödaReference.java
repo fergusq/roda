@@ -2,6 +2,7 @@ package org.kaivos.röda.type;
 
 import org.kaivos.röda.RödaValue;
 import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.unknownName;
 import static org.kaivos.röda.Interpreter.RödaScope;
 
 public class RödaReference extends RödaValue {
@@ -29,7 +30,7 @@ public class RödaReference extends RödaValue {
 
 	@Override public RödaValue resolve(boolean implicite) {
 		RödaValue t = scope.resolve(target);
-		if (t == null) error("variable not found (via " + (implicite ? "implicite" : "explicite")
+		if (t == null) unknownName("variable not found (via " + (implicite ? "implicite" : "explicite")
 				     + " reference): " + target);
 		return t;
 	}

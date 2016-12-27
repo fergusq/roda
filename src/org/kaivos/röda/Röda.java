@@ -35,7 +35,7 @@ public class Röda {
 	public static final String RÖDA_VERSION_STRING = "0.11-alpha";
 	
 	private static void printRödaException(Interpreter.RödaException e) {
-		System.err.println("[E] " + e.getMessage());
+		System.err.println("[" + e.getErrorObject().basicIdentity() + "] " + e.getMessage());
 		for (String step : e.getStack()) {
 			System.err.println(step);
 		}

@@ -2,7 +2,7 @@ package org.kaivos.röda.commands;
 
 import java.util.Arrays;
 
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.illegalArguments;
 import static org.kaivos.röda.RödaValue.LIST;
 
 import org.kaivos.röda.Parser.Parameter;
@@ -20,7 +20,7 @@ public final class InterleavePopulator {
 			
 			for (RödaValue list : args) {
 				if (list.list().size() != length)
-					error("illegal use of interleave: all lists must have the same size");
+					illegalArguments("illegal use of interleave: all lists must have the same size");
 			}
 			
 			for (int i = 0; i < length; i++) {

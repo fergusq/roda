@@ -1,6 +1,6 @@
 package org.kaivos.röda.commands;
 
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.typeMismatch;
 
 import java.util.Arrays;
 
@@ -18,7 +18,7 @@ public final class NamePopulator {
 		S.setLocal("name", RödaNativeFunction.of("name", (typeargs, args, kwargs, scope, in, out) -> {
 			for (RödaValue value : args) {
 				if (!value.is(RödaValue.REFERENCE))
-					error("invalid argument for undefine: " + "only references accepted");
+					typeMismatch("invalid argument for undefine: only references accepted");
 
 				out.push(RödaString.of(value.target()));
 			}

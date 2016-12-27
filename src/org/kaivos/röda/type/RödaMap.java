@@ -1,14 +1,15 @@
 package org.kaivos.röda.type;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Collections;
+import static org.kaivos.röda.Interpreter.outOfBounds;
+import static org.kaivos.röda.Interpreter.typeMismatch;
+
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
-
-import static org.kaivos.röda.Interpreter.error;
 
 public class RödaMap extends RödaValue {
 
@@ -30,7 +31,7 @@ public class RödaMap extends RödaValue {
 		if (type != null) {
 			for (RödaValue value : map.values()) {
 				if (!value.is(type)) {
-					error("can't make a " + typeString()
+					typeMismatch("can't make a " + typeString()
 					      + " that contains a " + value.typeString());
 				}
 			}
@@ -54,14 +55,14 @@ public class RödaMap extends RödaValue {
 
 	@Override public RödaValue get(RödaValue indexVal) {
 		String index = indexVal.str();
-		if (!map.containsKey(index)) error("key does not exist: " + index);
+		if (!map.containsKey(index)) outOfBounds("key does not exist: " + index);
 		return map.get(index);
 	}
 
 	@Override public void set(RödaValue indexVal, RödaValue value) {
 		String index = indexVal.str();
 		if (type != null && !value.is(type))
-			error("cannot put a " + value.typeString() + " to a " + typeString());
+			typeMismatch("cannot put " + value.typeString() + " to " + typeString());
 		map.put(index, value);
 	}
 

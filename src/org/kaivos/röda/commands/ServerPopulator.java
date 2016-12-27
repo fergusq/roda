@@ -2,6 +2,7 @@ package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.checkArgs;
 import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.illegalArguments;
 import static org.kaivos.röda.RödaValue.INTEGER;
 
 import java.io.IOException;
@@ -53,7 +54,7 @@ public final class ServerPopulator {
 		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, kwargs, scope, in, out) -> {
 			long port = args.get(0).integer();
 			if (port > Integer.MAX_VALUE)
-				error("can't open port greater than " + Integer.MAX_VALUE);
+				illegalArguments("can't open port greater than " + Integer.MAX_VALUE);
 
 			try {
 

@@ -1,7 +1,8 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.argumentOverflow;
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.emptyStream;
+import static org.kaivos.röda.Interpreter.outOfBounds;
 import static org.kaivos.röda.RödaValue.INTEGER;
 
 import java.util.ArrayList;
@@ -25,14 +26,14 @@ public final class HeadAndTailPopulator {
 			if (args.size() == 0) {
 				RödaValue input = in.pull();
 				if (input == null)
-					error("head: input stream is closed");
+					emptyStream("head: input stream is closed");
 				out.push(input);
 			} else {
 				long num = args.get(0).integer();
 				for (int i = 0; i < num; i++) {
 					RödaValue input = in.pull();
 					if (input == null)
-						error("head: input stream is closed");
+						emptyStream("head: input stream is closed");
 					out.push(input);
 				}
 			}
@@ -49,7 +50,7 @@ public final class HeadAndTailPopulator {
 			else {
 				numl = args.get(0).integer();
 				if (numl > Integer.MAX_VALUE)
-					error("tail: too large number: " + numl);
+					outOfBounds("tail: too large number: " + numl);
 			}
 
 			int num = (int) numl;
@@ -59,7 +60,7 @@ public final class HeadAndTailPopulator {
 				values.add(value);
 			}
 			if (values.size() < num)
-				error("tail: input stream is closed");
+				emptyStream("tail: input stream is closed");
 
 			for (int i = values.size() - num; i < values.size(); i++) {
 				out.push(values.get(i));

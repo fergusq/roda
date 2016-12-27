@@ -1,6 +1,7 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.illegalArguments;
 import static org.kaivos.röda.RödaValue.STRING;
 
 import java.util.Arrays;
@@ -19,7 +20,7 @@ public final class ReplacePopulator {
 	public static void populateReplace(RödaScope S) {
 		S.setLocal("replace", RödaNativeFunction.of("replace", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() % 2 != 0)
-				error("invalid arguments for replace: even number required (got " + args.size() + ")");
+				illegalArguments("invalid arguments for replace: even number required (got " + args.size() + ")");
 			try {
 				while (true) {
 					RödaValue input = in.pull();

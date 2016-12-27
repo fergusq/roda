@@ -1,9 +1,10 @@
 package org.kaivos.röda.type;
 
-import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.outOfBounds;
+import static org.kaivos.röda.Interpreter.typeMismatch;
 
 import org.kaivos.röda.Parser.Expression.CType;
+import org.kaivos.röda.RödaValue;
 
 public class RödaString extends RödaValue {
 	private String text;
@@ -25,7 +26,7 @@ public class RödaString extends RödaValue {
 		try {
 			return Long.parseLong(text);
 		} catch (NumberFormatException e) {
-			error("can't convert '" + text + "' to a number");
+			typeMismatch("can't convert '" + text + "' to a number");
 			return -1;
 		}
 	}
@@ -41,14 +42,14 @@ public class RödaString extends RödaValue {
 		if (end < 0) end = text.length()+end;
 		if (end == 0 && start > 0) end = text.length();
 		if (start > Integer.MAX_VALUE || end > Integer.MAX_VALUE)
-			error("string index out of bounds: too large number: " + (start > end ? start : end));
+			outOfBounds("string index out of bounds: too large number: " + (start > end ? start : end));
 		return of(text.substring((int) start, (int) end));
 	}
 	
 	@Override
 	public RödaValue callOperator(CType operator, RödaValue value) {
 		if (operator == CType.MUL ? !value.is(INTEGER) : !value.is(STRING))
-			error("can't " + operator.name() + " a " + typeString() + " and a " + value.typeString());
+			typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
 		switch (operator) {
 		case MUL:
 			String a = "";

@@ -2,7 +2,7 @@ package org.kaivos.röda.type;
 
 import org.kaivos.röda.Parser;
 import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.typeMismatch;
 
 public class RödaInteger extends RödaValue {
 	private long number;
@@ -31,7 +31,7 @@ public class RödaInteger extends RödaValue {
 	
 	@Override
 	public RödaValue callOperator(Parser.Expression.CType operator, RödaValue value) {
-		if (!value.is(INTEGER)) error("can't " + operator.name() + " a " + typeString() + " and a " + value.typeString());
+		if (!value.is(INTEGER)) typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
 		switch (operator) {
 		case MUL:
 			return RödaInteger.of(this.integer()*value.integer());

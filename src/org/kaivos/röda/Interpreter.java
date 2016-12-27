@@ -1,57 +1,68 @@
 package org.kaivos.röda;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Deque;
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Collections;
-
-import java.util.Optional;
-
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.joining;
+import static org.kaivos.röda.Parser.parse;
+import static org.kaivos.röda.Parser.parseStatement;
+import static org.kaivos.röda.Parser.t;
+import static org.kaivos.röda.RödaValue.BOOLEAN;
+import static org.kaivos.röda.RödaValue.FUNCTION;
+import static org.kaivos.röda.RödaValue.INTEGER;
+import static org.kaivos.röda.RödaValue.LIST;
+import static org.kaivos.röda.RödaValue.MAP;
+import static org.kaivos.röda.RödaValue.NFUNCTION;
+import static org.kaivos.röda.RödaValue.REFERENCE;
+import static org.kaivos.röda.RödaValue.STRING;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ExecutionException;
-
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.PatternSyntaxException;
 
-import java.io.File;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.FileInputStream;
-import java.io.PrintWriter;
-import java.io.IOException;
-
-import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.RödaValue.*;
-import org.kaivos.röda.type.RödaRecordInstance;
-import org.kaivos.röda.type.RödaList;
-import org.kaivos.röda.type.RödaMap;
-import org.kaivos.röda.type.RödaString;
-import org.kaivos.röda.type.RödaInteger;
-import org.kaivos.röda.type.RödaFloating;
-import org.kaivos.röda.type.RödaBoolean;
-import org.kaivos.röda.type.RödaFunction;
-import org.kaivos.röda.type.RödaNativeFunction;
-import org.kaivos.röda.type.RödaReference;
-import org.kaivos.röda.RödaStream;
-import static org.kaivos.röda.RödaStream.ISLineStream;
-import static org.kaivos.röda.RödaStream.OSStream;
-import static org.kaivos.röda.Parser.*;
-
 import org.kaivos.nept.parser.ParsingException;
 import org.kaivos.nept.parser.TokenList;
+import org.kaivos.röda.Parser.Annotation;
+import org.kaivos.röda.Parser.Argument;
+import org.kaivos.röda.Parser.Command;
+import org.kaivos.röda.Parser.Expression;
+import org.kaivos.röda.Parser.Function;
+import org.kaivos.röda.Parser.KwArgument;
+import org.kaivos.röda.Parser.Parameter;
+import org.kaivos.röda.Parser.Program;
+import org.kaivos.röda.Parser.Record;
+import org.kaivos.röda.Parser.Statement;
+import org.kaivos.röda.RödaStream.ISLineStream;
+import org.kaivos.röda.RödaStream.OSStream;
+import org.kaivos.röda.type.RödaBoolean;
+import org.kaivos.röda.type.RödaFloating;
+import org.kaivos.röda.type.RödaFunction;
+import org.kaivos.röda.type.RödaInteger;
+import org.kaivos.röda.type.RödaList;
+import org.kaivos.röda.type.RödaMap;
+import org.kaivos.röda.type.RödaNativeFunction;
+import org.kaivos.röda.type.RödaRecordInstance;
+import org.kaivos.röda.type.RödaReference;
+import org.kaivos.röda.type.RödaString;
 
 public class Interpreter {
 
@@ -135,8 +146,33 @@ public class Interpreter {
 		STDIN = new ISLineStream(in);
 		STDOUT = new OSStream(out);
 	}
+	
+	private static Record errorSubtype(String name) {
+		return new Record(name,
+				Collections.emptyList(),
+				Arrays.asList(new Datatype("Error")),
+				Collections.emptyList(),
+				false);
+	}
+	
+	private static Record errorSubtype(String name, String... superTypes) {
+		return new Record(name,
+				Collections.emptyList(),
+				Arrays.asList(superTypes).stream().map(Datatype::new).collect(toList()),
+				Collections.emptyList(),
+				false);
+	}
 
 	private static final Record errorRecord, typeRecord, fieldRecord;
+	private static final Record
+		javaErrorRecord,
+		leakyPipeErrorRecord,
+		emptyStreamErrorRecord,
+		fullStreamErrorRecord,
+		illegalArgumentsErrorRecord,
+		unknownNameErrorRecord,
+		typeMismatchErrorRecord,
+		outOfBoundsErrorRecord;
 	static {
 		errorRecord = new Record("Error",
 				Collections.emptyList(),
@@ -170,16 +206,42 @@ public class Interpreter {
 						new Record.Field("set", new Datatype("function"))
 						),
 				false);
+		
+		javaErrorRecord = errorSubtype("JavaError");
+		leakyPipeErrorRecord = errorSubtype("LeakyPipeError");
+		emptyStreamErrorRecord = errorSubtype("EmptyStreamError");
+		fullStreamErrorRecord = errorSubtype("FullStreamError");
+		illegalArgumentsErrorRecord = errorSubtype("IllegalArgumentsError");
+		unknownNameErrorRecord = errorSubtype("UnknownNameError");
+		typeMismatchErrorRecord = errorSubtype("TypeMismatchError", "IllegalArgumentsError");
+		outOfBoundsErrorRecord = errorSubtype("OutOfBoundsError", "IllegalArgumentsError");
+	}
+	private static final Record[] builtinRecords = {
+			errorRecord, typeRecord, fieldRecord,
+			leakyPipeErrorRecord,
+			javaErrorRecord,
+			emptyStreamErrorRecord,
+			fullStreamErrorRecord,
+			illegalArgumentsErrorRecord,
+			unknownNameErrorRecord,
+			typeMismatchErrorRecord,
+			outOfBoundsErrorRecord
+			};
+	private static final Map<String, Record> builtinRecordMap = new HashMap<>();
+	static {
+		for (Record r : builtinRecords) {
+			builtinRecordMap.put(r.name, r);
+		}
 	}
 
 	{
 		Builtins.populate(this);
-		preRegisterRecord(errorRecord);
-		preRegisterRecord(typeRecord);
-		preRegisterRecord(fieldRecord);
-		postRegisterRecord(errorRecord);
-		postRegisterRecord(typeRecord);
-		postRegisterRecord(fieldRecord);
+		for (Record r : builtinRecords) {
+			preRegisterRecord(r);
+		}
+		for (Record r : builtinRecords) {
+			postRegisterRecord(r);
+		}
 
 		G.setLocal("ENV", RödaMap.of(System.getenv().entrySet().stream()
 				.collect(toMap(e -> e.getKey(),
@@ -331,11 +393,12 @@ public class Interpreter {
 		}
 	}
 
-	private static RödaValue makeErrorObject(String message, StackTraceElement[] javaStackTrace, Throwable... causes) {
+	private static RödaValue makeErrorObject(Record record, String message,
+			StackTraceElement[] javaStackTrace, Throwable... causes) {
 		RödaValue errorObject = RödaRecordInstance
-				.of(errorRecord,
+				.of(record,
 						Collections.emptyList(),
-						new HashMap<>()); // Purkkaa, mutta toimii: errorilla ei ole riippuvuuksia
+						builtinRecordMap); // Purkkaa, mutta toimii: errorilla ei ole ulkoisia riippuvuuksia
 		errorObject.setField("message", RödaString.of(message));
 		errorObject.setField("stack", RödaList.of("string", callStack.get().stream()
 				.map(RödaString::of).collect(toList())));
@@ -344,18 +407,43 @@ public class Interpreter {
 				.collect(toList())));
 		errorObject.setField("causes", RödaList.of("Error", Arrays.stream(causes)
 				.map(cause -> cause instanceof RödaException ? ((RödaException) cause).getErrorObject()
-						: makeErrorObject(cause.getClass().getName() + ": " + cause.getMessage(), cause.getStackTrace()))
+						: makeErrorObject(javaErrorRecord,
+								cause.getClass().getName() + ": " + cause.getMessage(), cause.getStackTrace()))
 				.collect(toList())));
 		return errorObject;
 	}
 
-	private static RödaException createRödaException(String message) {
-		RödaValue errorObject = makeErrorObject(message, Thread.currentThread().getStackTrace());
+	private static RödaException createRödaException(Record record, String message) {
+		RödaValue errorObject = makeErrorObject(record, message, Thread.currentThread().getStackTrace());
 		return new RödaException(message, new ArrayDeque<>(callStack.get()), errorObject);
 	}
 	
 	public static void error(String message) {
-		throw createRödaException(message);
+		throw createRödaException(errorRecord, message);
+	}
+	
+	public static void emptyStream(String message) {
+		throw createRödaException(emptyStreamErrorRecord, message);
+	}
+	
+	public static void fullStream(String message) {
+		throw createRödaException(fullStreamErrorRecord, message);
+	}
+	
+	public static void illegalArguments(String message) {
+		throw createRödaException(illegalArgumentsErrorRecord, message);
+	}
+	
+	public static void unknownName(String message) {
+		throw createRödaException(unknownNameErrorRecord, message);
+	}
+	
+	public static void typeMismatch(String message) {
+		throw createRödaException(typeMismatchErrorRecord, message);
+	}
+	
+	public static void outOfBounds(String message) {
+		throw createRödaException(outOfBoundsErrorRecord, message);
 	}
 	
 	private static RödaException createRödaException(Throwable...causes) {
@@ -369,7 +457,8 @@ public class Interpreter {
 		if (causes.length == 1) javaStackTrace = causes[0].getStackTrace();
 		else javaStackTrace = Thread.currentThread().getStackTrace();
 		
-		RödaValue errorObject = makeErrorObject(message, javaStackTrace, causes);
+		RödaValue errorObject = makeErrorObject(causes.length == 1 ? javaErrorRecord : errorRecord,
+				message, javaStackTrace, causes);
 		return new RödaException(causes, new ArrayDeque<>(callStack.get()), errorObject);
 	}
 
@@ -404,7 +493,7 @@ public class Interpreter {
 			RödaValue main = G.resolve("main");
 			if (main == null) return;
 			if (!main.is(FUNCTION) || main.is(NFUNCTION))
-				error("The variable 'main' must be a function");
+				typeMismatch("The variable 'main' must be a function");
 
 			exec("<runtime>", 0, main, Collections.emptyList(), args, Collections.emptyMap(), G, STDIN, STDOUT);
 		} catch (ParsingException|RödaException e) {
@@ -497,63 +586,63 @@ public class Interpreter {
 
 	public static void checkReference(String function, RödaValue arg) {
 		if (!arg.is(REFERENCE)) {
-			error("illegal argument for '" + function
+			typeMismatch("illegal argument for '" + function
 					+ "': reference expected (got " + arg.typeString() + ")");
 		}
 	}
 
 	public static void checkList(String function, RödaValue arg) {
 		if (!arg.is(LIST)) {
-			error("illegal argument for '" + function
+			typeMismatch("illegal argument for '" + function
 					+ "': list expected (got " + arg.typeString() + ")");
 		}
 	}
 
 	public static void checkMap(String function, RödaValue arg) {
 		if (!arg.is(MAP)) {
-			error("illegal argument for '" + function
+			typeMismatch("illegal argument for '" + function
 					+ "': list expected (got " + arg.typeString() + ")");
 		}
 	}
 
 	public static void checkListOrString(String function, RödaValue arg) {
 		if (!arg.is(LIST) && !arg.is(STRING)) {
-			error("illegal argument for '" + function
+			typeMismatch("illegal argument for '" + function
 					+ "': list or string expected (got " + arg.typeString() + ")");
 		}
 	}
 
 	public static void checkListOrNumber(String function, RödaValue arg) {
 		if (!arg.is(LIST) && !arg.is(INTEGER)) {
-			error("illegal argument for '" + function
+			typeMismatch("illegal argument for '" + function
 					+ "': list or integer expected (got " + arg.typeString() + ")");
 		}
 	}
 
 	public static void checkString(String function, RödaValue arg) {
 		if (!arg.is(STRING)) {
-			error("illegal argument for '" + function
+			typeMismatch("illegal argument for '" + function
 					+ "': string expected (got " + arg.typeString() + ")");
 		}
 	}
 
 	public static void checkNumber(String function, RödaValue arg) {
 		if (!arg.is(INTEGER)) {
-			error("illegal argument for '" + function
+			typeMismatch("illegal argument for '" + function
 					+ "': integer expected (got " + arg.typeString() + ")");
 		}
 	}
 
 	public static void checkBoolean(String function, RödaValue arg) {
 		if (!arg.is(BOOLEAN)) {
-			error("illegal argument for '" + function
+			typeMismatch("illegal argument for '" + function
 					+ "': boolean expected (got " + arg.typeString() + ")");
 		}
 	}
 
 	public static void checkFunction(String function, RödaValue arg) {
 		if (!arg.is(FUNCTION)) {
-			error("illegal argument for '" + function
+			typeMismatch("illegal argument for '" + function
 					+ "': function expected (got " + arg.typeString() + ")");
 		}
 	}
@@ -579,28 +668,30 @@ public class Interpreter {
 			if (parameters.get(i).type == null) continue;
 			Datatype t = scope.substitute(parameters.get(i).type);
 			if (!args.get(i).is(t))
-				error("illegal argument for '"+name+"': " + t + " expected (got "
+				typeMismatch("illegal argument '" + parameters.get(i).name + "' for '"+name+"': "
+						+ t + " expected (got "
 						+ args.get(i).typeString() + ")");
 		}
 
 		for (Parameter par : kwparameters) {
 			if (!kwargs.containsKey(par.name))
-				error("illegal arguments for '" + name + "': kw argument " + par.name + " not found");
+				illegalArguments("illegal arguments for '" + name + "': kw argument " + par.name + " not found");
 			if (par.type == null) continue;
 			Datatype t = scope.substitute(par.type);
 			if (!kwargs.get(par.name).is(t))
-				error("illegal argument for '"+name+"': " + t + " expected (got "
+				typeMismatch("illegal argument '" + par.name + "' for '"+name+"': "
+						+ t + " expected (got "
 						+ kwargs.get(par.name).typeString() + ")");
 		}
 	}
 
 	public static void argumentOverflow(String function, int required, int got) {
-		error("illegal number of arguments for '" + function
+		illegalArguments("illegal number of arguments for '" + function
 				+ "': at most " + required + " required (got " + got + ")");
 	}
 
 	public static void argumentUnderflow(String function, int required, int got) {
-		error("illegal number of arguments for '" + function
+		illegalArguments("illegal number of arguments for '" + function
 				+ "': at least " + required + " required (got " + got + ")");
 	}
 
@@ -704,7 +795,7 @@ public class Interpreter {
 			// joko nimettömän funktion paikallinen scope tai ylätason scope
 			RödaScope newScope = value.localScope() == null ? new RödaScope(G) : new RödaScope(value.localScope());
 			if (typeparams.size() != typeargs.size())
-				error("illegal number of typearguments for '" + name + "': "
+				illegalArguments("illegal number of typearguments for '" + name + "': "
 						+ typeparams.size() + " required, got " + typeargs.size());
 			for (int i = 0; i < typeparams.size(); i++) {
 				newScope.addTypearg(typeparams.get(i), typeargs.get(i));
@@ -745,7 +836,7 @@ public class Interpreter {
 			value.nfunction().body.exec(typeargs, args, kwargs, scope, in, out);
 			return;
 		}
-		error("can't execute a value of type " + value.typeString());
+		typeMismatch("can't execute a value of type " + value.typeString());
 	}
 
 	private void evalStatement(Statement statement, RödaScope scope,
@@ -798,10 +889,10 @@ public class Interpreter {
 						return (RödaException) e.getCause();
 					}
 					if (e.getCause() instanceof ReturnException) {
-						return createRödaException("cannot pipe a return command");
+						return createRödaException(leakyPipeErrorRecord, "cannot pipe a return command");
 					}
 					if (e.getCause() instanceof BreakOrContinueException) {
-						return createRödaException("cannot pipe a break or continue command");
+						return createRödaException(leakyPipeErrorRecord, "cannot pipe a break or continue command");
 					}
 					return createRödaException(e.getCause());
 				}).toArray(n -> new RödaException[n]));
@@ -869,7 +960,7 @@ public class Interpreter {
 			if (e.type != Expression.Type.VARIABLE
 					&& e.type != Expression.Type.ELEMENT
 					&& e.type != Expression.Type.FIELD)
-				error("bad lvalue for '" + cmd.operator + "': " + e.asString());
+				typeMismatch("bad lvalue for '" + cmd.operator + "': " + e.asString());
 			Consumer<RödaValue> assign, assignLocal;
 			if (e.type == Expression.Type.VARIABLE) {
 				assign = v -> {
@@ -989,7 +1080,7 @@ public class Interpreter {
 					RödaValue rval = resolve.get();
 					checkString(".=", rval);
 					boolean quoteMode = false; // TODO: päätä, pitääkö tämä toteuttaa myöhemmin
-					if (args.size() % 2 != 0) error("illegal arguments for '~=': even number required (got " + (args.size()-1) + ")");
+					if (args.size() % 2 != 0) illegalArguments("illegal arguments for '~=': even number required (got " + (args.size()-1) + ")");
 					String text = rval.str();
 					try {
 						for (int j = 0; j < args.size(); j+=2) {
@@ -1017,7 +1108,7 @@ public class Interpreter {
 				};
 			} break;
 			default:
-				error("unknown operator " + cmd.operator);
+				unknownName("unknown operator " + cmd.operator);
 				r = null;
 			}
 			Runnable finalR = () -> {
@@ -1108,7 +1199,7 @@ public class Interpreter {
 										+ "for " + cmd.variables.stream().collect(joining(", "))
 										+ (cmd.list != null ? " in " + cmd.list.asString() : "")
 										+ " at " + cmd.file + ":" + cmd.line;
-								error("empty stream in " + place);
+								emptyStream("empty stream (in " + place + ")");
 							}
 							newScope.setLocal(var, val);
 						}
@@ -1146,7 +1237,7 @@ public class Interpreter {
 						RödaValue errorObject;
 						if (e instanceof RödaException)
 							errorObject = ((RödaException) e).getErrorObject();
-						else errorObject = makeErrorObject(e.getClass().getName() + ": "
+						else errorObject = makeErrorObject(javaErrorRecord, e.getClass().getName() + ": "
 								+ e.getMessage(),
 								e.getStackTrace());
 						newScope.setLocal(cmd.variable, errorObject);
@@ -1175,7 +1266,7 @@ public class Interpreter {
 
 		if (cmd.type == Command.Type.RETURN) {
 			if (!cmd.arguments.kwarguments.isEmpty())
-				error("all arguments of return must be non-kw");
+				illegalArguments("all arguments of return must be non-kw");
 			List<RödaValue> args = flattenArguments(cmd.arguments.arguments, scope, in, out, true);
 			Runnable r = () -> {
 				for (RödaValue arg : args) out.push(arg);
@@ -1198,7 +1289,7 @@ public class Interpreter {
 			};
 		}
 
-		error("unknown command");
+		unknownName("unknown command");
 		return null;
 	}
 
@@ -1258,7 +1349,7 @@ public class Interpreter {
 				type = value.basicIdentity();
 			}
 			if (!typeReflections.containsKey(type.name))
-				error("reflect: unknown record class '" + type + "'");
+				unknownName("reflect: unknown record class '" + type + "'");
 			return typeReflections.get(type.name);
 		}
 		if (exp.type == Expression.Type.NEW) {
@@ -1336,7 +1427,7 @@ public class Interpreter {
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
 			if (val == null)
-				error("empty stream in statement expression: " + exp.asString());
+				emptyStream("empty stream (in statement expression: " + exp.asString() + ")");
 			return val;
 		}
 		if (exp.type == Expression.Type.STATEMENT_SINGLE) {
@@ -1344,9 +1435,9 @@ public class Interpreter {
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
 			if (val.list().isEmpty())
-				error("empty stream in statement expression: " + exp.asString());
+				emptyStream("empty stream (in statement expression: " + exp.asString() + ")");
 			if (val.list().size() > 1)
-				error("stream is full in statement expression: " + exp.asString());
+				fullStream("stream is full (in statement expression: " + exp.asString() + ")");
 			return val.list().get(0);
 		}
 		if (exp.type == Expression.Type.VARIABLE) {
@@ -1354,7 +1445,7 @@ public class Interpreter {
 				return RödaReference.of(exp.variable, scope);
 			}
 			RödaValue v = scope.resolve(exp.variable);
-			if (v == null) error("variable '" + exp.variable + "' not found");
+			if (v == null) unknownName("variable '" + exp.variable + "' not found");
 			return v;
 		}
 		if (exp.type == Expression.Type.CALCULATOR) {
@@ -1362,13 +1453,13 @@ public class Interpreter {
 				RödaValue sub = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 				switch (exp.ctype) {
 				case NOT:
-					if (!sub.is(BOOLEAN)) error("tried to NOT a " + sub.typeString());
+					if (!sub.is(BOOLEAN)) typeMismatch("tried to NOT " + sub.typeString());
 					return RödaBoolean.of(!sub.bool());
 				case NEG:
-					if (!sub.is(INTEGER)) error("tried to NEG a " + sub.typeString());
+					if (!sub.is(INTEGER)) typeMismatch("tried to NEG " + sub.typeString());
 					return RödaInteger.of(-sub.integer());
 				case BNOT:
-					if (!sub.is(INTEGER)) error("tried to BNOT a " + sub.typeString());
+					if (!sub.is(INTEGER)) typeMismatch("tried to BNOT " + sub.typeString());
 					return RödaInteger.of(~sub.integer());
 				}
 			}
@@ -1379,31 +1470,31 @@ public class Interpreter {
 						.impliciteResolve();
 				switch (exp.ctype) {
 				case AND:
-					if (!val1.is(BOOLEAN)) error("tried to AND a " + val1.typeString());
+					if (!val1.is(BOOLEAN)) typeMismatch("tried to AND " + val1.typeString());
 					if (val1.bool() == false) return RödaBoolean.of(false);
 					val2 = getVal2.get();
-					if (!val2.is(BOOLEAN)) error("tried to AND a " + val2.typeString());
+					if (!val2.is(BOOLEAN)) typeMismatch("tried to AND " + val2.typeString());
 					return RödaBoolean.of(val2.bool());
 				case OR:
-					if (!val1.is(BOOLEAN)) error("tried to OR a " + val1.typeString());
+					if (!val1.is(BOOLEAN)) typeMismatch("tried to OR " + val1.typeString());
 					if (val1.bool() == true) return RödaBoolean.of(true);
 					val2 = getVal2.get();
-					if (!val2.is(BOOLEAN)) error("tried to OR a " + val2.typeString());
+					if (!val2.is(BOOLEAN)) typeMismatch("tried to OR " + val2.typeString());
 					return RödaBoolean.of(val1.bool() || val2.bool());
 				case XOR:
-					if (!val1.is(BOOLEAN)) error("tried to XOR a " + val1.typeString());
+					if (!val1.is(BOOLEAN)) typeMismatch("tried to XOR " + val1.typeString());
 					val2 = getVal2.get();
-					if (!val2.is(BOOLEAN)) error("tried to XOR a " + val2.typeString());
+					if (!val2.is(BOOLEAN)) typeMismatch("tried to XOR " + val2.typeString());
 					return RödaBoolean.of(val1.bool() ^ val2.bool());
 				}
 				val2 = getVal2.get();
 				return val1.callOperator(exp.ctype, val2);
 			}
-			error("unknown expression type " + exp.ctype);
+			unknownName("unknown expression type " + exp.ctype);
 			return null;
 		}
 
-		error("unknown expression type " + exp.type);
+		unknownName("unknown expression type " + exp.type);
 		return null;
 	}
 
@@ -1414,24 +1505,24 @@ public class Interpreter {
 				return RödaList.empty();
 			else if (subtypes.size() == 1)
 				return RödaList.empty(subtypes.get(0));
-			error("wrong number of typearguments to 'list': 1 required, got " + subtypes.size());
+			illegalArguments("wrong number of typearguments to 'list': 1 required, got " + subtypes.size());
 			return null;
 		case "map":
 			if (subtypes.size() == 0)
 				return RödaMap.empty();
 			else if (subtypes.size() == 1)
 				return RödaMap.empty(subtypes.get(0));
-			error("wrong number of typearguments to 'map': 1 required, got " + subtypes.size());
+			illegalArguments("wrong number of typearguments to 'map': 1 required, got " + subtypes.size());
 			return null;
 		}
 		Record r = records.get(type.name);
 		if (r == null)
-			error("record class '" + type.name + "' not found");
+			unknownName("record class '" + type.name + "' not found");
 		if (r.typeparams.size() != subtypes.size())
-			error("wrong number of typearguments for '" + r.name + "': "
+			illegalArguments("wrong number of typearguments for '" + r.name + "': "
 					+ r.typeparams.size() + " required, got " + subtypes.size());
 		if (r.params.size() != args.size())
-			error("wrong number of arguments for '" + r.name + "': "
+			illegalArguments("wrong number of arguments for '" + r.name + "': "
 					+ r.params.size() + " required, got " + args.size());
 		RödaValue value = RödaRecordInstance.of(r, subtypes, records);
 		RödaScope recordScope = new RödaScope(G);

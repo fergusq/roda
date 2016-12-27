@@ -69,7 +69,7 @@ public final class ThreadPopulator {
 			threadObject.setField("start", RödaNativeFunction.of("Thread.start", (ra, a, k, s, i, o) -> {
 				checkArgs("Thread.start", 0, a.size());
 				if (p.started)
-					error("Thread has already " + "been executed");
+					error("Thread has already been started");
 				p.started = true;
 				Interpreter.executor.execute(task);
 			}, Collections.emptyList(), false));

@@ -2,6 +2,7 @@ package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.checkArgs;
 import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.typeMismatch;
 import static org.kaivos.röda.RödaValue.STRING;
 
 import java.util.Arrays;
@@ -20,7 +21,7 @@ public class ErrorPopulator {
 			if (args.get(0).is(STRING)) {
 				error(args.get(0).str());
 			} else if (!args.get(0).is("Error")) {
-				error("error: can't cast a " + args.get(0).typeString() + " to an error");
+				typeMismatch("error: can't cast " + args.get(0).typeString() + " to an error");
 			} else
 				error(args.get(0));
 		}, Arrays.asList(new Parameter("errorObject", false)), false));

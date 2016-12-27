@@ -162,7 +162,7 @@ public class Builtins {
 			if (a.size() == 0) {
 				if (oneOnly) {
 					RödaValue v = peek ? _in.peek() : _in.pull();
-					if (v == null) error("empty stream");
+					if (v == null) emptyStream("empty stream");
 					o.push(v);
 				} else
 					while (true) {
@@ -174,7 +174,7 @@ public class Builtins {
 				for (RödaValue v : a) {
 					checkReference(name, v);
 					RödaValue pulled = peek ? _in.peek() : _in.pull();
-					if (pulled == null) error("empty stream");
+					if (pulled == null) emptyStream("empty stream");
 					v.assignLocal(pulled);
 				}
 			}

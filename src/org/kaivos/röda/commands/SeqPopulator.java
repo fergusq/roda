@@ -1,6 +1,6 @@
 package org.kaivos.röda.commands;
 
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.outOfBounds;
 import static org.kaivos.röda.RödaValue.INTEGER;
 
 import java.util.Arrays;
@@ -29,7 +29,7 @@ public final class SeqPopulator {
 					out.push(RödaInteger.of(i));
 			}
 			else {
-				error("illegal use of seq: step must be non-zero");
+				outOfBounds("illegal use of seq: step must be non-zero");
 			}
 		}, Arrays.asList(new Parameter("from", false, INTEGER), new Parameter("to", false, INTEGER)), false,
 				Arrays.asList(new Parameter("step", false, expressionInt("<seq populator>", 0, 1)))));

@@ -2,6 +2,7 @@ package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.argumentUnderflow;
 import static org.kaivos.röda.Interpreter.checkReference;
+import static org.kaivos.röda.Interpreter.emptyStream;
 import static org.kaivos.röda.Interpreter.error;
 
 import java.util.Arrays;
@@ -24,7 +25,7 @@ public final class PushAndPullPopulator {
 			if (args.isEmpty()) {
 				if (returnSuccess) argumentUnderflow(name, 1, 0);
 				RödaValue value = body.apply(in);
-				if (value == null) error("empty stream");
+				if (value == null) emptyStream("empty stream");
 				out.push(value);
 				return;
 			}
@@ -36,7 +37,7 @@ public final class PushAndPullPopulator {
 				if (returnSuccess) {
 					out.push(RödaBoolean.of(pulled != null));
 				}
-				else if (pulled == null) error("empty stream");
+				else if (pulled == null) emptyStream("empty stream");
 				value.assignLocal(pulled);
 			}
 		}, Arrays.asList(new Parameter("variables", true)), true));

@@ -1,7 +1,7 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.checkList;
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.illegalArguments;
 
 import java.util.Arrays;
 
@@ -19,7 +19,7 @@ public final class ShiftPopulator {
 			for (RödaValue listref : args) {
 				RödaValue list = listref.resolve(false);
 				checkList("shift", list);
-				if (list.list().isEmpty()) error("illegal use of shift: all lists must be non-empty");
+				if (list.list().isEmpty()) illegalArguments("illegal use of shift: all lists must be non-empty");
 				list.modifiableList().remove(0);
 			}
 		}, Arrays.asList(new Parameter("first_list", true), new Parameter("other_lists", true)), true));

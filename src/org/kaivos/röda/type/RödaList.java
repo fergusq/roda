@@ -1,16 +1,16 @@
 package org.kaivos.röda.type;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Arrays;
-
 import static java.util.stream.Collectors.joining;
+import static org.kaivos.röda.Interpreter.outOfBounds;
+import static org.kaivos.röda.Interpreter.typeMismatch;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
-
-import static org.kaivos.röda.Interpreter.error;
 
 public class RödaList extends RödaValue {
 
@@ -32,7 +32,7 @@ public class RödaList extends RödaValue {
 		if (type != null) {
 			for (RödaValue value : list) {
 				if (!value.is(type)) {
-					error("can't make a " + typeString()
+					typeMismatch("can't make a " + typeString()
 					      + " that contains a " + value.typeString());
 				}
 			}
@@ -60,9 +60,9 @@ public class RödaList extends RödaValue {
 	@Override public RödaValue get(RödaValue indexVal) {
 		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
-		if (list.size() <= index) error("array index out of bounds: index " + index
+		if (list.size() <= index) outOfBounds("array index out of bounds: index " + index
 						+ ", size " + list.size());
-		if (index > Integer.MAX_VALUE) error("array index out of bounds: too large index: "+index);
+		if (index > Integer.MAX_VALUE) outOfBounds("array index out of bounds: too large index: "+index);
 		return list.get((int) index);
 	}
 
@@ -70,11 +70,11 @@ public class RödaList extends RödaValue {
 		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
 		if (list.size() <= index)
-			error("array index out of bounds: index " + index
+			outOfBounds("array index out of bounds: index " + index
 			      + ", size " + list.size());
 		if (type != null && !value.is(type))
-			error("cannot put a " + value.typeString() + " to a " + typeString());
-		if (index > Integer.MAX_VALUE) error("array index out of bounds: too large index: "+index);
+			typeMismatch("cannot put " + value.typeString() + " to " + typeString());
+		if (index > Integer.MAX_VALUE) outOfBounds("array index out of bounds: too large index: "+index);
 		list.set((int) index, value);
 	}
 
@@ -103,8 +103,8 @@ public class RödaList extends RödaValue {
 		if (start < 0) start = list.size()+start;
 		if (end < 0) end = list.size()+end;
 		if (end == 0 && start > 0) end = list.size();
-		if (start > Integer.MAX_VALUE) error("array index out of bounds: too large index: "+start);
-		if (end > Integer.MAX_VALUE) error("array index out of bounds: too large index: "+end);
+		if (start > Integer.MAX_VALUE) outOfBounds("array index out of bounds: too large index: "+start);
+		if (end > Integer.MAX_VALUE) outOfBounds("array index out of bounds: too large index: "+end);
 		return of(list.subList((int) start, (int) end));
 	}
 
@@ -120,7 +120,7 @@ public class RödaList extends RödaValue {
 
 	@Override public void add(RödaValue value) {
 		if (type != null && !value.is(type))
-			error("cannot put a " + value.typeString() + " to a " + typeString());
+			typeMismatch("cannot put " + value.typeString() + " to " + typeString());
 		list.add(value);
 	}
 
@@ -128,7 +128,7 @@ public class RödaList extends RödaValue {
 		if (type != null) {
 			for (RödaValue value : values) {
 				if (!value.is(type))
-					error("cannot put a " + value.typeString() + " to a " + typeString());
+					typeMismatch("cannot put " + value.typeString() + " to " + typeString());
 			}
 		}
 		list.addAll(values);
