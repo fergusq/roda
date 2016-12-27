@@ -58,5 +58,12 @@ public final class FilePopulator {
 				error(e);
 			}
 		});
+		addQueryType(I, "ls", (file, out) -> {
+			try {
+				Files.list(file.toPath()).map(p -> RödaString.of(p.toAbsolutePath().toString())).forEach(out::push);
+			} catch (IOException e) {
+				error(e);
+			}
+		});
 	}
 }
