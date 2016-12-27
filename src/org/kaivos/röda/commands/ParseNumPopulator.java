@@ -43,7 +43,7 @@ public final class ParseNumPopulator {
 		
 		S.setLocal("parseFloating", RödaNativeFunction.of("parseFloating", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.isEmpty()) {
-				argumentUnderflow("parseInteger", 1, 0);
+				argumentUnderflow("parseFloating", 1, 0);
 			}
 			try {
 				for (RödaValue v : args) {
