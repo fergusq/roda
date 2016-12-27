@@ -11,7 +11,7 @@ public final class TrueAndFalsePopulator {
 	private TrueAndFalsePopulator() {}
 
 	public static void populateTrueAndFalse(RödaScope S) {
-		S.setLocal("true", RödaNativeFunction.of("list", (typeargs, args, kwargs, scope, in, out) -> {
+		S.setLocal("true", RödaNativeFunction.of("true", (typeargs, args, kwargs, scope, in, out) -> {
 			out.push(RödaBoolean.of(true));
 		}, Arrays.asList(), false));
 	
