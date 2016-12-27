@@ -4,6 +4,7 @@ import static org.kaivos.röda.Interpreter.argumentUnderflow;
 import static org.kaivos.röda.Interpreter.checkNumber;
 import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Interpreter.outOfBounds;
+import static org.kaivos.röda.RödaValue.STRING;
 
 import java.util.Arrays;
 
@@ -14,8 +15,6 @@ import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.type.RödaFloating;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaNativeFunction;
-
-import static org.kaivos.röda.RödaValue.STRING;
 
 public final class ParseNumPopulator {
 

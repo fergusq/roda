@@ -3,7 +3,6 @@ package org.kaivos.röda.commands;
 import static org.kaivos.röda.Interpreter.argumentUnderflow;
 import static org.kaivos.röda.Interpreter.checkReference;
 import static org.kaivos.röda.Interpreter.emptyStream;
-import static org.kaivos.röda.Interpreter.error;
 
 import java.util.Arrays;
 import java.util.function.Function;
