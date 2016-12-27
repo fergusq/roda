@@ -21,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -529,7 +530,8 @@ public class Interpreter {
 
 	public void loadFile(File file, RödaScope scope) {
 		try {
-			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+			BufferedReader in = new BufferedReader(
+					new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
 			String code = "";
 			String line = "";
 			while ((line = in.readLine()) != null) {
