@@ -31,12 +31,12 @@ public abstract class RödaValue {
 	public abstract String str();
 
 	public String target() {
-		error("can't cast a " + typeString() + " to a reference");
+		error("can't cast " + typeString() + " to reference");
 		return null;
 	}
 
 	public RödaScope localScope() {
-		error("can't cast a " + typeString() + " to a function");
+		error("can't cast " + typeString() + " to function");
 		return null;
 	}
 	
@@ -45,103 +45,103 @@ public abstract class RödaValue {
 	}
 	
 	public long integer() {
-		error("can't convert '" + str() + "' to an integer");
+		error("can't convert '" + str() + "' to integer");
 		return -1;
 	}
 	
 	public double floating() {
-		error("can't convert '" + str() + "' to a float");
+		error("can't convert '" + str() + "' to float");
 		return -1;
 	}
 
 	public List<RödaValue> list() {
-		error("can't cast a " + typeString() + " to a list");
+		error("can't cast " + typeString() + " to list");
 		return null;
 	}
 
 	public List<RödaValue> modifiableList() {
-		error("can't cast a " + typeString() + " to a list");
+		error("can't cast " + typeString() + " to list");
 		return null;
 	}
 
 	public Map<String, RödaValue> map() {
-		error("can't cast a " + typeString() + " to a list");
+		error("can't cast " + typeString() + " to list");
 		return null;
 	}
 
 	public Function function() {
-		error("can't convert '" + str() + "' to a function");
+		error("can't convert '" + str() + "' to function");
 		return null;
 	}
 
 	public NativeFunction nfunction() {
-		error("can't convert '" + str() + "' to a function");
+		error("can't convert '" + str() + "' to function");
 		return null;
 	}
 
 	public RödaValue get(RödaValue index) {
-		error("a " + typeString() + " doesn't have elements");
+		error(typeString() + " doesn't have elements");
 		return null;
 	}
 
 	public void set(RödaValue index, RödaValue value) {
-		error("a " + typeString() + " doesn't have elements");
+		error(typeString() + " doesn't have elements");
 	}
 
 	public RödaValue contains(RödaValue index) {
-		error("a " + typeString() + " doesn't have elements");
+		error(typeString() + " doesn't have elements");
 		return null;
 	}
 
 	public RödaValue containsValue(RödaValue value) {
-		error("a " + typeString() + " doesn't have elements");
+		error(typeString() + " doesn't have elements");
 		return null;
 	}
 
 	public RödaValue length() {
-		error("a " + typeString() + " doesn't have length");
+		error(typeString() + " doesn't have length");
 		return null;
 	}
 
 	public RödaValue slice(RödaValue start, RödaValue end) {
-		error("a " + typeString() + " doesn't have elements");
+		error(typeString() + " doesn't have elements");
 		return null;
 	}
 
 	public RödaValue join(RödaValue separator) {
-		error("can't join a " + typeString());
+		error("can't join " + typeString());
 		return null;
 	}
 
 	public void add(RödaValue value) {
-		error("can't add values to a " + typeString());
+		error("can't add values to " + typeString());
 	}
 
 	public void addAll(List<RödaValue> value) {
-		error("can't add values to a " + typeString());
+		error("can't add values to " + typeString());
 	}
 
 	public void setField(String field, RödaValue value) {
-		error("can't edit a " + typeString());
+		error("can't edit " + typeString());
 	}
 
 	public RödaValue getField(String field) {
-		error("can't read a " + typeString());
+		error("can't read " + typeString());
 		return null;
 	}
 
 	public Map<String, RödaValue> fields() {
-		error("a " + typeString() + " doesn't have fields");
+		error(typeString() + " doesn't have fields");
 		return null;
 	}
 
 	public RödaValue resolve(boolean implicite) {
-		error("can't dereference a " + typeString());
+		error("can't dereference " + typeString());
 		return null;
 	}
 
 	public RödaValue unsafeResolve() {
-		error("can't dereference a " + typeString());
+		error("can't dereference " + typeString());
 		return null;
 	}
 
