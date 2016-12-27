@@ -6,6 +6,7 @@ import static org.kaivos.röda.Interpreter.typeMismatch;
 import static org.kaivos.röda.Interpreter.unknownName;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +73,10 @@ public class RödaRecordInstance extends RödaValue {
 		for (Map.Entry<String, RödaValue> entry : fields.entrySet())
 			ans &= entry.getValue().strongEq(value.fields().get(entry.getKey()));
 		return ans;
+	}
+	
+	@Override public Map<String, RödaValue> fields() {
+		return Collections.unmodifiableMap(fields);
 	}
 
 	public static RödaRecordInstance of(Record record, List<Datatype> typearguments,
