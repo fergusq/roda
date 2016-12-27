@@ -1,6 +1,5 @@
 package org.kaivos.röda.commands;
 
-import static org.kaivos.röda.Interpreter.checkString;
 import static org.kaivos.röda.RödaValue.STRING;
 
 import java.io.File;
@@ -20,10 +19,16 @@ public final class ImportPopulator {
 	public static void populateImport(Interpreter I, RödaScope S) {
 		S.setLocal("import", RödaNativeFunction.of("import", (typeargs, args, kwargs, scope, in, out) -> {
 			for (RödaValue value : args) {
-				checkString("import", value);
 				String filename = value.str();
 				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
 				I.loadFile(file, I.G);
+			}
+		}, Arrays.asList(new Parameter("files", false, STRING)), true));
+		S.setLocal("localImport", RödaNativeFunction.of("import", (typeargs, args, kwargs, scope, in, out) -> {
+			for (RödaValue value : args) {
+				String filename = value.str();
+				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
+				I.loadFile(file, scope);
 			}
 		}, Arrays.asList(new Parameter("files", false, STRING)), true));
 	}
