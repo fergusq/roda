@@ -527,11 +527,6 @@ public class Interpreter {
 	public void load(String code, String filename, RödaScope scope, boolean overwrite) {
 		try {
 			Program program = parse(t.tokenize(code, filename));
-			for (Function f : program.blocks) {
-				exec("<runtime>", 0, RödaFunction.of(f),
-						Collections.emptyList(), Collections.emptyList(), Collections.emptyMap(),
-						G, RödaStream.makeEmptyStream(), RödaStream.makeStream());
-			}
 			for (Function f : program.functions) {
 				scope.setLocal(f.name, RödaFunction.of(f));
 			}
@@ -541,10 +536,21 @@ public class Interpreter {
 			for (Record r : program.records) {
 				scope.postRegisterRecord(r);
 			}
+			for (List<Statement> f : program.blocks) {
+				execBlock(f, scope);
+			}
 		} catch (ParsingException|RödaException e) {
 			throw e;
 		} catch (Exception e) {
 			error(e);
+		}
+	}
+	
+	private void execBlock(List<Statement> block, RödaScope scope) {
+		RödaStream in = RödaStream.makeEmptyStream();
+		RödaStream out = RödaStream.makeEmptyStream();
+		for (Statement s : block) {
+			evalStatement(s, scope, in, out, false);
 		}
 	}
 	

@@ -197,10 +197,10 @@ public class Parser {
 	static class Program {
 		List<Function> functions;
 		List<Record> records;
-		List<Function> blocks;
+		List<List<Statement>> blocks;
 		Program(List<Function> functions,
 			List<Record> records,
-			List<Function> blocks) {
+			List<List<Statement>> blocks) {
 			this.functions = functions;
 			this.records = records;
 			this.blocks = blocks;
@@ -214,7 +214,7 @@ public class Parser {
 		}
 
 		List<Function> functions = new ArrayList<>();
-		List<Function> blocks = new ArrayList<>();
+		List<List<Statement>> blocks = new ArrayList<>();
 		List<Record> records = new ArrayList<>();
 		while (!isNext(tl, "<EOF>")) {
 			List<Annotation> annotations = parseAnnotations(tl);
@@ -222,12 +222,7 @@ public class Parser {
 				records.add(parseRecord(tl, annotations));
 			}
 			else if (isNext(tl, "{")) {
-				blocks.add(new Function(
-						"<block>",
-						Collections.emptyList(),
-						Collections.emptyList(), false,
-						Collections.emptyList(),
-						parseBody(tl)));
+				blocks.add(parseBody(tl));
 			}
 			else {
 				functions.add(parseFunction(tl, true));
