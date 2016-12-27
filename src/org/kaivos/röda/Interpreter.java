@@ -70,16 +70,20 @@ public class Interpreter {
 	/*** INTERPRETER ***/
 
 	public static class RödaScope {
+		Interpreter context;
 		Optional<RödaScope> parent;
 		Map<String, RödaValue> map;
 		Map<String, Datatype> typeargs;
-		RödaScope(Optional<RödaScope> parent) {
+		Map<String, Record> records = new HashMap<>();
+		Map<String, RödaValue> typeReflections = new HashMap<>();
+		RödaScope(Interpreter context, Optional<RödaScope> parent) {
+			this.context = context;
 			this.parent = parent;
 			this.map = new HashMap<>();
 			this.typeargs = new HashMap<>();
 		}
-		public RödaScope(RödaScope parent) {
-			this(Optional.of(parent));
+		public RödaScope(Interpreter context, RödaScope parent) {
+			this(context, Optional.of(parent));
 		}
 
 		public synchronized RödaValue resolve(String name) {
@@ -130,11 +134,36 @@ public class Interpreter {
 			}
 			return new Datatype(type.name, subtypes);
 		}
+		
+		public Map<String, Record> getRecords() {
+			Map<String, Record> records = new HashMap<>();
+			if (parent.isPresent()) {
+				records.putAll(parent.get().getRecords());
+			}
+			records.putAll(this.records);
+			return Collections.unmodifiableMap(records);
+		}
+		
+		public Map<String, RödaValue> getTypeReflections() {
+			Map<String, RödaValue> typeReflections = new HashMap<>();
+			if (parent.isPresent()) {
+				typeReflections.putAll(parent.get().getTypeReflections());
+			}
+			typeReflections.putAll(this.typeReflections);
+			return Collections.unmodifiableMap(typeReflections);
+		}
+
+		public void preRegisterRecord(Record record) {
+			records.put(record.name, record);
+			typeReflections.put(record.name, context.createRecordClassReflection(record));
+		}
+
+		public void postRegisterRecord(Record record) {
+			context.createFieldReflections(record, typeReflections.get(record.name));
+		}
 	}
 
-	public RödaScope G = new RödaScope(Optional.empty());
-	public Map<String, Record> records = new HashMap<>();
-	Map<String, RödaValue> typeReflections = new HashMap<>();
+	public RödaScope G = new RödaScope(this, Optional.empty());
 
 	RödaStream STDIN, STDOUT;
 
@@ -238,10 +267,10 @@ public class Interpreter {
 	{
 		Builtins.populate(this);
 		for (Record r : builtinRecords) {
-			preRegisterRecord(r);
+			G.preRegisterRecord(r);
 		}
 		for (Record r : builtinRecords) {
-			postRegisterRecord(r);
+			G.postRegisterRecord(r);
 		}
 
 		G.setLocal("ENV", RödaMap.of(System.getenv().entrySet().stream()
@@ -249,23 +278,14 @@ public class Interpreter {
 						e -> RödaString.of(e.getValue())))));
 	}
 
-	public void preRegisterRecord(Record record) {
-		records.put(record.name, record);
-		typeReflections.put(record.name, createRecordClassReflection(record));
-	}
-
-	public void postRegisterRecord(Record record) {
-		createFieldReflections(record, typeReflections.get(record.name));
-	}
-
 	private RödaValue createRecordClassReflection(Record record) {
-		RödaValue typeObj = RödaRecordInstance.of(typeRecord, Collections.emptyList(), records);
+		RödaValue typeObj = RödaRecordInstance.of(typeRecord, Collections.emptyList(), G.records);
 		typeObj.setField("name", RödaString.of(record.name));
 		typeObj.setField("annotations", evalAnnotations(record.annotations));
 		typeObj.setField("newInstance", RödaNativeFunction
 				.of("Type.newInstance",
 						(ta, a, k, s, i, o) -> {
-							o.push(newRecord(new Datatype(record.name), ta, a));
+							o.push(newRecord(new Datatype(record.name), ta, a, G));
 						}, Collections.emptyList(), false));
 		return typeObj;
 	}
@@ -277,7 +297,7 @@ public class Interpreter {
 	}
 
 	private RödaValue createFieldReflection(Record record, Record.Field field) {
-		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, Collections.emptyList(), records);
+		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, Collections.emptyList(), G.records);
 		fieldObj.setField("name", RödaString.of(field.name));
 		fieldObj.setField("annotations", evalAnnotations(field.annotations));
 		fieldObj.setField("get", RödaNativeFunction
@@ -302,8 +322,8 @@ public class Interpreter {
 							obj.setField(field.name, val);
 						}, Arrays.asList(new Parameter("object", false),
 								new Parameter("value", false)), false));
-		if (typeReflections.containsKey(field.type.name))
-			fieldObj.setField("type", typeReflections.get(field.type.name));
+		if (G.typeReflections.containsKey(field.type.name))
+			fieldObj.setField("type", G.typeReflections.get(field.type.name));
 		return fieldObj;
 	}
 
@@ -504,7 +524,7 @@ public class Interpreter {
 		}
 	}
 
-	public void load(String code, String filename, RödaScope scope) {
+	public void load(String code, String filename, RödaScope scope, boolean overwrite) {
 		try {
 			Program program = parse(t.tokenize(code, filename));
 			for (Function f : program.blocks) {
@@ -516,10 +536,10 @@ public class Interpreter {
 				scope.setLocal(f.name, RödaFunction.of(f));
 			}
 			for (Record r : program.records) {
-				preRegisterRecord(r);
+				scope.preRegisterRecord(r);
 			}
 			for (Record r : program.records) {
-				postRegisterRecord(r);
+				scope.postRegisterRecord(r);
 			}
 		} catch (ParsingException|RödaException e) {
 			throw e;
@@ -527,8 +547,12 @@ public class Interpreter {
 			error(e);
 		}
 	}
+	
+	public void load(String code, String filename, RödaScope scope) {
+		load(code, filename, scope, true);
+	}
 
-	public void loadFile(File file, RödaScope scope) {
+	public void loadFile(File file, RödaScope scope, boolean overwrite) {
 		try {
 			BufferedReader in = new BufferedReader(
 					new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
@@ -538,10 +562,14 @@ public class Interpreter {
 				code += line + "\n";
 			}
 			in.close();
-			load(code, file.getName(), scope);
+			load(code, file.getName(), scope, overwrite);
 		} catch (IOException e) {
 			error(e);
 		}
+	}
+	
+	public void loadFile(File file, RödaScope scope) {
+		loadFile(file, scope, true);
 	}
 
 	public void interpretStatement(String code, String filename) {
@@ -795,7 +823,8 @@ public class Interpreter {
 			String name = value.function().name;
 
 			// joko nimettömän funktion paikallinen scope tai ylätason scope
-			RödaScope newScope = value.localScope() == null ? new RödaScope(G) : new RödaScope(value.localScope());
+			RödaScope newScope = value.localScope() == null
+					? new RödaScope(this, G) : new RödaScope(this, value.localScope());
 			if (typeparams.size() != typeargs.size())
 				illegalArguments("illegal number of typearguments for '" + name + "': "
 						+ typeparams.size() + " required, got " + typeargs.size());
@@ -1140,7 +1169,7 @@ public class Interpreter {
 			Runnable r = () -> {
 				boolean goToElse = true;
 				do {
-					RödaScope newScope = new RödaScope(scope);
+					RödaScope newScope = new RödaScope(this, scope);
 					if (evalCond(commandName, cmd.cond, scope, _in) ^ neg) break;
 					goToElse = false;
 					try {
@@ -1153,7 +1182,7 @@ public class Interpreter {
 					}
 				} while (isWhile);
 				if (goToElse && cmd.elseBody != null) {
-					RödaScope newScope = new RödaScope(scope);
+					RödaScope newScope = new RödaScope(this, scope);
 					for (Statement s : cmd.elseBody) {
 						evalStatement(s, newScope, _in, _out, false);
 					}
@@ -1170,7 +1199,7 @@ public class Interpreter {
 				checkList("for", list);
 				r = () -> {
 					for (RödaValue val : list.list()) {
-						RödaScope newScope = new RödaScope(scope);
+						RödaScope newScope = new RödaScope(this, scope);
 						newScope.setLocal(cmd.variables.get(0), val);
 						if (cmd.cond != null && evalCond("for if", cmd.cond, newScope, _in))
 							continue;
@@ -1191,7 +1220,7 @@ public class Interpreter {
 						RödaValue val = _in.pull();
 						if (val == null) break;
 
-						RödaScope newScope = new RödaScope(scope);
+						RödaScope newScope = new RödaScope(this, scope);
 						newScope.setLocal(firstVar, val);
 						for (String var : otherVars) {
 							val = _in.pull();
@@ -1225,7 +1254,7 @@ public class Interpreter {
 		if (cmd.type == Command.Type.TRY_DO) {
 			Runnable r = () -> {
 				try {
-					RödaScope newScope = new RödaScope(scope);
+					RödaScope newScope = new RödaScope(this, scope);
 					for (Statement s : cmd.body) {
 						evalStatement(s, newScope, _in, _out, false);
 					}
@@ -1235,7 +1264,7 @@ public class Interpreter {
 					throw e;
 				} catch (Exception e) {
 					if (cmd.variable != null) {
-						RödaScope newScope = new RödaScope(scope);
+						RödaScope newScope = new RödaScope(this, scope);
 						RödaValue errorObject;
 						if (e instanceof RödaException)
 							errorObject = ((RödaException) e).getErrorObject();
@@ -1350,9 +1379,9 @@ public class Interpreter {
 				RödaValue value = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 				type = value.basicIdentity();
 			}
-			if (!typeReflections.containsKey(type.name))
+			if (!scope.getTypeReflections().containsKey(type.name))
 				unknownName("reflect: unknown record class '" + type + "'");
-			return typeReflections.get(type.name);
+			return scope.getTypeReflections().get(type.name);
 		}
 		if (exp.type == Expression.Type.NEW) {
 			Datatype type = scope.substitute(exp.datatype);
@@ -1362,7 +1391,7 @@ public class Interpreter {
 					.map(e -> evalExpression(e, scope, in, out))
 					.map(RödaValue::impliciteResolve)
 					.collect(toList());
-			return newRecord(type, subtypes, args);
+			return newRecord(type, subtypes, args, scope);
 		}
 		if (exp.type == Expression.Type.LENGTH
 				|| exp.type == Expression.Type.ELEMENT
@@ -1500,7 +1529,7 @@ public class Interpreter {
 		return null;
 	}
 
-	private RödaValue newRecord(Datatype type, List<Datatype> subtypes, List<RödaValue> args) {
+	private RödaValue newRecord(Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
 		switch (type.name) {
 		case "list":
 			if (subtypes.size() == 0)
@@ -1517,6 +1546,7 @@ public class Interpreter {
 			illegalArguments("wrong number of typearguments to 'map': 1 required, got " + subtypes.size());
 			return null;
 		}
+		Map<String, Record> records = scope.getRecords();
 		Record r = records.get(type.name);
 		if (r == null)
 			unknownName("record class '" + type.name + "' not found");
@@ -1527,7 +1557,7 @@ public class Interpreter {
 			illegalArguments("wrong number of arguments for '" + r.name + "': "
 					+ r.params.size() + " required, got " + args.size());
 		RödaValue value = RödaRecordInstance.of(r, subtypes, records);
-		RödaScope recordScope = new RödaScope(G);
+		RödaScope recordScope = new RödaScope(this, G);
 		recordScope.setLocal("self", value);
 		for (int i = 0; i < subtypes.size(); i++) {
 			recordScope.addTypearg(r.typeparams.get(i), subtypes.get(i));

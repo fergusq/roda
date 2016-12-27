@@ -35,7 +35,7 @@ public final class ServerPopulator {
 				Arrays.asList(new Record.Field("accept", new Datatype("function")),
 						new Record.Field("close", new Datatype("function"))),
 				false);
-		I.preRegisterRecord(serverRecord);
+		I.G.preRegisterRecord(serverRecord);
 
 		Record socketRecord = new Record("Socket", Collections.emptyList(), Collections.emptyList(), Arrays.asList(
 				new Record.Field("writeStrings", new Datatype("function")),
@@ -46,10 +46,10 @@ public final class ServerPopulator {
 				new Record.Field("close", new Datatype("function")), new Record.Field("ip", new Datatype("string")),
 				new Record.Field("hostname", new Datatype("string")), new Record.Field("port", new Datatype("number")),
 				new Record.Field("localport", new Datatype("number"))), false);
-		I.preRegisterRecord(socketRecord);
+		I.G.preRegisterRecord(socketRecord);
 		
-		I.postRegisterRecord(serverRecord);
-		I.postRegisterRecord(socketRecord);
+		I.G.postRegisterRecord(serverRecord);
+		I.G.postRegisterRecord(socketRecord);
 
 		S.setLocal("server", RödaNativeFunction.of("server", (typeargs, args, kwargs, scope, in, out) -> {
 			long port = args.get(0).integer();
@@ -60,7 +60,7 @@ public final class ServerPopulator {
 
 				ServerSocket server = new ServerSocket((int) port);
 
-				RödaValue serverObject = RödaRecordInstance.of(serverRecord, Collections.emptyList(), I.records);
+				RödaValue serverObject = RödaRecordInstance.of(serverRecord, Collections.emptyList(), I.G.getRecords());
 				serverObject.setField("accept", RödaNativeFunction.of("Server.accept", (ra, a, k, s, i, o) -> {
 					checkArgs("Server.accept", 0, a.size());
 					Socket socket;
@@ -74,7 +74,7 @@ public final class ServerPopulator {
 						error(e);
 						return;
 					}
-					RödaValue socketObject = RödaRecordInstance.of(socketRecord, Collections.emptyList(), I.records);
+					RödaValue socketObject = RödaRecordInstance.of(socketRecord, Collections.emptyList(), I.G.getRecords());
 					socketObject.setField("readBytes", Builtins.genericReadBytesOrString("Socket.readBytes", _in, I, false));
 					socketObject.setField("readString", Builtins.genericReadBytesOrString("Socket.readString", _in, I, true));
 					socketObject.setField("readLine", Builtins.genericReadLine("Socket.readLine", _in, I));

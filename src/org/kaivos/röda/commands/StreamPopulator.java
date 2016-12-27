@@ -31,12 +31,12 @@ public final class StreamPopulator {
 						new Record.Field("push", new Datatype("function")),
 						new Record.Field("finish", new Datatype("function"))),
 				false);
-		I.preRegisterRecord(streamRecord);
-		I.postRegisterRecord(streamRecord);
+		I.G.preRegisterRecord(streamRecord);
+		I.G.postRegisterRecord(streamRecord);
 
 		Supplier<RödaValue> getStreamObj = () -> {
 			RödaStream stream = RödaStream.makeStream();
-			RödaValue streamObject = RödaRecordInstance.of(streamRecord, Collections.emptyList(), I.records);
+			RödaValue streamObject = RödaRecordInstance.of(streamRecord, Collections.emptyList(), I.G.getRecords());
 			
 			streamObject.setField("pull", Builtins.genericPull("Stream.pull", stream, false, true));
 			streamObject.setField("tryPull", Builtins.genericTryPull("Stream.tryPull", stream, false));

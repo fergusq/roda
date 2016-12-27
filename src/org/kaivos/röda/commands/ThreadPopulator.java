@@ -33,14 +33,14 @@ public final class ThreadPopulator {
 						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function"))),
 				false);
-		I.preRegisterRecord(threadRecord);
-		I.postRegisterRecord(threadRecord);
+		I.G.preRegisterRecord(threadRecord);
+		I.G.postRegisterRecord(threadRecord);
 
 		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, kwargs, scope, in, out) -> {
 			RödaValue function = args.get(0);
 
 			RödaScope newScope = !function.is(RödaValue.NFUNCTION) && function.localScope() != null
-					? new RödaScope(function.localScope()) : new RödaScope(I.G);
+					? new RödaScope(I, function.localScope()) : new RödaScope(I, I.G);
 			RödaStream _in = RödaStream.makeStream();
 			RödaStream _out = RödaStream.makeStream();
 
@@ -65,7 +65,7 @@ public final class ThreadPopulator {
 				_out.finish();
 			};
 
-			RödaValue threadObject = RödaRecordInstance.of(threadRecord, Collections.emptyList(), I.records);
+			RödaValue threadObject = RödaRecordInstance.of(threadRecord, Collections.emptyList(), I.G.getRecords());
 			threadObject.setField("start", RödaNativeFunction.of("Thread.start", (ra, a, k, s, i, o) -> {
 				checkArgs("Thread.start", 0, a.size());
 				if (p.started)

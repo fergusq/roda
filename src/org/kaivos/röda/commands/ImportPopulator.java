@@ -28,7 +28,14 @@ public final class ImportPopulator {
 			for (RödaValue value : args) {
 				String filename = value.str();
 				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
-				I.loadFile(file, scope);
+				I.loadFile(file, scope, true);
+			}
+		}, Arrays.asList(new Parameter("files", false, STRING)), true));
+		S.setLocal("safeLocalImport", RödaNativeFunction.of("import", (typeargs, args, kwargs, scope, in, out) -> {
+			for (RödaValue value : args) {
+				String filename = value.str();
+				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
+				I.loadFile(file, scope, false);
 			}
 		}, Arrays.asList(new Parameter("files", false, STRING)), true));
 	}
