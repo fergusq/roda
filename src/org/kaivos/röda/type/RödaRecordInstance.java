@@ -95,8 +95,8 @@ public class RödaRecordInstance extends RödaValue {
 			// TODO check double inheritance
 			fieldTypes.put(field.name, substitute(field.type, record.typeparams, typearguments));
 		}
-		for (Datatype superType : record.superTypes) {
-			superType = substitute(superType, record.typeparams, typearguments);
+		for (Record.SuperExpression superExp : record.superTypes) {
+			Datatype superType = substitute(superExp.type, record.typeparams, typearguments);
 			Record r = records.get(superType.name);
 			if (r == null)
 				unknownName("super type " + superType.name + " not found");

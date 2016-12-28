@@ -1,5 +1,7 @@
 package org.kaivos.röda;
 
+import static java.util.Collections.emptyList;
+
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -179,17 +181,19 @@ public class Interpreter {
 	
 	private static Record errorSubtype(String name) {
 		return new Record(name,
-				Collections.emptyList(),
-				Arrays.asList(new Datatype("Error")),
-				Collections.emptyList(),
+				emptyList(),
+				Arrays.asList(new Record.SuperExpression(new Datatype("Error"), emptyList())),
+				emptyList(),
 				false);
 	}
 	
 	private static Record errorSubtype(String name, String... superTypes) {
 		return new Record(name,
-				Collections.emptyList(),
-				Arrays.asList(superTypes).stream().map(Datatype::new).collect(toList()),
-				Collections.emptyList(),
+				emptyList(),
+				Arrays.asList(superTypes).stream()
+					.map(t -> new Record.SuperExpression(new Datatype(t), emptyList()))
+					.collect(toList()),
+				emptyList(),
 				false);
 	}
 
@@ -205,8 +209,8 @@ public class Interpreter {
 		outOfBoundsErrorRecord;
 	static {
 		errorRecord = new Record("Error",
-				Collections.emptyList(),
-				Collections.emptyList(),
+				emptyList(),
+				emptyList(),
 				Arrays.asList(new Record.Field("message", new Datatype("string")),
 						new Record.Field("stack",
 								new Datatype("list", Arrays.asList(new Datatype("string")))),
@@ -217,8 +221,8 @@ public class Interpreter {
 						),
 				false);
 		typeRecord = new Record("Type",
-				Collections.emptyList(),
-				Collections.emptyList(),
+				emptyList(),
+				emptyList(),
 				Arrays.asList(new Record.Field("name", new Datatype("string")),
 						new Record.Field("annotations", new Datatype("list")),
 						new Record.Field("fields",
@@ -227,8 +231,8 @@ public class Interpreter {
 						),
 				false);
 		fieldRecord = new Record("Field",
-				Collections.emptyList(),
-				Collections.emptyList(),
+				emptyList(),
+				emptyList(),
 				Arrays.asList(new Record.Field("name", new Datatype("string")),
 						new Record.Field("annotations", new Datatype("list")),
 						new Record.Field("type", new Datatype("Type")),
@@ -281,14 +285,14 @@ public class Interpreter {
 	private RödaValue createRecordClassReflection(Record record) {
 		if (enableDebug) callStack.get().push("creating reflection object of record "
 				+ record.name + "\n\tat <runtime>");
-		RödaValue typeObj = RödaRecordInstance.of(typeRecord, Collections.emptyList(), G.records);
+		RödaValue typeObj = RödaRecordInstance.of(typeRecord, emptyList(), G.records);
 		typeObj.setField("name", RödaString.of(record.name));
 		typeObj.setField("annotations", evalAnnotations(record.annotations));
 		typeObj.setField("newInstance", RödaNativeFunction
 				.of("Type.newInstance",
 						(ta, a, k, s, i, o) -> {
 							o.push(newRecord(new Datatype(record.name), ta, a, G));
-						}, Collections.emptyList(), false));
+						}, emptyList(), false));
 		if (enableDebug) callStack.get().pop();
 		return typeObj;
 	}
@@ -305,7 +309,7 @@ public class Interpreter {
 	private RödaValue createFieldReflection(Record record, Record.Field field) {
 		if (enableDebug) callStack.get().push("creating reflection object of field "
 				+ record.name + "." + field.name + "\n\tat <runtime>");
-		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, Collections.emptyList(), G.records);
+		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, emptyList(), G.records);
 		fieldObj.setField("name", RödaString.of(field.name));
 		fieldObj.setField("annotations", evalAnnotations(field.annotations));
 		fieldObj.setField("get", RödaNativeFunction
@@ -349,7 +353,7 @@ public class Interpreter {
 							RödaStream.makeEmptyStream(),
 							RödaStream.makeStream(), false);
 					RödaStream _out = RödaStream.makeStream();
-					exec(a.file, a.line, function, Collections.emptyList(), args, kwargs,
+					exec(a.file, a.line, function, emptyList(), args, kwargs,
 							G, RödaStream.makeEmptyStream(), _out);
 					_out.finish();
 					RödaValue list = _out.readAll();
@@ -428,7 +432,7 @@ public class Interpreter {
 			StackTraceElement[] javaStackTrace, Throwable... causes) {
 		RödaValue errorObject = RödaRecordInstance
 				.of(record,
-						Collections.emptyList(),
+						emptyList(),
 						builtinRecordMap); // Purkkaa, mutta toimii: errorilla ei ole ulkoisia riippuvuuksia
 		errorObject.setField("message", RödaString.of(message));
 		errorObject.setField("stack", RödaList.of("string", callStack.get().stream()
@@ -526,7 +530,7 @@ public class Interpreter {
 			if (!main.is(FUNCTION) || main.is(NFUNCTION))
 				typeMismatch("The variable 'main' must be a function");
 
-			exec("<runtime>", 0, main, Collections.emptyList(), args, Collections.emptyMap(), G, STDIN, STDOUT);
+			exec("<runtime>", 0, main, emptyList(), args, Collections.emptyMap(), G, STDIN, STDOUT);
 		} catch (ParsingException|RödaException e) {
 			throw e;
 		} catch (Exception e) {
@@ -630,7 +634,7 @@ public class Interpreter {
 		if (function.is(FUNCTION)) {
 			return function.function().kwparameters;
 		}
-		return Collections.emptyList();
+		return emptyList();
 	}
 
 	public static void checkReference(String function, RödaValue arg) {
@@ -1547,7 +1551,7 @@ public class Interpreter {
 		unknownName("unknown expression type " + exp.type);
 		return null;
 	}
-
+	
 	private RödaValue newRecord(Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
 		switch (type.name) {
 		case "list":
@@ -1565,6 +1569,11 @@ public class Interpreter {
 			illegalArguments("wrong number of typearguments to 'map': 1 required, got " + subtypes.size());
 			return null;
 		}
+		return newRecord(null, type, subtypes, args, scope);
+	}
+
+	private RödaValue newRecord(RödaValue value,
+			Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
 		Map<String, Record> records = scope.getRecords();
 		Record r = records.get(type.name);
 		if (r == null)
@@ -1575,7 +1584,7 @@ public class Interpreter {
 		if (r.params.size() != args.size())
 			illegalArguments("wrong number of arguments for '" + r.name + "': "
 					+ r.params.size() + " required, got " + args.size());
-		RödaValue value = RödaRecordInstance.of(r, subtypes, records);
+		value = value != null ? value : RödaRecordInstance.of(r, subtypes, records);
 		RödaScope recordScope = new RödaScope(this, G);
 		recordScope.setLocal("self", value);
 		for (int i = 0; i < subtypes.size(); i++) {
@@ -1584,23 +1593,24 @@ public class Interpreter {
 		for (int i = 0; i < args.size(); i++) {
 			recordScope.setLocal(r.params.get(i), args.get(i));
 		}
-		List<Record.Field> fields = new ArrayList<>();
-		addFields(fields, r, scope);
-		for (Record.Field f : fields) {
+		for (Record.SuperExpression superExp : r.superTypes) {
+			Datatype superType = scope.substitute(superExp.type);
+			List<Datatype> superSubtypes = superExp.type.subtypes.stream()
+					.map(recordScope::substitute).collect(toList());
+			List<RödaValue> superArgs = superExp.args.stream()
+					.map(e -> evalExpression(e, recordScope,
+							RödaStream.makeEmptyStream(), RödaStream.makeEmptyStream()))
+					.map(RödaValue::impliciteResolve)
+					.collect(toList());
+			newRecord(value, superType, superSubtypes, superArgs, scope);
+		}
+		for (Record.Field f : r.fields) {
 			if (f.defaultValue != null) {
-				// TODO nyt kaikki ylätyyppien kentät näkevät samat tyyppiparametrit
-				value.setField(f.name, evalExpression(f.defaultValue, recordScope, RödaStream.makeEmptyStream(), RödaStream.makeStream(), false));
+				value.setField(f.name, evalExpression(f.defaultValue, recordScope,
+						RödaStream.makeEmptyStream(), RödaStream.makeEmptyStream(), false));
 			}
 		}
 		return value;
-	}
-	
-	// TODO tyyppiargumenttien substituutio
-	private void addFields(List<Record.Field> fs, Record r, RödaScope scope) {
-		for (Datatype sr : r.superTypes) {
-			addFields(fs, scope.getRecords().get(sr.name), scope);
-		}
-		fs.addAll(r.fields);
 	}
 
 	private RödaValue concat(RödaValue val1, RödaValue val2) {

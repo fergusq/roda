@@ -302,17 +302,26 @@ public class Parser {
 				this.annotations = Collections.unmodifiableList(annotations);
 			}
 		}
+		public static class SuperExpression {
+			public final Datatype type;
+			final List<Expression> args;
+			
+			SuperExpression(Datatype type, List<Expression> args) {
+				this.type = type;
+				this.args = args;
+			}
+		}
 
 		public final String name;
 		public final List<String> typeparams, params;
-		public final List<Datatype> superTypes;
+		public final List<SuperExpression> superTypes;
 		public final List<Annotation> annotations;
 		public final List<Field> fields;
 		public final boolean isValueType;
 
 		public Record(String name,
 		       List<String> typeparams,
-		       List<Datatype> superTypes,
+		       List<SuperExpression> superTypes,
 		       List<Field> fields,
 		       boolean isValueType) {
 			this(name, typeparams, Collections.emptyList(), superTypes, Collections.emptyList(), fields, isValueType);
@@ -321,7 +330,7 @@ public class Parser {
 		Record(String name,
 		       List<String> typeparams,
 		       List<String> params,
-		       List<Datatype> superTypes,
+		       List<SuperExpression> superTypes,
 		       List<Annotation> annotations,
 		       List<Field> fields,
 		       boolean isValueType) {
@@ -351,12 +360,19 @@ public class Parser {
 			accept(tl, ")");
 		}
 
-		List<Datatype> superTypes = new ArrayList<>();
+		List<Record.SuperExpression> superTypes = new ArrayList<>();
 		if (acceptIfNext(tl, ":")) {
-			superTypes.add(parseType(tl));
-			while (acceptIfNext(tl, ",")) {
-				superTypes.add(parseType(tl));
-			}
+			do {
+				Datatype type = parseType(tl);
+				List<Expression> args = new ArrayList<>();
+				if (acceptIfNext(tl, "(")) {
+					do {
+						args.add(parseExpression(tl));
+					} while (acceptIfNext(tl, ","));
+					accept(tl, ")");
+				}
+				superTypes.add(new Record.SuperExpression(type, args));
+			} while (acceptIfNext(tl, ","));
 		}
 		
 		List<Record.Field> fields = new ArrayList<>();
