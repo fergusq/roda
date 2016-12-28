@@ -197,13 +197,15 @@ public class Parser {
 	static class Program {
 		List<Function> functions;
 		List<Record> records;
-		List<List<Statement>> blocks;
+		List<List<Statement>> preBlocks, postBlocks;
 		Program(List<Function> functions,
 			List<Record> records,
-			List<List<Statement>> blocks) {
+			List<List<Statement>> preBlocks,
+			List<List<Statement>> postBlocks) {
 			this.functions = functions;
 			this.records = records;
-			this.blocks = blocks;
+			this.preBlocks = preBlocks;
+			this.postBlocks = postBlocks;
 		}
 	}
 	
@@ -214,21 +216,34 @@ public class Parser {
 		}
 
 		List<Function> functions = new ArrayList<>();
-		List<List<Statement>> blocks = new ArrayList<>();
+		List<List<Statement>> preBlocks = new ArrayList<>(), postBlocks = new ArrayList<>();
 		List<Record> records = new ArrayList<>();
 		while (!isNext(tl, "<EOF>")) {
+			skipNewlines(tl);
 			List<Annotation> annotations = parseAnnotations(tl);
 			if (isNext(tl, "record")) {
 				records.add(parseRecord(tl, annotations));
 			}
 			else if (isNext(tl, "{")) {
-				blocks.add(parseBody(tl));
+				preBlocks.add(parseBody(tl));
+			}
+			/* TODO: ei salli uusiarivejä väliin */
+			else if (validIdentifier(tl.seekString()) && tl.seekString(1).equals(":")) {
+				String eventName = nextString(tl);
+				accept(tl, ":");
+				List<Statement> block = parseBody(tl);
+				if (eventName.equals("pre_load")) {
+					preBlocks.add(block);
+				}
+				else if (eventName.equals("post_load")) {
+					postBlocks.add(block);
+				}
 			}
 			else {
 				functions.add(parseFunction(tl, true));
 			}
 		}
-		return new Program(functions, records, blocks);
+		return new Program(functions, records, preBlocks, postBlocks);
 	}
 
 	public static class Annotation {
@@ -250,7 +265,11 @@ public class Parser {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
 			String name = "@" + identifier(tl);
-			Arguments arguments = parseArguments(tl, false);
+			Arguments arguments;
+			if (acceptIfNext(tl, "(")) {
+				arguments = parseArguments(tl, true);
+				accept(tl, ")");
+			} else arguments = parseArguments(tl, false);
 			if (!arguments.sfvarguments.isEmpty()) {
 				throw new ParsingException(
 						"annotations can't have underscore arguments",

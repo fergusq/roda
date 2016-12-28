@@ -279,6 +279,8 @@ public class Interpreter {
 	}
 
 	private RödaValue createRecordClassReflection(Record record) {
+		if (enableDebug) callStack.get().push("creating reflection object of record "
+				+ record.name + "\n\tat <runtime>");
 		RödaValue typeObj = RödaRecordInstance.of(typeRecord, Collections.emptyList(), G.records);
 		typeObj.setField("name", RödaString.of(record.name));
 		typeObj.setField("annotations", evalAnnotations(record.annotations));
@@ -287,16 +289,22 @@ public class Interpreter {
 						(ta, a, k, s, i, o) -> {
 							o.push(newRecord(new Datatype(record.name), ta, a, G));
 						}, Collections.emptyList(), false));
+		if (enableDebug) callStack.get().pop();
 		return typeObj;
 	}
 
 	private void createFieldReflections(Record record, RödaValue typeObj) {
+		if (enableDebug) callStack.get().push("creating field reflection objects of record "
+				+ record.name + "\n\tat <runtime>");
 		typeObj.setField("fields", RödaList.of("Field", record.fields.stream()
 				.map(f -> createFieldReflection(record, f))
 				.collect(toList())));
+		if (enableDebug) callStack.get().pop();
 	}
 
 	private RödaValue createFieldReflection(Record record, Record.Field field) {
+		if (enableDebug) callStack.get().push("creating reflection object of field "
+				+ record.name + "." + field.name + "\n\tat <runtime>");
 		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, Collections.emptyList(), G.records);
 		fieldObj.setField("name", RödaString.of(field.name));
 		fieldObj.setField("annotations", evalAnnotations(field.annotations));
@@ -324,6 +332,7 @@ public class Interpreter {
 								new Parameter("value", false)), false));
 		if (G.typeReflections.containsKey(field.type.name))
 			fieldObj.setField("type", G.typeReflections.get(field.type.name));
+		if (enableDebug) callStack.get().pop();
 		return fieldObj;
 	}
 
@@ -331,6 +340,7 @@ public class Interpreter {
 		return annotations.stream()
 				.map(a -> {
 					RödaValue function = G.resolve(a.name);
+					if (function == null) unknownName("annotation function '" + a.name + "' not found");
 					List<RödaValue> args = flattenArguments(a.args.arguments, G,
 							RödaStream.makeEmptyStream(),
 							RödaStream.makeStream(),
@@ -527,6 +537,9 @@ public class Interpreter {
 	public void load(String code, String filename, RödaScope scope, boolean overwrite) {
 		try {
 			Program program = parse(t.tokenize(code, filename));
+			for (List<Statement> f : program.preBlocks) {
+				execBlock(f, scope);
+			}
 			for (Function f : program.functions) {
 				scope.setLocal(f.name, RödaFunction.of(f));
 			}
@@ -536,7 +549,7 @@ public class Interpreter {
 			for (Record r : program.records) {
 				scope.postRegisterRecord(r);
 			}
-			for (List<Statement> f : program.blocks) {
+			for (List<Statement> f : program.postBlocks) {
 				execBlock(f, scope);
 			}
 		} catch (ParsingException|RödaException e) {
@@ -1571,12 +1584,23 @@ public class Interpreter {
 		for (int i = 0; i < args.size(); i++) {
 			recordScope.setLocal(r.params.get(i), args.get(i));
 		}
-		for (Record.Field f : r.fields) {
+		List<Record.Field> fields = new ArrayList<>();
+		addFields(fields, r, scope);
+		for (Record.Field f : fields) {
 			if (f.defaultValue != null) {
+				// TODO nyt kaikki ylätyyppien kentät näkevät samat tyyppiparametrit
 				value.setField(f.name, evalExpression(f.defaultValue, recordScope, RödaStream.makeEmptyStream(), RödaStream.makeStream(), false));
 			}
 		}
 		return value;
+	}
+	
+	// TODO tyyppiargumenttien substituutio
+	private void addFields(List<Record.Field> fs, Record r, RödaScope scope) {
+		for (Datatype sr : r.superTypes) {
+			addFields(fs, scope.getRecords().get(sr.name), scope);
+		}
+		fs.addAll(r.fields);
 	}
 
 	private RödaValue concat(RödaValue val1, RödaValue val2) {
