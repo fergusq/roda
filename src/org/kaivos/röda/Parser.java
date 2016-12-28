@@ -1300,7 +1300,7 @@ public class Parser {
 	}
 
 	private static Expression parseArrayAccessIfPossible(TokenList tl, Expression ans, boolean allowCalls) {
-		while (isNext(tl, "[", ".", "is") || allowCalls && isNext(tl, "(", "<<")) {
+		while (isNext(tl, ".", "is") || tl.isNext("[") || allowCalls && (isNext(tl, "<<") || tl.isNext("("))) {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
 			if (acceptIfNext(tl, "[")) {
