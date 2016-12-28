@@ -157,11 +157,11 @@ public class Interpreter {
 
 		public void preRegisterRecord(Record record) {
 			records.put(record.name, record);
-			typeReflections.put(record.name, context.createRecordClassReflection(record));
+			typeReflections.put(record.name, context.createRecordClassReflection(record, this));
 		}
 
 		public void postRegisterRecord(Record record) {
-			context.createFieldReflections(record, typeReflections.get(record.name));
+			context.createFieldReflections(record, typeReflections.get(record.name), this);
 		}
 	}
 
@@ -282,36 +282,36 @@ public class Interpreter {
 						e -> RödaString.of(e.getValue())))));
 	}
 
-	private RödaValue createRecordClassReflection(Record record) {
+	private RödaValue createRecordClassReflection(Record record, RödaScope scope) {
 		if (enableDebug) callStack.get().push("creating reflection object of record "
 				+ record.name + "\n\tat <runtime>");
 		RödaValue typeObj = RödaRecordInstance.of(typeRecord, emptyList(), G.records);
 		typeObj.setField("name", RödaString.of(record.name));
-		typeObj.setField("annotations", evalAnnotations(record.annotations));
+		typeObj.setField("annotations", evalAnnotations(record.annotations, scope));
 		typeObj.setField("newInstance", RödaNativeFunction
 				.of("Type.newInstance",
 						(ta, a, k, s, i, o) -> {
-							o.push(newRecord(new Datatype(record.name), ta, a, G));
+							o.push(newRecord(new Datatype(record.name), ta, a, scope));
 						}, emptyList(), false));
 		if (enableDebug) callStack.get().pop();
 		return typeObj;
 	}
 
-	private void createFieldReflections(Record record, RödaValue typeObj) {
+	private void createFieldReflections(Record record, RödaValue typeObj, RödaScope scope) {
 		if (enableDebug) callStack.get().push("creating field reflection objects of record "
 				+ record.name + "\n\tat <runtime>");
 		typeObj.setField("fields", RödaList.of("Field", record.fields.stream()
-				.map(f -> createFieldReflection(record, f))
+				.map(f -> createFieldReflection(record, f, scope))
 				.collect(toList())));
 		if (enableDebug) callStack.get().pop();
 	}
 
-	private RödaValue createFieldReflection(Record record, Record.Field field) {
+	private RödaValue createFieldReflection(Record record, Record.Field field, RödaScope scope) {
 		if (enableDebug) callStack.get().push("creating reflection object of field "
 				+ record.name + "." + field.name + "\n\tat <runtime>");
 		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, emptyList(), G.records);
 		fieldObj.setField("name", RödaString.of(field.name));
-		fieldObj.setField("annotations", evalAnnotations(field.annotations));
+		fieldObj.setField("annotations", evalAnnotations(field.annotations, scope));
 		fieldObj.setField("get", RödaNativeFunction
 				.of("Field.get",
 						(ta, a, k, s, i, o) -> {
@@ -334,22 +334,22 @@ public class Interpreter {
 							obj.setField(field.name, val);
 						}, Arrays.asList(new Parameter("object", false),
 								new Parameter("value", false)), false));
-		if (G.typeReflections.containsKey(field.type.name))
-			fieldObj.setField("type", G.typeReflections.get(field.type.name));
+		if (scope.typeReflections.containsKey(field.type.name))
+			fieldObj.setField("type", scope.typeReflections.get(field.type.name));
 		if (enableDebug) callStack.get().pop();
 		return fieldObj;
 	}
 
-	private RödaValue evalAnnotations(List<Annotation> annotations) {
+	private RödaValue evalAnnotations(List<Annotation> annotations, RödaScope scope) {
 		return annotations.stream()
 				.map(a -> {
-					RödaValue function = G.resolve(a.name);
+					RödaValue function = scope.resolve(a.name);
 					if (function == null) unknownName("annotation function '" + a.name + "' not found");
-					List<RödaValue> args = flattenArguments(a.args.arguments, G,
+					List<RödaValue> args = flattenArguments(a.args.arguments, scope,
 							RödaStream.makeEmptyStream(),
 							RödaStream.makeStream(),
 							false);
-					Map<String, RödaValue> kwargs = kwargsToMap(a.args.kwarguments, G,
+					Map<String, RödaValue> kwargs = kwargsToMap(a.args.kwarguments, scope,
 							RödaStream.makeEmptyStream(),
 							RödaStream.makeStream(), false);
 					RödaStream _out = RödaStream.makeStream();
