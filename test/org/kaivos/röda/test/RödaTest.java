@@ -120,6 +120,23 @@ public class RödaTest {
 						   + "push r.l[0], r.t}"));
 	}
 
+	@Test
+	public void testTypeparametrizationInSuperTypes() {
+		assertEquals("Tiina,Amanda",
+				eval("record R<<T>>{l:list<<T>>=new list<<T>>}record S<<U>>:R<<U>>{}"
+						+ "main{s:=new S<<string>>;"
+						+ "s.l+=\"Tiina\";s.l+=\"Amanda\";"
+						+ "s.l}"));
+	}
+
+	@Test
+	public void testSuperTypeArguments() {
+		assertEquals("Iida,Irina",
+				eval("record R(a,b){l:list=[a,b]}record S(a):R(a,\"Irina\"){}"
+						+ "main{s:=new S(\"Iida\");"
+						+ "s.l}"));
+	}
+
 	@Test(expected=RödaException.class)
 	public void testFieldTypeparametrizationWithWrongTypes() {
 		eval("record R<<T>>{t:T}main{r:=new R<<string>>;r.t=5}");
