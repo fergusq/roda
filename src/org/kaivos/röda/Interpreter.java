@@ -545,7 +545,7 @@ public class Interpreter {
 				execBlock(f, scope);
 			}
 			for (Function f : program.functions) {
-				scope.setLocal(f.name, RödaFunction.of(f));
+				scope.setLocal(f.name, RödaFunction.of(f, scope));
 			}
 			for (Record r : program.records) {
 				scope.preRegisterRecord(r);
