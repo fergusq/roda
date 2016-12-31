@@ -9,7 +9,7 @@ import org.kaivos.röda.type.RödaBoolean;
 import static org.kaivos.röda.type.RödaNativeFunction.NativeFunction;
 import static org.kaivos.röda.Parser.Function;
 import static org.kaivos.röda.Interpreter.RödaScope;
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.typeMismatch;
 
 public abstract class RödaValue {
 
@@ -31,12 +31,12 @@ public abstract class RödaValue {
 	public abstract String str();
 
 	public String target() {
-		error("can't cast " + typeString() + " to reference");
+		typeMismatch("can't cast " + typeString() + " to reference");
 		return null;
 	}
 
 	public RödaScope localScope() {
-		error("can't cast " + typeString() + " to function");
+		typeMismatch("can't cast " + typeString() + " to function");
 		return null;
 	}
 	
@@ -45,103 +45,103 @@ public abstract class RödaValue {
 	}
 	
 	public long integer() {
-		error("can't convert '" + str() + "' to integer");
+		typeMismatch("can't cast " + typeString() + " to integer");
 		return -1;
 	}
 	
 	public double floating() {
-		error("can't convert '" + str() + "' to float");
+		typeMismatch("can't cast " + typeString() + " to floating");
 		return -1;
 	}
 
 	public List<RödaValue> list() {
-		error("can't cast " + typeString() + " to list");
+		typeMismatch("can't cast " + typeString() + " to list");
 		return null;
 	}
 
 	public List<RödaValue> modifiableList() {
-		error("can't cast " + typeString() + " to list");
+		typeMismatch("can't cast " + typeString() + " to list");
 		return null;
 	}
 
 	public Map<String, RödaValue> map() {
-		error("can't cast " + typeString() + " to list");
+		typeMismatch("can't cast " + typeString() + " to list");
 		return null;
 	}
 
 	public Function function() {
-		error("can't convert '" + str() + "' to function");
+		typeMismatch("can't cast " + typeString() + " to function");
 		return null;
 	}
 
 	public NativeFunction nfunction() {
-		error("can't convert '" + str() + "' to function");
+		typeMismatch("can't cast " + typeString() + " to function");
 		return null;
 	}
 
 	public RödaValue get(RödaValue index) {
-		error(typeString() + " doesn't have elements");
+		typeMismatch(typeString() + " doesn't have elements");
 		return null;
 	}
 
 	public void set(RödaValue index, RödaValue value) {
-		error(typeString() + " doesn't have elements");
+		typeMismatch(typeString() + " doesn't have elements");
 	}
 
 	public RödaValue contains(RödaValue index) {
-		error(typeString() + " doesn't have elements");
+		typeMismatch(typeString() + " doesn't have elements");
 		return null;
 	}
 
 	public RödaValue containsValue(RödaValue value) {
-		error(typeString() + " doesn't have elements");
+		typeMismatch(typeString() + " doesn't have elements");
 		return null;
 	}
 
 	public RödaValue length() {
-		error(typeString() + " doesn't have length");
+		typeMismatch(typeString() + " doesn't have length");
 		return null;
 	}
 
 	public RödaValue slice(RödaValue start, RödaValue end) {
-		error(typeString() + " doesn't have elements");
+		typeMismatch(typeString() + " doesn't have elements");
 		return null;
 	}
 
 	public RödaValue join(RödaValue separator) {
-		error("can't join " + typeString());
+		typeMismatch("can't join " + typeString());
 		return null;
 	}
 
 	public void add(RödaValue value) {
-		error("can't add values to " + typeString());
+		typeMismatch("can't add values to " + typeString());
 	}
 
 	public void addAll(List<RödaValue> value) {
-		error("can't add values to " + typeString());
+		typeMismatch("can't add values to " + typeString());
 	}
 
 	public void setField(String field, RödaValue value) {
-		error("can't edit " + typeString());
+		typeMismatch(typeString() + " doesn't have fields");
 	}
 
 	public RödaValue getField(String field) {
-		error("can't read " + typeString());
+		typeMismatch(typeString() + " doesn't have fields");
 		return null;
 	}
 
 	public Map<String, RödaValue> fields() {
-		error(typeString() + " doesn't have fields");
+		typeMismatch(typeString() + " doesn't have fields");
 		return null;
 	}
 
 	public RödaValue resolve(boolean implicite) {
-		error("can't dereference " + typeString());
+		typeMismatch("can't cast " + typeString() + " to reference");
 		return null;
 	}
 
 	public RödaValue unsafeResolve() {
-		error("can't dereference " + typeString());
+		typeMismatch("can't cast " + typeString() + " to reference");
 		return null;
 	}
 
@@ -150,11 +150,11 @@ public abstract class RödaValue {
 	}
 	
 	public void assign(RödaValue value) {
-		error("can't assign a " + typeString());
+		typeMismatch("can't cast " + typeString() + " to reference");
 	}
 	
 	public void assignLocal(RödaValue value) {
-		error("can't assign a " + typeString());
+		typeMismatch("can't cast " + typeString() + " to reference");
 	}
 	
 	public RödaValue callOperator(Parser.Expression.CType operator, RödaValue value) {
@@ -164,11 +164,11 @@ public abstract class RödaValue {
 		case NEQ:
 			return RödaBoolean.of(!this.halfEq(value));
 		case MATCHES:
-			if (!this.is(STRING)) error("tried to MATCH a " + this.typeString());
-			if (!value.is(STRING)) error("tried to MATCH a " + value.typeString());
+			if (!this.is(STRING)) typeMismatch("tried to MATCH " + this.typeString());
+			if (!value.is(STRING)) typeMismatch("tried to MATCH " + value.typeString());
 			return RödaBoolean.of(this.str().matches(value.str()));
 		default:
-			error("can't " + operator.name() + " a " + basicIdentity() + " and a " + value.basicIdentity());
+			typeMismatch("can't " + operator.name() + " " + basicIdentity() + " and " + value.basicIdentity());
 			return null;
 		}
 	}
