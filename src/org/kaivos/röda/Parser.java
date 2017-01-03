@@ -65,7 +65,7 @@ public class Parser {
 			if (!tl.seekString(i-1).equals("\n") && !tl.seekString(i-1).equals(";")) return tl.seek(i-1);
 			i++;
 		}
-		throw new RuntimeException();
+		throw new ParsingException("Unexpected EOF", tl.seek(i-2));
 	}
 
 	private static String seekString(TokenList tl) {
@@ -1350,7 +1350,6 @@ public class Parser {
 					accept(tl, ">>");
 				}
 				accept(tl, "(");
-				List<Command> commands = new ArrayList<>();
 				Arguments args = parseArguments(tl, true);
 				if (!args.sfvarguments.isEmpty()) {
 					throw new ParsingException("the first command in the pipeline in an expression "
@@ -1358,6 +1357,7 @@ public class Parser {
 				}
 				Command cmd = _makeNormalCommand(file, line, ans, typeargs, args);
 				accept(tl, ")");
+				List<Command> commands = new ArrayList<>();
 				commands.add(parseSuffix(tl, cmd));
 				while (acceptIfNext(tl, "|")) {
 					commands.add(parseCommand(tl));
