@@ -539,8 +539,14 @@ public class RödaTest {
 
 	@Test
 	public void testListConcat() {
-		assertEquals("[[1], [2], [3]]",
+		assertEquals("[[1, 2, 3]]",
 			     eval("main{push \"[\"..[1, 2, 3]..\"]\"}"));
+	}
+
+	@Test
+	public void testListConcatChildren() {
+		assertEquals("[[1], [2], [3]]",
+			     eval("main{push \"[\"...[1, 2, 3]...\"]\"}"));
 	}
 
 	@Test

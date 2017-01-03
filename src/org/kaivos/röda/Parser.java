@@ -977,6 +977,7 @@ public class Parser {
 			FIELD,
 			SLICE,
 			CONCAT,
+			CONCAT_CHILDREN,
 			JOIN,
 			CALCULATOR,
 			NEW,
@@ -986,32 +987,41 @@ public class Parser {
 			IN
 		}
 		public enum CType {
-			MUL,
-			DIV,
-			IDIV,
-			MOD,
-			ADD,
-			SUB,
-			BAND,
-			BOR,
-			BXOR,
-			BRSHIFT,
-			BRRSHIFT,
-			BLSHIFT,
-			EQ,
-			NEQ,
-			MATCHES,
-			LT,
-			GT,
-			LE,
-			GE,
-			AND,
-			OR,
-			XOR,
+			MUL("*"),
+			DIV("/"),
+			IDIV("//"),
+			MOD("%"),
+			ADD("+"),
+			SUB("-"),
+			BAND("b_and"),
+			BOR("b_or"),
+			BXOR("b_xor"),
+			BRSHIFT("b_shiftr"),
+			BRRSHIFT("b_shiftrr"),
+			BLSHIFT("b_shiftl"),
+			EQ("="),
+			NEQ("!="),
+			MATCHES("~="),
+			LT("<"),
+			GT(">"),
+			LE("<="),
+			GE(">="),
+			AND("and"),
+			OR("or"),
+			XOR("xor"),
 			
-			NEG,
-			BNOT,
-			NOT
+			NEG("-", true),
+			BNOT("b_not", true),
+			NOT("not", true);
+			
+			String op;
+			boolean unary;
+			
+			private CType(String op, boolean unary) {
+				this.op = op;
+				this.unary = unary;
+			}
+			private CType(String op) { this(op, false); }
 		}
 		Type type;
 		CType ctype;
@@ -1074,9 +1084,9 @@ public class Parser {
 			case IN:
 				return exprA.asString() + " in " + exprB.asString();
 			case CALCULATOR:
-				return "<" + ctype.toString() + " "
-					+ (isUnary ? sub.asString() : exprA.asString() + ", " + exprB.asString())
-					+ ">";
+				return isUnary
+						? ctype.op + " " + sub.asString()
+						: exprA.asString() + " " + ctype.op + " " + exprB.asString();
 			default:
 				return "<" + type + ">";
 			}
@@ -1209,6 +1219,16 @@ public class Parser {
 	private static Expression expressionConcat(String file, int line, Expression a, Expression b) {
 		Expression e = new Expression();
 		e.type = Expression.Type.CONCAT;
+		e.file = file;
+		e.line = line;
+		e.exprA = a;
+		e.exprB = b;
+		return e;
+	}
+
+	private static Expression expressionConcatChildren(String file, int line, Expression a, Expression b) {
+		Expression e = new Expression();
+		e.type = Expression.Type.CONCAT_CHILDREN;
 		e.file = file;
 		e.line = line;
 		e.exprA = a;
@@ -1378,6 +1398,7 @@ public class Parser {
 		library.add("!=", op(Expression.CType.NEQ));
 		library.increaseLevel();
 		library.add("..", (a, b) -> expressionConcat(a.file, a.line, a, b));
+		library.add("...", (a, b) -> expressionConcatChildren(a.file, a.line, a, b));
 		library.increaseLevel();
 		library.add("&", (a, b) -> expressionJoin(a.file, a.line, a, b));
 		library.increaseLevel();
