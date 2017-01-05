@@ -10,6 +10,7 @@ import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.type.RödaNamespace;
 import org.kaivos.röda.type.RödaNativeFunction;
 
 public final class ImportPopulator {
@@ -36,6 +37,25 @@ public final class ImportPopulator {
 				String filename = value.str();
 				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
 				I.loadFile(file, scope, false);
+			}
+		}, Arrays.asList(new Parameter("files", false, STRING)), true));
+		
+		S.setLocal("importNamespace", RödaNativeFunction.of("importNamespace", (typeargs, args, kwargs, scope, in, out) -> {
+			for (RödaValue value : args) {
+				String filename = value.str();
+				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
+				RödaScope newScope = new RödaScope(I, I.G);
+				I.loadFile(file, newScope);
+				out.push(RödaNamespace.of(newScope));
+			}
+		}, Arrays.asList(new Parameter("files", false, STRING)), true));
+		S.setLocal("localImportNamespace", RödaNativeFunction.of("localImportNamespace", (typeargs, args, kwargs, scope, in, out) -> {
+			for (RödaValue value : args) {
+				String filename = value.str();
+				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
+				RödaScope newScope = new RödaScope(I, scope);
+				I.loadFile(file, newScope);
+				out.push(RödaNamespace.of(newScope));
 			}
 		}, Arrays.asList(new Parameter("files", false, STRING)), true));
 	}
