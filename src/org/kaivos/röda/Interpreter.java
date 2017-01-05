@@ -64,7 +64,6 @@ import org.kaivos.röda.type.RödaFunction;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
-import org.kaivos.röda.type.RödaNamespace;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaReference;
@@ -359,10 +358,7 @@ public class Interpreter {
 						if (!val.is(NAMESPACE)) {
 							typeMismatch("type mismatch: expected namespace, got " + val.typeString());
 						}
-						if (!(val instanceof RödaNamespace)) {
-							typeMismatch("bogus namespace");
-						}
-						annotationScope = ((RödaNamespace) val).getScope();
+						annotationScope = val.scope();
 					}
 					RödaValue function = annotationScope.resolve(a.name);
 					if (function == null) unknownName("annotation function '" + a.name + "' not found");

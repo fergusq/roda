@@ -54,7 +54,7 @@ public class RödaNamespace extends RödaValue {
 		return RödaBoolean.of(scope.resolve(index) != null);
 	}
 	
-	public RödaScope getScope() {
+	@Override public RödaScope scope() {
 		return scope;
 	}
 	

@@ -70,6 +70,11 @@ public abstract class RödaValue {
 		return null;
 	}
 
+	public RödaScope scope() {
+		typeMismatch("can't cast " + typeString() + " to namespace");
+		return null;
+	}
+
 	public Function function() {
 		typeMismatch("can't cast " + typeString() + " to function");
 		return null;
