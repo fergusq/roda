@@ -1,6 +1,7 @@
 package org.kaivos.röda.commands;
 
-import static org.kaivos.röda.Interpreter.checkString;
+import static org.kaivos.röda.Interpreter.unknownName;
+import static org.kaivos.röda.RödaValue.STRING;
 
 import java.util.Arrays;
 
@@ -14,16 +15,33 @@ public final class AssignGlobalPopulator {
 
 	public static void populateAssignGlobal(RödaScope S) {
 		S.setLocal("assignGlobal", RödaNativeFunction.of("assignGlobal", (typeargs, args, kwargs, scope, in, out) -> {
-			checkString("assignGlobal", args.get(0));
 			String variableName = args.get(0).str();
 			S.setLocal(variableName, args.get(1));
-	    }, Arrays.asList(new Parameter("variable", false), new Parameter("value", false)), true));
+	    }, Arrays.asList(new Parameter("variable", false, STRING), new Parameter("value", false)), false));
 	
 	    S.setLocal("createGlobal", RödaNativeFunction.of("createGlobal", (typeargs, args, kwargs, scope, in, out) -> {
-			checkString("createGlobal", args.get(0));
-	        String variableName = args.get(0).str();
+			String variableName = args.get(0).str();
 			if (S.resolve(variableName) == null)
 				S.setLocal(variableName, args.get(1));
-	    }, Arrays.asList(new Parameter("variable", false), new Parameter("value", false)), true));
+	    }, Arrays.asList(new Parameter("variable", false, STRING), new Parameter("value", false)), false));
+		
+	    S.setLocal("assignGlobalType", RödaNativeFunction.of("assignGlobalType", (typeargs, args, kwargs, scope, in, out) -> {
+			String typename = args.get(0).str();
+			if (!scope.getRecords().containsKey(typename))
+				unknownName("record class '" + typename + "' not found");
+			S.registerRecord(scope.getRecords().get(typename),
+					scope.getTypeReflections().get(typename));
+	    }, Arrays.asList(
+	    		new Parameter("typename", false, STRING)), false));
+	
+	    S.setLocal("createGlobalType", RödaNativeFunction.of("createGlobalType", (typeargs, args, kwargs, scope, in, out) -> {
+	    	String typename = args.get(0).str();
+			if (!scope.getRecords().containsKey(typename))
+				unknownName("record class '" + typename + "' not found");
+			if (!S.getRecords().containsKey(typename))
+				S.registerRecord(scope.getRecords().get(typename),
+						scope.getTypeReflections().get(typename));
+	    }, Arrays.asList(
+	    		new Parameter("typename", false, STRING)), false));
 	}
 }

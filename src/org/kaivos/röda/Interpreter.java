@@ -164,6 +164,11 @@ public class Interpreter {
 		public void postRegisterRecord(Record record) {
 			context.createFieldReflections(record, typeReflections.get(record.name), this);
 		}
+		
+		public void registerRecord(Record record, RödaValue reflection) {
+			records.put(record.name, record);
+			typeReflections.put(record.name, reflection);
+		}
 	}
 
 	public RödaScope G = new RödaScope(this, Optional.empty());
