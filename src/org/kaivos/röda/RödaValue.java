@@ -22,6 +22,7 @@ public abstract class RödaValue {
 	public static final Datatype MAP = new Datatype("map");
 	public static final Datatype FUNCTION = new Datatype("function");
 	public static final Datatype NFUNCTION = new Datatype("nfunction");
+	public static final Datatype NAMESPACE = new Datatype("namespace");
 	public static final Datatype REFERENCE = new Datatype("reference");
 
 	protected RödaValue() {} // käytä apufunktioita

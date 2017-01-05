@@ -13,6 +13,7 @@ import static org.kaivos.röda.RödaValue.FUNCTION;
 import static org.kaivos.röda.RödaValue.INTEGER;
 import static org.kaivos.röda.RödaValue.LIST;
 import static org.kaivos.röda.RödaValue.MAP;
+import static org.kaivos.röda.RödaValue.NAMESPACE;
 import static org.kaivos.röda.RödaValue.NFUNCTION;
 import static org.kaivos.röda.RödaValue.REFERENCE;
 import static org.kaivos.röda.RödaValue.STRING;
@@ -63,6 +64,7 @@ import org.kaivos.röda.type.RödaFunction;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
+import org.kaivos.röda.type.RödaNamespace;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaReference;
@@ -349,7 +351,20 @@ public class Interpreter {
 	private RödaValue evalAnnotations(List<Annotation> annotations, RödaScope scope) {
 		return annotations.stream()
 				.map(a -> {
-					RödaValue function = scope.resolve(a.name);
+					RödaScope annotationScope = scope;
+					for (String var : a.namespace) {
+						RödaValue val = annotationScope.resolve(var);
+						if (val == null)
+							unknownName("namespace '" + var + "' not found");
+						if (!val.is(NAMESPACE)) {
+							typeMismatch("type mismatch: expected namespace, got " + val.typeString());
+						}
+						if (!(val instanceof RödaNamespace)) {
+							typeMismatch("bogus namespace");
+						}
+						annotationScope = ((RödaNamespace) val).getScope();
+					}
+					RödaValue function = annotationScope.resolve(a.name);
 					if (function == null) unknownName("annotation function '" + a.name + "' not found");
 					List<RödaValue> args = flattenArguments(a.args.arguments, scope,
 							RödaStream.makeEmptyStream(),

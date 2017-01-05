@@ -248,13 +248,16 @@ public class Parser {
 
 	public static class Annotation {
 		public final String name;
+		public final List<String> namespace;
 		public final Arguments args;
 		final String file;
 		final int line;
-		public Annotation(String file, int line, String name, Arguments args) {
+		public Annotation(String file, int line,
+				String name, List<String> namespace, Arguments args) {
 			this.file = file;
 			this.line = line;
 			this.name = name;
+			this.namespace = Collections.unmodifiableList(namespace);
 			this.args = args;
 		}
 	}
@@ -264,6 +267,12 @@ public class Parser {
 		while (acceptIfNext(tl, "@")) {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
+			List<String> namespace = new ArrayList<>();
+			while (tl.seekString(1).equals(".")) {
+				namespace.add(identifier(tl));
+				accept(tl, ".");
+				skipNewlines(tl);
+			}
 			String name = "@" + identifier(tl);
 			Arguments arguments;
 			if (acceptIfNext(tl, "(")) {
@@ -275,7 +284,7 @@ public class Parser {
 						"annotations can't have underscore arguments",
 						tl.seek());
 			}
-			annotations.add(new Annotation(file, line, name, arguments));
+			annotations.add(new Annotation(file, line, name, namespace, arguments));
 		}
 		return annotations;
 	}
@@ -1539,6 +1548,10 @@ public class Parser {
 		else if (isNext(tl, "if", "while", "unless", "until", "for", "try")) {
 			Statement s = parseStatement(tl);
 			ans = expressionStatementSingle(file, line, s);
+		}
+		else if (acceptIfNext(tl, "@")) {
+			String name = "@" + identifier(tl);
+			ans = expressionVariable(file, line, name);
 		}
 		else {
 			String name = identifier(tl);
