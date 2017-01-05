@@ -40,6 +40,7 @@ import org.kaivos.röda.commands.SearchPopulator;
 import org.kaivos.röda.commands.SeqPopulator;
 import org.kaivos.röda.commands.ServerPopulator;
 import org.kaivos.röda.commands.ShiftPopulator;
+import org.kaivos.röda.commands.SortPopulator;
 import org.kaivos.röda.commands.SplitPopulator;
 import org.kaivos.röda.commands.StreamPopulator;
 import org.kaivos.röda.commands.StrsizePopulator;
@@ -91,6 +92,7 @@ public class Builtins {
 
 		HeadAndTailPopulator.populateHeadAndTail(S);
 		InterleavePopulator.populateInterleave(S);
+		SortPopulator.populateSort(I, S);
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
