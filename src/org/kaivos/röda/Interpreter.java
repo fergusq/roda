@@ -32,6 +32,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -747,6 +748,22 @@ public class Interpreter {
 		illegalArguments("illegal number of arguments for '" + function
 				+ "': at least " + required + " required (got " + got + ")");
 	}
+	
+	private RödaValue resolveArgument(RödaValue val, boolean isReferenceParameter) {
+		// jos kyseessä ei ole viittausparametri, resolvoidaan viittaus
+		if (val.is(REFERENCE) && !isReferenceParameter) {
+			RödaValue rval = val.resolve(true);
+			if (rval.is(REFERENCE)) rval = rval.resolve(true); // tuplaviittaus
+			return rval;
+		}
+		// jos kyseessä on viittausparametri, resolvoidaan viittaus vain, jos kyseessä on tuplaviittaus
+		if (val.is(REFERENCE) && isReferenceParameter) {
+			RödaValue rval = val.unsafeResolve();
+			if (rval != null && rval.is(REFERENCE)) return rval; // tuplaviittaus
+			else return val;
+		}
+		return val;
+	}
 
 	public void exec(String file, int line,
 			RödaValue value, List<Datatype> typeargs,
@@ -756,21 +773,8 @@ public class Interpreter {
 		Map<String, RödaValue> kwargs = new HashMap<>();
 		int i = 0;
 		for (RödaValue val : rawArgs) {
-			if (val.is(REFERENCE)
-					&& !(value.is(FUNCTION)
-							&& isReferenceParameter(value, i))) {
-				RödaValue rval = val.resolve(true);
-				if (rval.is(REFERENCE)) rval = rval.resolve(true);
-				args.add(rval);
-			}
-			else if (val.is(REFERENCE)
-					&& value.is(FUNCTION)
-					&& isReferenceParameter(value, i)) {
-				RödaValue rval = val.unsafeResolve();
-				if (rval != null && rval.is(REFERENCE)) args.add(rval);
-				else args.add(val);
-			}
-			else if (val.is(LIST)) {
+			val = resolveArgument(val, value.is(FUNCTION) && isReferenceParameter(value, i));
+			if (val.is(LIST)) {
 				args.add(val.copy());
 			}
 			else args.add(val);
@@ -786,15 +790,19 @@ public class Interpreter {
 				continue;
 			}
 			RödaValue val = rawKwArgs.get(kwpar.name);
-			if (val.is(REFERENCE)) {
-				RödaValue rval = val.resolve(true);
-				if (rval.is(REFERENCE)) rval = rval.resolve(true);
-				kwargs.put(kwpar.name, rval);
-			}
-			else if (val.is(LIST)) {
+			val = resolveArgument(val, false);
+			if (val.is(LIST)) {
 				kwargs.put(kwpar.name, val.copy());
 			}
 			else kwargs.put(kwpar.name, val);
+		}
+		
+		if (value.is(NFUNCTION) && value.nfunction().isKwVarargs) {
+			for (Entry<String, RödaValue> arg : rawKwArgs.entrySet()) {
+				if (!kwargs.containsKey(arg.getKey())) {
+					kwargs.put(arg.getKey(), resolveArgument(arg.getValue(), false));
+				}
+			}
 		}
 
 		if (enableDebug) {

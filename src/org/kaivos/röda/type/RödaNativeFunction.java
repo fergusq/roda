@@ -15,7 +15,7 @@ public class RödaNativeFunction extends RödaValue {
 	public static class NativeFunction {
 		public String name;
 		public NativeFunctionBody body;
-		public boolean isVarargs;
+		public boolean isVarargs, isKwVarargs;
 		public List<Parameter> parameters, kwparameters;
 	}
 	
@@ -62,6 +62,11 @@ public class RödaNativeFunction extends RödaValue {
 
 	public static RödaNativeFunction of(String name, NativeFunctionBody body,
 			List<Parameter> parameters, boolean isVarargs, List<Parameter> kwparameters) {
+		return of(name, body, parameters, isVarargs, kwparameters, false);
+	}
+
+	public static RödaNativeFunction of(String name, NativeFunctionBody body,
+			List<Parameter> parameters, boolean isVarargs, List<Parameter> kwparameters, boolean isKwVarargs) {
 		
 		for (Parameter p : parameters)
 			if (p.defaultValue != null)
@@ -75,6 +80,7 @@ public class RödaNativeFunction extends RödaValue {
 		function.name = name;
 		function.body = body;
 		function.isVarargs = isVarargs;
+		function.isKwVarargs = isKwVarargs;
 		function.parameters = parameters;
 		function.kwparameters = kwparameters;
 		return of(function);
