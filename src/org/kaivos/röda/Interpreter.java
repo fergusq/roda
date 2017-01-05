@@ -1467,7 +1467,13 @@ public class Interpreter {
 		if (exp.type == Expression.Type.CONCAT) {
 			RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue val2 = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
-			return RödaString.of(val1.str() + val2.str());
+			if (val1.is(LIST) && val2.is(LIST)) {
+				List<RödaValue> newList = new ArrayList<>();
+				newList.addAll(val1.list());
+				newList.addAll(val2.list());
+				return RödaList.of(newList);
+			}
+			else return RödaString.of(val1.str() + val2.str());
 		}
 		if (exp.type == Expression.Type.CONCAT_CHILDREN) {
 			RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
