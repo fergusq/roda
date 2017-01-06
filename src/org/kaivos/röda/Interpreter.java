@@ -98,7 +98,9 @@ public class Interpreter {
 		}
 
 		public synchronized void set(String name, RödaValue value) {
-			if (parent.isPresent() && parent.get().resolve(name) != null)
+			if (map.containsKey(name))
+				map.put(name, value);
+			else if (parent.isPresent() && parent.get().resolve(name) != null)
 				parent.get().set(name, value);
 			else {
 				map.put(name, value);
