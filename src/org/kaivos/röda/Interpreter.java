@@ -793,10 +793,7 @@ public class Interpreter {
 		int i = 0;
 		for (RödaValue val : rawArgs) {
 			val = resolveArgument(val, value.is(FUNCTION) && isReferenceParameter(value, i));
-			if (val.is(LIST)) {
-				args.add(val.copy());
-			}
-			else args.add(val);
+			args.add(val);
 			i++;
 		}
 
@@ -810,10 +807,7 @@ public class Interpreter {
 			}
 			RödaValue val = rawKwArgs.get(kwpar.name);
 			val = resolveArgument(val, false);
-			if (val.is(LIST)) {
-				kwargs.put(kwpar.name, val.copy());
-			}
-			else kwargs.put(kwpar.name, val);
+			kwargs.put(kwpar.name, val);
 		}
 		
 		if (value.is(NFUNCTION) && value.nfunction().isKwVarargs) {
