@@ -64,6 +64,7 @@ import org.kaivos.röda.type.RödaFunction;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaMap;
+import org.kaivos.röda.type.RödaNamespace;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaRecordInstance;
 import org.kaivos.röda.type.RödaReference;
@@ -872,6 +873,9 @@ public class Interpreter {
 			// joko nimettömän funktion paikallinen scope tai ylätason scope
 			RödaScope newScope = value.localScope() == null
 					? new RödaScope(this, G) : new RödaScope(this, value.localScope());
+			
+			newScope.setLocal("caller_namespace", RödaNamespace.of(scope));
+			
 			if (typeparams.size() != typeargs.size())
 				illegalArguments("illegal number of typearguments for '" + name + "': "
 						+ typeparams.size() + " required, got " + typeargs.size());
