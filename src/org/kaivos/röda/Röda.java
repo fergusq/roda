@@ -49,6 +49,7 @@ public class Röda {
 	
 	public static void main(String[] args) throws IOException {
 		String file = null;
+		List<String> eval = new ArrayList<>();
 		List<String> argsForRöda = new ArrayList<>();
 		boolean interactive = System.console() != null, forcedI = false, enableDebug = true;
 		String prompt = null;
@@ -64,6 +65,9 @@ public class Röda {
 				continue;
 			case "-P":
 				prompt = "";
+				continue;
+			case "-e":
+				eval.add(args[++i]);
 				continue;
 			case "-i":
 				interactive = true;
@@ -83,11 +87,12 @@ public class Röda {
 			case "--help": {
 				System.out.println("Usage: röda [options] file | röda [options] -i | röda [options]");
 				System.out.println("Available options:");
+				System.out.println("-D            Disable stack tracing (may speed up execution a little)");
+				System.out.println("-e stmt       Evaluate the given statement before executing the given files");
+				System.out.println("-i            Enable console mode");
+				System.out.println("-I            Disable console mode");
 				System.out.println("-p prompt     Change the prompt in interactive mode");
 				System.out.println("-P            Disable prompt in interactive mode");
-				System.out.println("-i            Enable interactive mode");
-				System.out.println("-I            Disable interactive mode");
-				System.out.println("-D            Disable stack tracing (may speed up execution a little)");
 				System.out.println("-v, --version Show the version number of the interpreter");
 				System.out.println("-h, --help    Show this help text");
 				return;
@@ -116,6 +121,7 @@ public class Röda {
 			in.close();
 			Interpreter c = new Interpreter();
 			c.enableDebug = enableDebug;
+			for (String stmt : eval) c.interpretStatement(stmt, "<option -e>");
 			List<RödaValue> valueArgs = argsForRöda.stream()
 				.map(RödaString::of)
 				.collect(Collectors.toList());
@@ -143,6 +149,8 @@ public class Röda {
 							new OSStream(out));
 			
 			c.enableDebug = enableDebug;
+			
+			for (String stmt : eval) c.interpretStatement(stmt, "<option -e>");
 
 			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, k, s, i, o) -> {
 						Interpreter.checkString("prompt", a.get(0));
@@ -186,6 +194,7 @@ public class Röda {
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 			Interpreter c = new Interpreter();
 			c.enableDebug = enableDebug;
+			for (String stmt : eval) c.interpretStatement(stmt, "<option -e>");
 			String line = "";
 			int i = 1;
 			System.out.print(prompt);
