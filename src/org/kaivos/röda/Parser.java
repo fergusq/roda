@@ -49,6 +49,7 @@ public class Parser {
 		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
+		.addCommentRule("#!", "\n")
 		.addStringRule('"','"','\\')
 		.addEscapeCode('\\', "\\")
 		.addEscapeCode('n', "\n")
