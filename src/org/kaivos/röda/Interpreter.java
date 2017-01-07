@@ -399,6 +399,8 @@ public class Interpreter {
 		STDOUT = out;
 	}
 
+	/* kutsupino */
+	
 	public static ThreadLocal<ArrayDeque<String>> callStack = new InheritableThreadLocal<ArrayDeque<String>>() {
 		@Override protected ArrayDeque<String> childValue(ArrayDeque<String> parentValue) {
 			return new ArrayDeque<>(parentValue);
@@ -407,7 +409,18 @@ public class Interpreter {
 
 	static { callStack.set(new ArrayDeque<>()); }
 	
-	public boolean enableDebug = true;
+	/* profiloija */
+	
+	public static Map<String, Long> profilerData = new HashMap<>();
+	
+	private synchronized void updateProfilerData(String function, long value) {
+		long oldValue = profilerData.containsKey(function) ? profilerData.get(function).longValue() : 0l;
+		profilerData.put(function, Long.valueOf(oldValue + value));
+	}
+	
+	private static ThreadLocal<ArrayDeque<Timer>> timerStack = ThreadLocal.withInitial(ArrayDeque::new);
+	
+	public boolean enableDebug = true, enableProfiling = false;
 
 	@SuppressWarnings("serial")
 	public static class RödaException extends RuntimeException {
@@ -818,6 +831,15 @@ public class Interpreter {
 			}
 		}
 
+		if (enableProfiling) {
+			ArrayDeque<Timer> ts = timerStack.get();
+			if (!ts.isEmpty()) {
+				ts.peek().stop();
+			}
+			Timer t = new Timer();
+			ts.push(t);
+			t.start();
+		}
 		if (enableDebug) {
 			if (args.size() > 0) {
 				callStack.get().push("calling " + value.str()
@@ -840,6 +862,15 @@ public class Interpreter {
 		catch (Throwable e) { error(e); }
 		finally {
 			if (enableDebug) callStack.get().pop();
+			if (enableProfiling) {
+				ArrayDeque<Timer> ts = timerStack.get();
+				Timer t = ts.pop();
+				t.stop();
+				updateProfilerData(value.str(), t.timeNanos());
+				if (!ts.isEmpty()) {
+					ts.peek().start();
+				}
+			}
 		}
 	}
 

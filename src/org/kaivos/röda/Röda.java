@@ -1,28 +1,26 @@
 package org.kaivos.röda;
 
-import org.kaivos.röda.Interpreter;
-import org.kaivos.röda.Interpreter.RödaException;
-
-import static org.kaivos.röda.RödaStream.OSStream;
-import org.kaivos.röda.Parser.Parameter;
-import org.kaivos.röda.type.RödaString;
-import org.kaivos.röda.type.RödaNativeFunction;
-
-import org.kaivos.nept.parser.ParsingException;
+import static java.util.stream.Collectors.toList;
 
 import java.io.BufferedReader;
-import java.io.PrintWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.File;
 import java.io.FileInputStream;
-
-import java.util.List;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.TreeSet;
 import java.util.Arrays;
-
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
+
+import org.kaivos.nept.parser.ParsingException;
+import org.kaivos.röda.Interpreter.RödaException;
+import org.kaivos.röda.Parser.Parameter;
+import org.kaivos.röda.RödaStream.OSStream;
+import org.kaivos.röda.type.RödaNativeFunction;
+import org.kaivos.röda.type.RödaString;
 
 import jline.console.ConsoleReader;
 import jline.console.history.FileHistory;
@@ -47,11 +45,22 @@ public class Röda {
 		}
 	}
 	
+	private static void interpretEOption(Interpreter i, List<String> eval) {
+		try {
+			for (String stmt : eval) i.interpretStatement(stmt, "<option -e>");
+		} catch (ParsingException e) {
+			System.err.println("[E] " + e.getMessage());
+		} catch (Interpreter.RödaException e) {
+			printRödaException(e);
+		}
+	}
+	
 	public static void main(String[] args) throws IOException {
 		String file = null;
 		List<String> eval = new ArrayList<>();
 		List<String> argsForRöda = new ArrayList<>();
-		boolean interactive = System.console() != null, forcedI = false, enableDebug = true;
+		boolean interactive = System.console() != null, forcedI = false,
+				enableDebug = true, enableProfiling = false;
 		String prompt = null;
 		
 		for (int i = 0; i < args.length; i++) {
@@ -79,6 +88,9 @@ public class Röda {
 			case "-D":
 				enableDebug = false;
 				continue;
+			case "-t":
+				enableProfiling = true;
+				continue;
 			case "-v":
 			case "--version":
 				System.out.println("Röda " + RÖDA_VERSION_STRING);
@@ -93,6 +105,7 @@ public class Röda {
 				System.out.println("-I            Disable console mode");
 				System.out.println("-p prompt     Change the prompt in interactive mode");
 				System.out.println("-P            Disable prompt in interactive mode");
+				System.out.println("-t            Enable time profiler");
 				System.out.println("-v, --version Show the version number of the interpreter");
 				System.out.println("-h, --help    Show this help text");
 				return;
@@ -121,7 +134,8 @@ public class Röda {
 			in.close();
 			Interpreter c = new Interpreter();
 			c.enableDebug = enableDebug;
-			for (String stmt : eval) c.interpretStatement(stmt, "<option -e>");
+			c.enableProfiling = enableProfiling;
+			interpretEOption(c, eval);
 			List<RödaValue> valueArgs = argsForRöda.stream()
 				.map(RödaString::of)
 				.collect(Collectors.toList());
@@ -146,11 +160,12 @@ public class Röda {
 			PrintWriter out = new PrintWriter(in.getOutput());
 
 			Interpreter c = new Interpreter(RödaStream.makeEmptyStream(),
-							new OSStream(out));
+					new OSStream(out));
 			
 			c.enableDebug = enableDebug;
+			c.enableProfiling = enableProfiling;
 			
-			for (String stmt : eval) c.interpretStatement(stmt, "<option -e>");
+			interpretEOption(c, eval);
 
 			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, k, s, i, o) -> {
 						Interpreter.checkString("prompt", a.get(0));
@@ -194,7 +209,8 @@ public class Röda {
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 			Interpreter c = new Interpreter();
 			c.enableDebug = enableDebug;
-			for (String stmt : eval) c.interpretStatement(stmt, "<option -e>");
+			c.enableProfiling = enableProfiling;
+			interpretEOption(c, eval);
 			String line = "";
 			int i = 1;
 			System.out.print(prompt);
@@ -209,6 +225,24 @@ public class Röda {
 					}
 				}
 				System.out.print(prompt);
+			}
+		}
+		
+		if (enableProfiling) {
+			List<Entry<String, Long>> data = Interpreter.profilerData.entrySet()
+					.stream().sorted((a, b) -> Long.compare(b.getValue(), a.getValue())).collect(toList());
+			long sum = data.parallelStream().mapToLong(e -> e.getValue().longValue()).sum();
+			double acc = 0;
+			
+			System.out.printf("%5s %5s %6s %s\n", "%", "ACC", "MS", "FUNCTION");
+			
+			for (Entry<String, Long> e : data) {
+				String f = e.getKey();
+				double time = e.getValue() / 1_000_000d;
+				double percent = 100d * e.getValue() / sum;
+				acc += percent;
+				
+				System.out.printf("%5.2f %5.2f %6.2f %s\n", percent, acc, time, f);
 			}
 		}
 
