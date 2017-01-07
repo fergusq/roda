@@ -29,6 +29,7 @@ import org.kaivos.röda.commands.IdentityPopulator;
 import org.kaivos.röda.commands.ImportPopulator;
 import org.kaivos.röda.commands.InterleavePopulator;
 import org.kaivos.röda.commands.JsonPopulator;
+import org.kaivos.röda.commands.KeysPopulator;
 import org.kaivos.röda.commands.MatchPopulator;
 import org.kaivos.röda.commands.NamePopulator;
 import org.kaivos.röda.commands.ParseNumPopulator;
@@ -115,9 +116,10 @@ public class Builtins {
 		TrueAndFalsePopulator.populateTrueAndFalse(S);
 		StreamPopulator.populateStream(I, S);
 
-		/* Listaoperaatiot */
+		/* Lista- ja karttaoperaatiot */
 		
 		ShiftPopulator.populateShift(S);
+		KeysPopulator.populateKeys(S);
 		
 		/* Apuoperaatiot */
 
