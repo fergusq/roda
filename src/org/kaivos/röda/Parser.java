@@ -20,7 +20,7 @@ import org.kaivos.nept.parser.ParsingException;
 
 public class Parser {
 
-	private static final String NUMBER_REGEX = "-?(0|[1-9][0-9]*)(\\.[0-9]+)([eE](\\+|-)?[0-9]+)?";
+	private static final String NUMBER_REGEX = "(0|[1-9][0-9]*)(\\.[0-9]+)([eE](\\+|-)?[0-9]+)?";
 	private static final Pattern NUMBER_PATTERN = Pattern.compile("^"+NUMBER_REGEX);
 	private static final Pattern NUMBER_PATTERN_ALL = Pattern.compile("^"+NUMBER_REGEX+"$");
 	private static final Pattern INT_PATTERN_ALL = Pattern.compile("^[0-9]+$");
@@ -45,7 +45,7 @@ public class Parser {
 		.addOperatorRule(">=")
 		.addOperatorRule("<<")
 		.addOperatorRule(">>")
-		.addPatternRule(NUMBER_PATTERN, '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+		.addPatternRule(NUMBER_PATTERN, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
 		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
@@ -121,7 +121,7 @@ public class Parser {
 	}
 
 	private static boolean validTypename(String applicant) {
-		if (applicant.length() == 1 && "<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$_".indexOf(applicant.charAt(0)) >= 0) return false;
+		if (applicant.length() == 1 && "<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$_\"".indexOf(applicant.charAt(0)) >= 0) return false;
 		switch (applicant) {
 		/* avainsanat */
 		case "if":
@@ -993,6 +993,7 @@ public class Parser {
 		enum Type {
 			VARIABLE,
 			STRING,
+			PATTERN,
 			INTEGER,
 			FLOATING,
 			STATEMENT_LIST,
@@ -1056,6 +1057,7 @@ public class Parser {
 		boolean isUnary;
 		String variable;
 		String string;
+		Pattern pattern;
 		int integer;
 		double floating;
 		Statement statement;
@@ -1074,6 +1076,8 @@ public class Parser {
 				return variable;
 			case STRING:
 				return "\"" + string.replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
+			case PATTERN:
+				return "r:\"" + pattern.pattern().replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
 			case INTEGER:
 				return String.valueOf(integer);
 			case SLICE: {
@@ -1136,6 +1140,15 @@ public class Parser {
 		e.file = file;
 		e.line = line;
 		e.string = t;
+		return e;
+	}
+
+	public static Expression expressionPattern(String file, int line, String t) {
+		Expression e = new Expression();
+		e.type = Expression.Type.PATTERN;
+		e.file = file;
+		e.line = line;
+		e.pattern = Pattern.compile(t);
 		return e;
 	}
 
@@ -1461,6 +1474,7 @@ public class Parser {
 	}
 
 	private static Expression parseExpressionPrimary(TokenList tl, boolean allowCalls) {
+		skipNewlines(tl);
 		String file = seek(tl).getFile();
 		int line = seek(tl).getLine();
 		Expression ans = null;
@@ -1571,6 +1585,14 @@ public class Parser {
 		}
 		else if (NUMBER_PATTERN_ALL.matcher(seekString(tl)).find()) {
 			ans = expressionFloat(file, line, Double.parseDouble(nextString(tl)));
+		}
+		else if (tl.isNext("r") && tl.seekString(1).equals(":")) { /* r:n ja kaksoispisteen välissä ei saa olla uuttariviä */
+			tl.accept("r");
+			tl.accept(":");
+			tl.accept("\"");
+			String s = tl.nextString();
+			tl.accept("\"");
+		    ans = expressionPattern(file, line, s);
 		}
 		else {
 			String name = identifier(tl);

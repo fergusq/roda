@@ -42,6 +42,7 @@ import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import org.kaivos.nept.parser.ParsingException;
@@ -1208,11 +1209,11 @@ public class Interpreter {
 						for (int j = 0; j < args.size(); j+=2) {
 							checkString(e.asString() + "~=", args.get(j));
 							checkString(e.asString() + "~=", args.get(j+1));
-							String pattern = args.get(j).str();
+							Pattern pattern = args.get(j).pattern();
 							String replacement = args.get(j+1).str();
 							if (quoteMode) replacement = Matcher
 									.quoteReplacement(replacement);
-							text = text.replaceAll(pattern, replacement);
+							text = pattern.matcher(text).replaceAll(replacement);
 						}
 					} catch (PatternSyntaxException ex) {
 						error("'"+e.asString()+"~=': pattern syntax exception: "
@@ -1453,6 +1454,7 @@ public class Interpreter {
 			RödaStream in, RödaStream out,
 			boolean variablesAreReferences) {
 		if (exp.type == Expression.Type.STRING) return RödaString.of(exp.string);
+		if (exp.type == Expression.Type.PATTERN) return RödaString.of(exp.pattern);
 		if (exp.type == Expression.Type.INTEGER) return RödaInteger.of(exp.integer);
 		if (exp.type == Expression.Type.FLOATING) return RödaFloating.of(exp.floating);
 		if (exp.type == Expression.Type.BLOCK) return RödaFunction.of(exp.block, scope);

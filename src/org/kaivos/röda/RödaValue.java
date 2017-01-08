@@ -3,6 +3,7 @@ package org.kaivos.röda;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.kaivos.röda.type.RödaBoolean;
 
@@ -30,6 +31,10 @@ public abstract class RödaValue {
 	public abstract RödaValue copy();
 	
 	public abstract String str();
+	
+	public Pattern pattern() {
+		return Pattern.compile(str());
+	}
 
 	public String target() {
 		typeMismatch("can't cast " + typeString() + " to reference");
@@ -169,10 +174,6 @@ public abstract class RödaValue {
 			return RödaBoolean.of(this.halfEq(value));
 		case NEQ:
 			return RödaBoolean.of(!this.halfEq(value));
-		case MATCHES:
-			if (!this.is(STRING)) typeMismatch("tried to MATCH " + this.typeString());
-			if (!value.is(STRING)) typeMismatch("tried to MATCH " + value.typeString());
-			return RödaBoolean.of(this.str().matches(value.str()));
 		default:
 			typeMismatch("can't " + operator.name() + " " + basicIdentity() + " and " + value.basicIdentity());
 			return null;
