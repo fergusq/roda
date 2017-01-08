@@ -21,6 +21,9 @@ import org.kaivos.nept.parser.ParsingException;
 public class Parser {
 
 	private static final String NUMBER_REGEX = "-?(0|[1-9][0-9]*)(\\.[0-9]+)([eE](\\+|-)?[0-9]+)?";
+	private static final Pattern NUMBER_PATTERN = Pattern.compile("^"+NUMBER_REGEX);
+	private static final Pattern NUMBER_PATTERN_ALL = Pattern.compile("^"+NUMBER_REGEX+"$");
+	private static final Pattern INT_PATTERN_ALL = Pattern.compile("^[0-9]+$");
 	
 	public static final TokenScanner t = new TokenScanner()
 		.addOperatorRule("...")
@@ -36,16 +39,13 @@ public class Parser {
 		.addOperatorRule("++")
 		.addOperatorRule("--")
 		.addOperatorRule("//")
-		.addOperatorRule("&&")
-		.addOperatorRule("||")
-		.addOperatorRule("^^")
 		.addOperatorRule("!=")
 		.addOperatorRule("=~")
 		.addOperatorRule("<=")
 		.addOperatorRule(">=")
 		.addOperatorRule("<<")
 		.addOperatorRule(">>")
-		.addPatternRule(Pattern.compile("^"+NUMBER_REGEX), '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+		.addPatternRule(NUMBER_PATTERN, '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
 		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
@@ -121,8 +121,9 @@ public class Parser {
 	}
 
 	private static boolean validTypename(String applicant) {
-		if (applicant.matches("[<>()\\[\\]{}|&.,:;=#%!?\n+\\-*/~@%$_]|[:~.+\\-*/!]=|\\+\\+|&&|\\|\\||^^|=~|<=|>=|<<|>>")) return false;
+		if (applicant.length() == 1 && "<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$_".indexOf(applicant.charAt(0)) >= 0) return false;
 		switch (applicant) {
+		/* avainsanat */
 		case "if":
 		case "unless":
 		case "while":
@@ -148,6 +149,23 @@ public class Parser {
 		case "xor":
 		case "try":
 		case "catch":
+		/* operaattorit*/
+		case ":=":
+		case "~=":
+		case ".=":
+		case "+=":
+		case "-=":
+		case "*=":
+		case "/=":
+		case "!=":
+		case "++":
+		case "--":
+		case "//":
+		case "=~":
+		case "<=":
+		case ">=":
+		case "<<":
+		case ">>":
 			return false;
 		default:
 			return true;
@@ -1511,12 +1529,6 @@ public class Parser {
 			tl.accept("\"");
 		    ans = expressionString(file, line, s);
 		}
-		else if (seekString(tl).matches("[0-9]+")) {
-			ans = expressionInt(file, line, Integer.parseInt(nextString(tl)));
-		}
-		else if (seekString(tl).matches(NUMBER_REGEX)) {
-			ans = expressionFloat(file, line, Double.parseDouble(nextString(tl)));
-		}
 		else if (acceptIfNext(tl, "[")) {
 			List<Expression> list = new ArrayList<>();
 			while (!isNext(tl, "]")) {
@@ -1553,6 +1565,12 @@ public class Parser {
 		else if (acceptIfNext(tl, "@")) {
 			String name = "@" + identifier(tl);
 			ans = expressionVariable(file, line, name);
+		}
+		else if (INT_PATTERN_ALL.matcher(seekString(tl)).find()) {
+			ans = expressionInt(file, line, Integer.parseInt(nextString(tl)));
+		}
+		else if (NUMBER_PATTERN_ALL.matcher(seekString(tl)).find()) {
+			ans = expressionFloat(file, line, Double.parseDouble(nextString(tl)));
 		}
 		else {
 			String name = identifier(tl);
