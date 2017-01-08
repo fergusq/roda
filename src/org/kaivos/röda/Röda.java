@@ -240,7 +240,7 @@ public class Röda {
 						Long.compare(divInvs ? b.time / b.invocations : b.time, divInvs ? a.time / a.invocations : a.time))
 					.collect(toList());
 			
-			long sum = data.parallelStream().mapToLong(e -> divInvs ? e.time/e.invocations : e.time).sum();
+			long sum = data.stream().mapToLong(e -> e.time).sum();
 			
 			double acc = 0;
 			
