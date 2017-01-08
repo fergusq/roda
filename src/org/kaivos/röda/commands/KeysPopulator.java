@@ -17,7 +17,7 @@ public class KeysPopulator {
 	
 	public static void populateKeys(RödaScope S) {
 		S.setLocal("keys", RödaNativeFunction.of("keys", (typeargs, args, kwargs, scope, in, out) -> {
-			out.push(RödaList.of(args.get(0).map().keySet().parallelStream().map(RödaString::of).collect(toList())));
+			out.push(RödaList.of(args.get(0).map().keySet().stream().map(RödaString::of).collect(toList())));
 		}, Arrays.asList(new Parameter("table", false, MAP)), false));
 	}
 

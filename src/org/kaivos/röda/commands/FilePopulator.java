@@ -7,7 +7,9 @@ import static org.kaivos.röda.Interpreter.error;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 import org.kaivos.röda.IOUtils;
@@ -58,6 +60,13 @@ public final class FilePopulator {
 				error(e);
 			}
 		});
+		addQueryType(I, "permissions", (file, out) ->{
+			try {
+				out.push(RödaInteger.of(permissionsToInt(Files.getPosixFilePermissions(file.toPath()))));
+			} catch (IOException e) {
+				error(e);
+			}
+		});
 		addQueryType(I, "ls", (file, out) -> {
 			try {
 				Files.list(file.toPath()).map(p -> RödaString.of(p.toAbsolutePath().toString())).forEach(out::push);
@@ -65,5 +74,34 @@ public final class FilePopulator {
 				error(e);
 			}
 		});
+	}
+
+	private static int permissionsToInt(Set<PosixFilePermission> permissions) {
+		return permissions.stream().mapToInt(FilePopulator::permissionToInt).sum();
+	}
+	
+	private static int permissionToInt(PosixFilePermission permission) {
+		switch (permission) {
+		case OWNER_EXECUTE:
+			return 100;
+		case GROUP_EXECUTE:
+			return 10;
+		case OTHERS_EXECUTE:
+			return 1;
+		case OWNER_WRITE:
+			return 200;
+		case GROUP_WRITE:
+			return 20;
+		case OTHERS_WRITE:
+			return 2;
+		case OWNER_READ:
+			return 400;
+		case GROUP_READ:
+			return 40;
+		case OTHERS_READ:
+			return 4;
+		default:
+			return 0;
+		}
 	}
 }
