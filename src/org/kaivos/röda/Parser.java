@@ -149,6 +149,7 @@ public class Parser {
 		case "xor":
 		case "try":
 		case "catch":
+		case "del":
 		/* operaattorit*/
 		case ":=":
 		case "~=":
@@ -594,7 +595,8 @@ public class Parser {
 			RETURN,
 			BREAK,
 			CONTINUE,
-			EXPRESSION
+			EXPRESSION,
+			DEL
 		}
 		Type type;
 		Expression name;
@@ -645,6 +647,8 @@ public class Parser {
 				return "try do ... done";
 			case VARIABLE:
 				return name.asString() + operator + argumentsAsString();
+			case DEL:
+				return "del " + name.asString();
 			default:
 				return "<" + type + ">";
 			}
@@ -786,6 +790,15 @@ public class Parser {
 		cmd.name = expr;
 		return cmd;
 	}
+	
+	static Command _makeDelCommand(String file, int line, Expression expr) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.DEL;
+		cmd.file = file;
+		cmd.line = line;
+		cmd.name = expr;
+		return cmd;
+	}
 
 	static Command parseCommand(TokenList tl) {
 		Command cmd = parsePrefixCommand(tl);
@@ -912,6 +925,10 @@ public class Parser {
 
 		if (acceptIfNext(tl, "continue")) {
 			return _makeContinueCommand(file, line);
+		}
+
+		if (acceptIfNext(tl, "del")) {
+			return _makeDelCommand(file, line, parseExpressionPrimary(tl, false));
 		}
 
 		Expression name = parseExpressionPrimary(tl, false);
@@ -1533,7 +1550,7 @@ public class Parser {
 			}
 			accept(tl, "}");
 			ans = expressionFunction(file, line,
-					new Function("<block>",
+					new Function("<block at " + file + ":" + line + ">",
 							Collections.emptyList(),
 							parameters, isVarargs,
 							kwparameters, body));

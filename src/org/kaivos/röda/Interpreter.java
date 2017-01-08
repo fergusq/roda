@@ -1076,6 +1076,31 @@ public class Interpreter {
 			};
 			return r;
 		}
+		
+		if (cmd.type == Command.Type.DEL) {
+			Expression e = cmd.name;
+			if (e.type != Expression.Type.ELEMENT
+					&& e.type != Expression.Type.SLICE)
+				error("bad lvalue for del: " + e.asString());
+			if (e.type == Expression.Type.ELEMENT) {
+				return () -> {
+					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
+					RödaValue index = evalExpression(e.index, scope, in, out)
+							.impliciteResolve();
+					list.del(index);
+				};
+			}
+			else if (e.type == Expression.Type.SLICE) {
+				return () -> {
+					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
+					RödaValue index1 = evalExpression(e.index1, scope, in, out)
+							.impliciteResolve();
+					RödaValue index2 = evalExpression(e.index2, scope, in, out)
+							.impliciteResolve();
+					list.delSlice(index1, index2);
+				};
+			}
+		}
 
 		if (cmd.type == Command.Type.VARIABLE) {
 			List<RödaValue> args = flattenArguments(cmd.arguments.arguments, scope, in, out, true);
@@ -1083,7 +1108,7 @@ public class Interpreter {
 			if (e.type != Expression.Type.VARIABLE
 					&& e.type != Expression.Type.ELEMENT
 					&& e.type != Expression.Type.FIELD)
-				typeMismatch("bad lvalue for '" + cmd.operator + "': " + e.asString());
+				error("bad lvalue for '" + cmd.operator + "': " + e.asString());
 			Consumer<RödaValue> assign, assignLocal;
 			if (e.type == Expression.Type.VARIABLE) {
 				assign = v -> {

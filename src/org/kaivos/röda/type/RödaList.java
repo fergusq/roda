@@ -108,6 +108,27 @@ public class RödaList extends RödaValue {
 		return of(list.subList((int) start, (int) end));
 	}
 
+	@Override public void del(RödaValue indexVal) {
+		long index = indexVal.integer();
+		if (index < 0) index = list.size()+index;
+		if (list.size() <= index)
+			outOfBounds("list index out of bounds: index " + index
+			      + ", size " + list.size());
+		if (index > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+index);
+		list.remove((int) index);
+	}
+
+	@Override public void delSlice(RödaValue startVal, RödaValue endVal) {
+		long start = startVal == null ? 0 : startVal.integer();
+		long end = endVal == null ? list.size() : endVal.integer();
+		if (start < 0) start = list.size()+start;
+		if (end < 0) end = list.size()+end;
+		if (end == 0 && start > 0) end = list.size();
+		if (start > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+start);
+		if (end > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+end);
+		for (int i = (int) start; i < end; i++) list.remove(i);
+	}
+
 	@Override public RödaValue join(RödaValue separatorVal) {
 		String separator = separatorVal.str();
 		String text = "";

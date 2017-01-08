@@ -65,6 +65,11 @@ public class RödaMap extends RödaValue {
 			typeMismatch("cannot put " + value.typeString() + " to " + typeString());
 		map.put(index, value);
 	}
+	
+	@Override public void del(RödaValue indexVal) {
+		String index = indexVal.str();
+		map.remove(index);
+	}
 
 	@Override public RödaValue contains(RödaValue indexVal) {
 		String index = indexVal.str();

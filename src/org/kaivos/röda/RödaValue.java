@@ -99,6 +99,14 @@ public abstract class RödaValue {
 		typeMismatch(typeString() + " doesn't have elements");
 	}
 
+	public void del(RödaValue index) {
+		typeMismatch(typeString() + " doesn't have elements");
+	}
+
+	public void delSlice(RödaValue start, RödaValue end) {
+		typeMismatch(typeString() + " doesn't have elements");
+	}
+
 	public RödaValue contains(RödaValue index) {
 		typeMismatch(typeString() + " doesn't have elements");
 		return null;
