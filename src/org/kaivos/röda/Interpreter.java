@@ -411,11 +411,24 @@ public class Interpreter {
 	
 	/* profiloija */
 	
-	public static Map<String, Long> profilerData = new HashMap<>();
+	public static class ProfilerData {
+		public final String function;
+		public int invocations = 0;
+		public long time = 0;
+		
+		public ProfilerData(String function) {
+			this.function = function;
+		}
+	}
+	
+	public static Map<String, ProfilerData> profilerData = new HashMap<>();
 	
 	private synchronized void updateProfilerData(String function, long value) {
-		long oldValue = profilerData.containsKey(function) ? profilerData.get(function).longValue() : 0l;
-		profilerData.put(function, Long.valueOf(oldValue + value));
+		ProfilerData data;
+		if (!profilerData.containsKey(function)) profilerData.put(function, data = new ProfilerData(function));
+		else data = profilerData.get(function);
+		data.time += value;
+		data.invocations++;
 	}
 	
 	private static ThreadLocal<ArrayDeque<Timer>> timerStack = ThreadLocal.withInitial(ArrayDeque::new);

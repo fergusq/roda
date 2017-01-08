@@ -11,7 +11,6 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -60,7 +59,7 @@ public class Röda {
 		List<String> eval = new ArrayList<>();
 		List<String> argsForRöda = new ArrayList<>();
 		boolean interactive = System.console() != null, forcedI = false,
-				enableDebug = true, enableProfiling = false;
+				enableDebug = true, enableProfiling = false, divideByInvocations = false;
 		String prompt = null;
 		
 		for (int i = 0; i < args.length; i++) {
@@ -91,6 +90,9 @@ public class Röda {
 			case "-t":
 				enableProfiling = true;
 				continue;
+			case "--per-invocation":
+				divideByInvocations = true;
+				break;
 			case "-v":
 			case "--version":
 				System.out.println("Röda " + RÖDA_VERSION_STRING);
@@ -99,15 +101,16 @@ public class Röda {
 			case "--help": {
 				System.out.println("Usage: röda [options] file | röda [options] -i | röda [options]");
 				System.out.println("Available options:");
-				System.out.println("-D            Disable stack tracing (may speed up execution a little)");
-				System.out.println("-e stmt       Evaluate the given statement before executing the given files");
-				System.out.println("-i            Enable console mode");
-				System.out.println("-I            Disable console mode");
-				System.out.println("-p prompt     Change the prompt in interactive mode");
-				System.out.println("-P            Disable prompt in interactive mode");
-				System.out.println("-t            Enable time profiler");
-				System.out.println("-v, --version Show the version number of the interpreter");
-				System.out.println("-h, --help    Show this help text");
+				System.out.println("-D               Disable stack tracing (may speed up execution a little)");
+				System.out.println("-e stmt          Evaluate the given statement before executing the given files");
+				System.out.println("-i               Enable console mode");
+				System.out.println("-I               Disable console mode");
+				System.out.println("-p prompt        Change the prompt in interactive mode");
+				System.out.println("-P               Disable prompt in interactive mode");
+				System.out.println("--per-invocation Divide CPU time by invocation number in profiler output");
+				System.out.println("-t               Enable time profiler");
+				System.out.println("-v, --version    Show the version number of the interpreter");
+				System.out.println("-h, --help       Show this help text");
 				return;
 			}
 			default:
@@ -229,20 +232,30 @@ public class Röda {
 		}
 		
 		if (enableProfiling) {
-			List<Entry<String, Long>> data = Interpreter.profilerData.entrySet()
-					.stream().sorted((a, b) -> Long.compare(b.getValue(), a.getValue())).collect(toList());
-			long sum = data.parallelStream().mapToLong(e -> e.getValue().longValue()).sum();
+			final boolean divInvs = divideByInvocations;
+			
+			List<Interpreter.ProfilerData> data = Interpreter.profilerData.values()
+					.stream()
+					.sorted((a, b) ->
+						Long.compare(divInvs ? b.time / b.invocations : b.time, divInvs ? a.time / a.invocations : a.time))
+					.collect(toList());
+			
+			long sum = data.parallelStream().mapToLong(e -> divInvs ? e.time/e.invocations : e.time).sum();
+			
 			double acc = 0;
 			
-			System.out.printf("%5s %5s %6s %s\n", "%", "ACC", "MS", "FUNCTION");
+			System.out.printf("%5s %6s %6s %4s %s\n", "%", "ACC", "MS", "INVS", "FUNCTION");
 			
-			for (Entry<String, Long> e : data) {
-				String f = e.getKey();
-				double time = e.getValue() / 1_000_000d;
-				double percent = 100d * e.getValue() / sum;
+			for (Interpreter.ProfilerData pd : data) {
+				String f = pd.function;
+				int invs = pd.invocations;
+				double timenanos = pd.time;
+				if (divideByInvocations) timenanos /= invs;
+				double time = timenanos / 1_000_000d;
+				double percent = 100d * timenanos / sum;
 				acc += percent;
 				
-				System.out.printf("%5.2f %5.2f %6.2f %s\n", percent, acc, time, f);
+				System.out.printf("%5.2f %6.2f %6.2f %4d %s\n", percent, acc, time, invs, f);
 			}
 		}
 
