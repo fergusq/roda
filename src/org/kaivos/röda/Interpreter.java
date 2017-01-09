@@ -328,7 +328,7 @@ public class Interpreter {
 						(ta, a, k, s, i, o) -> {
 							RödaValue obj = a.get(0);
 							if (!obj.is(new Datatype(record.name))) {
-								error("illegal argument for Field.get: "
+								illegalArguments("illegal argument for Field.get: "
 										+ record.name + " required, got " + obj.typeString());
 							}
 							o.push(obj.getField(field.name));
@@ -338,7 +338,7 @@ public class Interpreter {
 						(ta, a, k, s, i, o) -> {
 							RödaValue obj = a.get(0);
 							if (!obj.is(new Datatype(record.name))) {
-								error("illegal argument for Field.get: "
+								illegalArguments("illegal argument for Field.get: "
 										+ record.name + " required, got " + obj.typeString());
 							}
 							RödaValue val = a.get(1);
@@ -1467,6 +1467,7 @@ public class Interpreter {
 					variablesAreReferences);
 		}
 		catch (RödaException e) { throw e; }
+		catch (ReturnException e) { throw e; }
 		catch (Throwable e) { error(e); value = null; }
 		finally {
 			if (enableDebug) callStack.get().pop();
