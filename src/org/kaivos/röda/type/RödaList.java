@@ -57,8 +57,8 @@ public class RödaList extends RödaValue {
 		return list;
 	}
 	
-	private void checkInRange(long index) {
-		if (list.size() <= index)
+	private void checkInRange(long index, boolean allowOneAfterLast) {
+		if (list.size() + (allowOneAfterLast ? 1 : 0) <= index)
 			outOfBounds("list index out of bounds: index " + index
 			      + ", size " + list.size());
 		if (index > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+index);
@@ -67,14 +67,14 @@ public class RödaList extends RödaValue {
 	@Override public RödaValue get(RödaValue indexVal) {
 		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
-		checkInRange(index);
+		checkInRange(index, false);
 		return list.get((int) index);
 	}
 
 	@Override public void set(RödaValue indexVal, RödaValue value) {
 		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
-		checkInRange(index);
+		checkInRange(index, false);
 		if (type != null && !value.is(type))
 			typeMismatch("cannot put " + value.typeString() + " to " + typeString());
 		list.set((int) index, value);
@@ -83,7 +83,7 @@ public class RödaList extends RödaValue {
 	private int sliceStart(RödaValue startVal) {
 		long start = startVal == null ? 0 : startVal.integer();
 		if (start < 0) start = list.size()+start;
-		checkInRange(start);
+		checkInRange(start, true);
 		return (int) start;
 	}
 	
@@ -91,7 +91,7 @@ public class RödaList extends RödaValue {
 		long end = endVal == null ? list.size() : endVal.integer();
 		if (end < 0) end = list.size()+end;
 		if (end == 0 && start > 0) end = list.size();
-		checkInRange(end);
+		checkInRange(end, true);
 		return (int) end;
 	}
 
@@ -111,7 +111,7 @@ public class RödaList extends RödaValue {
 	@Override public void del(RödaValue indexVal) {
 		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
-		checkInRange(index);
+		checkInRange(index, false);
 		list.remove((int) index);
 	}
 
