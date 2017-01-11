@@ -33,8 +33,7 @@ public final class AssignGlobalPopulator {
 			RödaScope typeScope = args.size() == 1 ? scope : args.get(1).scope();
 			if (!typeScope.getRecords().containsKey(typename))
 				unknownName("record class '" + typename + "' not found");
-			S.registerRecord(typeScope.getRecords().get(typename),
-					typeScope.getTypeReflections().get(typename));
+			S.registerRecord(typeScope.getRecordDeclarations().get(typename));
 	    }, Arrays.asList(
 	    		new Parameter("typename", false, STRING),
 	    		new Parameter("namespace", false, NAMESPACE)), true));
@@ -46,8 +45,7 @@ public final class AssignGlobalPopulator {
 			if (!typeScope.getRecords().containsKey(typename))
 				unknownName("record class '" + typename + "' not found");
 			if (!S.getRecords().containsKey(typename))
-				S.registerRecord(typeScope.getRecords().get(typename),
-						typeScope.getTypeReflections().get(typename));
+				S.registerRecord(typeScope.getRecordDeclarations().get(typename));
 	    }, Arrays.asList(
 	    		new Parameter("typename", false, STRING),
 	    		new Parameter("namespace", false, NAMESPACE)), true));

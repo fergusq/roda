@@ -80,8 +80,7 @@ public class Interpreter {
 		Optional<RödaScope> parent;
 		Map<String, RödaValue> map;
 		Map<String, Datatype> typeargs;
-		Map<String, Record> records = new HashMap<>();
-		Map<String, RödaValue> typeReflections = new HashMap<>();
+		Map<String, RecordDeclaration> records = new HashMap<>();
 		RödaScope(Interpreter context, Optional<RödaScope> parent) {
 			this.context = context;
 			this.parent = parent;
@@ -148,31 +147,41 @@ public class Interpreter {
 			if (parent.isPresent()) {
 				records.putAll(parent.get().getRecords());
 			}
-			records.putAll(this.records);
+			this.records.values().forEach(r -> records.put(r.tree.name, r.tree));
 			return Collections.unmodifiableMap(records);
 		}
 		
-		public Map<String, RödaValue> getTypeReflections() {
-			Map<String, RödaValue> typeReflections = new HashMap<>();
+		public Map<String, RecordDeclaration> getRecordDeclarations() {
+			Map<String, RecordDeclaration> records = new HashMap<>();
 			if (parent.isPresent()) {
-				typeReflections.putAll(parent.get().getTypeReflections());
+				records.putAll(parent.get().getRecordDeclarations());
 			}
-			typeReflections.putAll(this.typeReflections);
-			return Collections.unmodifiableMap(typeReflections);
+			records.putAll(this.records);
+			return Collections.unmodifiableMap(records);
 		}
 
 		public void preRegisterRecord(Record record) {
-			records.put(record.name, record);
-			typeReflections.put(record.name, context.createRecordClassReflection(record, this));
+			records.put(record.name, new RecordDeclaration(record, this, context.createRecordClassReflection(record, this)));
 		}
 
 		public void postRegisterRecord(Record record) {
-			context.createFieldReflections(record, typeReflections.get(record.name), this);
+			context.createFieldReflections(record, records.get(record.name).reflection, this);
 		}
 		
-		public void registerRecord(Record record, RödaValue reflection) {
-			records.put(record.name, record);
-			typeReflections.put(record.name, reflection);
+		public void registerRecord(RecordDeclaration record) {
+			records.put(record.tree.name, record);
+		}
+	}
+	
+	public static class RecordDeclaration {
+		Record tree;
+		RödaScope declarationScope;
+		RödaValue reflection;
+		
+		public RecordDeclaration(Record record, RödaScope declarationScope, RödaValue reflection) {
+			this.tree = record;
+			this.declarationScope = declarationScope;
+			this.reflection = reflection;
 		}
 	}
 
@@ -296,7 +305,7 @@ public class Interpreter {
 	private RödaValue createRecordClassReflection(Record record, RödaScope scope) {
 		if (enableDebug) callStack.get().push("creating reflection object of record "
 				+ record.name + "\n\tat <runtime>");
-		RödaValue typeObj = RödaRecordInstance.of(typeRecord, emptyList(), G.records);
+		RödaValue typeObj = RödaRecordInstance.of(typeRecord, emptyList(), G.getRecords());
 		typeObj.setField("name", RödaString.of(record.name));
 		typeObj.setField("annotations", evalAnnotations(record.annotations, scope));
 		typeObj.setField("newInstance", RödaNativeFunction
@@ -320,7 +329,7 @@ public class Interpreter {
 	private RödaValue createFieldReflection(Record record, Record.Field field, RödaScope scope) {
 		if (enableDebug) callStack.get().push("creating reflection object of field "
 				+ record.name + "." + field.name + "\n\tat <runtime>");
-		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, emptyList(), G.records);
+		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, emptyList(), G.getRecords());
 		fieldObj.setField("name", RödaString.of(field.name));
 		fieldObj.setField("annotations", evalAnnotations(field.annotations, scope));
 		fieldObj.setField("get", RödaNativeFunction
@@ -345,8 +354,8 @@ public class Interpreter {
 							obj.setField(field.name, val);
 						}, Arrays.asList(new Parameter("object", false),
 								new Parameter("value", false)), false));
-		if (scope.typeReflections.containsKey(field.type.name))
-			fieldObj.setField("type", scope.typeReflections.get(field.type.name));
+		if (scope.getRecordDeclarations().containsKey(field.type.name))
+			fieldObj.setField("type", scope.getRecordDeclarations().get(field.type.name).reflection);
 		if (enableDebug) callStack.get().pop();
 		return fieldObj;
 	}
@@ -1498,9 +1507,9 @@ public class Interpreter {
 				RödaValue value = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 				type = value.basicIdentity();
 			}
-			if (!scope.getTypeReflections().containsKey(type.name))
+			if (!scope.getRecordDeclarations().containsKey(type.name))
 				unknownName("reflect: unknown record class '" + type + "'");
-			return scope.getTypeReflections().get(type.name);
+			return scope.getRecordDeclarations().get(type.name).reflection;
 		}
 		if (exp.type == Expression.Type.NEW) {
 			Datatype type = scope.substitute(exp.datatype);
@@ -1681,8 +1690,9 @@ public class Interpreter {
 
 	private RödaValue newRecord(RödaValue value,
 			Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
-		Map<String, Record> records = scope.getRecords();
-		Record r = records.get(type.name);
+		Map<String, RecordDeclaration> records = scope.getRecordDeclarations();
+		Record r = records.get(type.name).tree;
+		RödaScope declarationScope = records.get(type.name).declarationScope;
 		if (r == null)
 			unknownName("record class '" + type.name + "' not found");
 		if (r.typeparams.size() != subtypes.size())
@@ -1691,8 +1701,8 @@ public class Interpreter {
 		if (r.params.size() != args.size())
 			illegalArguments("wrong number of arguments for '" + r.name + "': "
 					+ r.params.size() + " required, got " + args.size());
-		value = value != null ? value : RödaRecordInstance.of(r, subtypes, records);
-		RödaScope recordScope = new RödaScope(this, G);
+		value = value != null ? value : RödaRecordInstance.of(r, subtypes, scope.getRecords());
+		RödaScope recordScope = new RödaScope(this, declarationScope);
 		recordScope.setLocal("self", value);
 		for (int i = 0; i < subtypes.size(); i++) {
 			recordScope.addTypearg(r.typeparams.get(i), subtypes.get(i));
