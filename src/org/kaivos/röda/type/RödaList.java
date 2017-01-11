@@ -56,26 +56,69 @@ public class RödaList extends RödaValue {
 	@Override public List<RödaValue> modifiableList() {
 		return list;
 	}
+	
+	private void checkInRange(long index) {
+		if (list.size() <= index)
+			outOfBounds("list index out of bounds: index " + index
+			      + ", size " + list.size());
+		if (index > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+index);
+	}
 
 	@Override public RödaValue get(RödaValue indexVal) {
 		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
-		if (list.size() <= index) outOfBounds("list index out of bounds: index " + index
-						+ ", size " + list.size());
-		if (index > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+index);
+		checkInRange(index);
 		return list.get((int) index);
 	}
 
 	@Override public void set(RödaValue indexVal, RödaValue value) {
 		long index = indexVal.integer();
 		if (index < 0) index = list.size()+index;
-		if (list.size() <= index)
-			outOfBounds("list index out of bounds: index " + index
-			      + ", size " + list.size());
+		checkInRange(index);
 		if (type != null && !value.is(type))
 			typeMismatch("cannot put " + value.typeString() + " to " + typeString());
-		if (index > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+index);
 		list.set((int) index, value);
+	}
+	
+	private int sliceStart(RödaValue startVal) {
+		long start = startVal == null ? 0 : startVal.integer();
+		if (start < 0) start = list.size()+start;
+		checkInRange(start);
+		return (int) start;
+	}
+	
+	private int sliceEnd(int start, RödaValue endVal) {
+		long end = endVal == null ? list.size() : endVal.integer();
+		if (end < 0) end = list.size()+end;
+		if (end == 0 && start > 0) end = list.size();
+		checkInRange(end);
+		return (int) end;
+	}
+
+	@Override public void setSlice(RödaValue startVal, RödaValue endVal, RödaValue value) {
+		int start = sliceStart(startVal);
+		int end = sliceEnd(start, endVal);
+		for (int i = start; i < end; i++) list.remove(start);
+		list.addAll(start, value.list());
+	}
+
+	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal) {
+		int start = sliceStart(startVal);
+		int end = sliceEnd(start, endVal);
+		return of(list.subList((int) start, (int) end));
+	}
+
+	@Override public void del(RödaValue indexVal) {
+		long index = indexVal.integer();
+		if (index < 0) index = list.size()+index;
+		checkInRange(index);
+		list.remove((int) index);
+	}
+
+	@Override public void delSlice(RödaValue startVal, RödaValue endVal) {
+		int start = sliceStart(startVal);
+		int end = sliceEnd(start, endVal);
+		for (int i = start; i < end; i++) list.remove(start);
 	}
 
 	@Override public RödaValue contains(RödaValue indexVal) {
@@ -95,38 +138,6 @@ public class RödaList extends RödaValue {
 
 	@Override public RödaValue length() {
 		return RödaInteger.of(list.size());
-	}
-
-	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal) {
-		long start = startVal == null ? 0 : startVal.integer();
-		long end = endVal == null ? list.size() : endVal.integer();
-		if (start < 0) start = list.size()+start;
-		if (end < 0) end = list.size()+end;
-		if (end == 0 && start > 0) end = list.size();
-		if (start > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+start);
-		if (end > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+end);
-		return of(list.subList((int) start, (int) end));
-	}
-
-	@Override public void del(RödaValue indexVal) {
-		long index = indexVal.integer();
-		if (index < 0) index = list.size()+index;
-		if (list.size() <= index)
-			outOfBounds("list index out of bounds: index " + index
-			      + ", size " + list.size());
-		if (index > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+index);
-		list.remove((int) index);
-	}
-
-	@Override public void delSlice(RödaValue startVal, RödaValue endVal) {
-		long start = startVal == null ? 0 : startVal.integer();
-		long end = endVal == null ? list.size() : endVal.integer();
-		if (start < 0) start = list.size()+start;
-		if (end < 0) end = list.size()+end;
-		if (end == 0 && start > 0) end = list.size();
-		if (start > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+start);
-		if (end > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+end);
-		for (int i = (int) start; i < end; i++) list.remove(i);
 	}
 
 	@Override public RödaValue join(RödaValue separatorVal) {

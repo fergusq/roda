@@ -1116,6 +1116,7 @@ public class Interpreter {
 			Expression e = cmd.name;
 			if (e.type != Expression.Type.VARIABLE
 					&& e.type != Expression.Type.ELEMENT
+					&& e.type != Expression.Type.SLICE
 					&& e.type != Expression.Type.FIELD)
 				error("bad lvalue for '" + cmd.operator + "': " + e.asString());
 			Consumer<RödaValue> assign, assignLocal;
@@ -1136,9 +1137,17 @@ public class Interpreter {
 			else if (e.type == Expression.Type.ELEMENT) {
 				assign = v -> {
 					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
-					RödaValue index = evalExpression(e.index, scope, in, out)
-							.impliciteResolve();
+					RödaValue index = evalExpression(e.index, scope, in, out).impliciteResolve();
 					list.set(index, v);
+				};
+				assignLocal = assign;
+			}
+			else if (e.type == Expression.Type.SLICE) {
+				assign = v -> {
+					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
+					RödaValue index1 = evalExpression(e.index1, scope, in, out).impliciteResolve();
+					RödaValue index2 = evalExpression(e.index2, scope, in, out).impliciteResolve();
+					list.setSlice(index1, index2, v);
 				};
 				assignLocal = assign;
 			}
