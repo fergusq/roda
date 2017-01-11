@@ -517,6 +517,18 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testListSetSlice() {
+		assertEquals("[Annamari, Janna, Tuuli, Susanna]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];l[1:3]=[\"Janna\", \"Tuuli\"];push(l)}"));
+	}
+
+	@Test
+	public void testListDelSlice() {
+		assertEquals("[Annamari, Susanna]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];del l[1:3];push(l)}"));
+	}
+
+	@Test
 	public void testListJoin() {
 		assertEquals("Annamari_Reetta_Vilma_Susanna",
 			     eval("main{push([\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"]&\"_\")}"));
