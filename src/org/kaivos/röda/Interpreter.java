@@ -1124,13 +1124,13 @@ public class Interpreter {
 				assign = v -> {
 					RödaValue value = scope.resolve(e.variable);
 					if (value == null || !value.is(REFERENCE))
-						value = RödaReference.of(e.variable, scope);
+						value = RödaReference.of(e.variable, scope, e.file, e.line);
 					value.assign(v);
 				};
 				assignLocal = v -> {
 					RödaValue value = scope.resolve(e.variable);
 					if (value == null || !value.is(REFERENCE))
-						value = RödaReference.of(e.variable, scope);
+						value = RödaReference.of(e.variable, scope, e.file, e.line);
 					value.assignLocal(v);
 				};
 			}
@@ -1621,10 +1621,10 @@ public class Interpreter {
 		}
 		if (exp.type == Expression.Type.VARIABLE) {
 			if (variablesAreReferences) {
-				return RödaReference.of(exp.variable, scope);
+				return RödaReference.of(exp.variable, scope, exp.file, exp.line);
 			}
 			RödaValue v = scope.resolve(exp.variable);
-			if (v == null) unknownName("variable '" + exp.variable + "' not found");
+			if (v == null) unknownName("variable not found: " + exp.variable);
 			return v;
 		}
 		if (exp.type == Expression.Type.CALCULATOR) {
