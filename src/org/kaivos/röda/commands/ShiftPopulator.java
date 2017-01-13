@@ -16,12 +16,11 @@ public final class ShiftPopulator {
 	
 	public static final void populateShift(RödaScope S) {
 		S.setLocal("shift", RödaNativeFunction.of("shift", (typeargs, args, kwargs, scope, in, out) -> {
-			for (RödaValue listref : args) {
-				RödaValue list = listref.resolve(false);
+			for (RödaValue list : args) {
 				checkList("shift", list);
 				if (list.list().isEmpty()) illegalArguments("illegal use of shift: all lists must be non-empty");
 				list.modifiableList().remove(0);
 			}
-		}, Arrays.asList(new Parameter("first_list", true), new Parameter("other_lists", true)), true));
+		}, Arrays.asList(new Parameter("first_list", false), new Parameter("other_lists", false)), true));
 	}
 }
