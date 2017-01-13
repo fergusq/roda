@@ -1680,11 +1680,22 @@ public class Interpreter {
 	private RödaValue newRecord(Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
 		switch (type.name) {
 		case "list":
-			if (subtypes.size() == 0)
-				return RödaList.empty();
-			else if (subtypes.size() == 1)
-				return RödaList.empty(subtypes.get(0));
-			illegalArguments("wrong number of typearguments to 'list': 1 required, got " + subtypes.size());
+			if (subtypes.size() > 1)
+				illegalArguments("wrong number of typearguments to 'list': 1 required, got " + subtypes.size());
+			if (args.size() == 0) {
+				if (subtypes.size() == 0)
+					return RödaList.empty();
+				else if (subtypes.size() == 1)
+					return RödaList.empty(subtypes.get(0));
+			}
+			else if (args.size() == 1) {
+				checkList("list", args.get(0));
+				if (subtypes.size() == 0)
+					return RödaList.of(args.get(0).list());
+				else if (subtypes.size() == 1)
+					return RödaList.of(subtypes.get(0), args.get(0).list());
+				argumentOverflow("list", 1, args.size());
+			}
 			return null;
 		case "map":
 			if (subtypes.size() == 0)

@@ -32,8 +32,8 @@ public class RödaList extends RödaValue {
 		if (type != null) {
 			for (RödaValue value : list) {
 				if (!value.is(type)) {
-					typeMismatch("can't make a " + typeString()
-					      + " that contains a " + value.typeString());
+					typeMismatch(typeString()
+					      + " can't contain a value of type " + value.typeString());
 				}
 			}
 		}
