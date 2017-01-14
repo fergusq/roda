@@ -93,9 +93,7 @@ public final class ExecPopulator {
 				Future<?> futureIn = Interpreter.executor.submit(input);
 				Future<?> futureOut = Interpreter.executor.submit(output);
 				futureOut.get();
-				in.pause();
 				futureIn.get();
-				in.unpause();
 				p.waitFor();
 			} catch (IOException e) {
 				error(e);

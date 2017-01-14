@@ -1,8 +1,10 @@
 package org.kaivos.röda;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
-import java.util.LinkedList;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -28,7 +30,6 @@ import static org.kaivos.röda.Interpreter.error;
  * values in a pipe. It can be used to iterate over all these values.
  */
 public abstract class RödaStream implements Iterable<RödaValue> {
-	private boolean paused = false;
 	private Queue<RödaValue> peekQueue = new ArrayDeque<>();
 
 	protected abstract RödaValue get();
@@ -43,35 +44,13 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	 * Returns false if it is possible to pull values from the stream.
 	 */
 	public boolean closed() {
-		return paused() || finished();
+		return finished();
 	}
 
 	/**
 	 * Returns true if the stream is permanently finished.
 	 */
 	public abstract boolean finished();
-
-	/**
-	 * Closes the stream so that it can be opened again.
-	 */
-	public synchronized void pause() {
-		paused = true;
-		notifyAll();
-	}
-
-	/**
-	 * Opens the stream after it has been paused.
-	 */
-	public void unpause() {
-		paused = false;
-	}
-
-	/**
-	 * Returns true if the stream is paused.
-	 */
-	public boolean paused() {
-		return paused;
-	}
 
 	/**
 	 * Pushes a new value to the stream.
@@ -200,43 +179,40 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	}
 
 	static class RödaStreamImpl extends RödaStream {
-		Queue<RödaValue> queue = new LinkedList<>();
+		BlockingQueue<Optional<RödaValue>> queue = new LinkedBlockingQueue<>();
 		boolean finished = false;
 
 		@Override
-		public synchronized RödaValue get() {
-			// System.err.println("<PULL " + this + ">");
+		public RödaValue get() {
+			if (finished) return null;
+			Optional<RödaValue> value;
 			try {
-				while (queue.isEmpty() && !closed()) {
-					wait();
-				}
-				
-				if (closed())
-					return null;
-				return queue.poll();
+				value = queue.take();
 			} catch (InterruptedException e) {
-				error("threading error");
+				error(e);
 				return null;
+			}
+			finished = !value.isPresent();
+			return value.orElse(null);
+		}
+
+		@Override
+		public void put(RödaValue value) {
+			try {
+				queue.put(Optional.of(value));
+			} catch (InterruptedException e) {
+				error(e);
 			}
 		}
 
 		@Override
-		public synchronized void put(RödaValue value) {
-			// System.err.println("<PUSH " + value + " to " + this + ">");
-			queue.add(value);
-			notifyAll();
-		}
-
-		@Override
 		public boolean finished() {
-			return finished && queue.isEmpty();
+			return finished;
 		}
 
 		@Override
-		public synchronized void finish() {
-			// System.err.println("<FINISH " + this + ">");
-			finished = true;
-			notifyAll();
+		public void finish() {
+			queue.add(Optional.empty());
 		}
 
 		@Override
@@ -265,10 +241,6 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 			if (finished)
 				return null;
 			try {
-				while (!in.ready()) {
-					if (paused())
-						return null;
-				}
 				String line = in.readLine();
 				if (line == null)
 					return null;
