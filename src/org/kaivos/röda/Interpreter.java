@@ -884,7 +884,9 @@ public class Interpreter {
 		catch (RödaException e) { throw e; }
 		catch (Throwable e) { error(e); }
 		finally {
-			if (enableDebug) callStack.get().pop();
+			if (enableDebug) {
+				callStack.get().pop();
+			}
 			if (enableProfiling) {
 				ArrayDeque<Timer> ts = timerStack.get();
 				Timer t = ts.pop();
@@ -976,16 +978,26 @@ public class Interpreter {
 		RödaStream _in = in;
 		int i = 0;
 		Runnable[] runnables = new Runnable[statement.commands.size()];
+		Timer[] timers = new Timer[statement.commands.size()];
 		for (Command command : statement.commands) {
 			boolean last = i == statement.commands.size()-1;
 			RödaStream _out = last ? out : RödaStream.makeStream();
 			Runnable tr = evalCommand(command, scope,
 					in, out,
 					_in, _out);
+			Timer timer = timers[i] = enableProfiling ? new Timer() : null;
 			runnables[i] = () -> {
 				try {
+					if (enableProfiling) {
+						timerStack.get().push(timer);
+						timer.start();
+					}
 					tr.run();
 				} finally {
+					if (enableProfiling) {
+						timer.stop();
+						timerStack.get().pop();
+					}
 					// sulje virta jos se on putki tai muulla tavalla uudelleenohjaus
 					if (!last || redirected)
 						_out.finish();
@@ -994,40 +1006,59 @@ public class Interpreter {
 			_in = _out;
 			i++;
 		}
-		if (runnables.length == 1) runnables[0].run();
-		else {
-			Future<?>[] futures = new Future<?>[runnables.length];
-			i = 0;
-			for (Runnable r : runnables) {
-				futures[i++] = executor.submit(r);
+
+		if (enableProfiling) {
+			ArrayDeque<Timer> ts = timerStack.get();
+			if (!ts.isEmpty()) {
+				ts.peek().stop();
 			}
-			List<ExecutionException> exceptions = new ArrayList<>();
-			try {
-				i = futures.length;
-				while (i --> 0) {
-					try {
-						futures[i].get();
-					} catch (ExecutionException e) {
-						exceptions.add(e);
-					}
+		}
+		try {
+			if (runnables.length == 1) runnables[0].run();
+			else {
+				Future<?>[] futures = new Future<?>[runnables.length];
+				i = 0;
+				for (Runnable r : runnables) {
+					futures[i++] = executor.submit(r);
 				}
-			} catch (InterruptedException e) {
-				error(e);
-			} 
-			
-			if (!exceptions.isEmpty()) {
-				error(exceptions.stream().map(e -> {
-					if (e.getCause() instanceof RödaException) {
-						return (RödaException) e.getCause();
+				List<ExecutionException> exceptions = new ArrayList<>();
+				try {
+					i = futures.length;
+					while (i --> 0) {
+						try {
+							futures[i].get();
+						} catch (ExecutionException e) {
+							exceptions.add(e);
+						}
 					}
-					if (e.getCause() instanceof ReturnException) {
-						return createRödaException(leakyPipeErrorRecord, "cannot pipe a return command");
-					}
-					if (e.getCause() instanceof BreakOrContinueException) {
-						return createRödaException(leakyPipeErrorRecord, "cannot pipe a break or continue command");
-					}
-					return createRödaException(e.getCause());
-				}).toArray(n -> new RödaException[n]));
+				} catch (InterruptedException e) {
+					error(e);
+				} 
+				
+				if (!exceptions.isEmpty()) {
+					error(exceptions.stream().map(e -> {
+						if (e.getCause() instanceof RödaException) {
+							return (RödaException) e.getCause();
+						}
+						if (e.getCause() instanceof ReturnException) {
+							return createRödaException(leakyPipeErrorRecord, "cannot pipe a return command");
+						}
+						if (e.getCause() instanceof BreakOrContinueException) {
+							return createRödaException(leakyPipeErrorRecord, "cannot pipe a break or continue command");
+						}
+						return createRödaException(e.getCause());
+					}).toArray(n -> new RödaException[n]));
+				}
+			}
+		}
+		finally {
+			if (enableProfiling) {
+				ArrayDeque<Timer> ts = timerStack.get();
+				if (!ts.isEmpty()) {
+					Timer timer = ts.peek();
+					for (Timer t : timers) timer.add(t);
+					timer.start();
+				}
 			}
 		}
 	}

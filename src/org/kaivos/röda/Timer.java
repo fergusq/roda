@@ -44,6 +44,13 @@ public class Timer {
 	}
 	
 	/**
+	 * Adds the value of the given timer to the value of this timer.
+	 */
+	public void add(Timer timer) {
+		sum += timer.sum;
+	}
+	
+	/**
 	 * Returns the value of the timer, in milliseconds. The value is the total
 	 * time the timer has been running.
 	 * @return value of timer in milliseconds
