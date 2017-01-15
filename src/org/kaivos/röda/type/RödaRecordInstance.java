@@ -11,8 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Datatype;
 import org.kaivos.röda.runtime.Record;
 
 public class RödaRecordInstance extends RödaValue {

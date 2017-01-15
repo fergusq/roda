@@ -1,4 +1,4 @@
-package org.kaivos.röda;
+package org.kaivos.röda.runtime;
 
 import static org.kaivos.röda.Interpreter.unknownName;
 import static java.util.stream.Collectors.joining;
@@ -7,9 +7,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.Interpreter.RecordDeclaration;
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.runtime.Record;
 
 public class Datatype {
 	public final String name;

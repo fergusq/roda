@@ -57,6 +57,7 @@ import org.kaivos.röda.Parser.ParameterTree;
 import org.kaivos.röda.Parser.ProgramTree;
 import org.kaivos.röda.Parser.RecordTree;
 import org.kaivos.röda.Parser.StatementTree;
+import org.kaivos.röda.runtime.Datatype;
 import org.kaivos.röda.runtime.Function;
 import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.runtime.Record;
@@ -197,8 +198,8 @@ public class Interpreter {
 	}
 	
 	public static class RecordDeclaration {
-		Record tree;
-		RödaValue reflection;
+		public final Record tree;
+		public final RödaValue reflection;
 		
 		public RecordDeclaration(Record record, RödaValue reflection) {
 			this.tree = record;

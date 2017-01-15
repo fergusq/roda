@@ -9,8 +9,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Datatype;
 
 public class RödaList extends RödaValue {
 

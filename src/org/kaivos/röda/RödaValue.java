@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.kaivos.röda.runtime.Datatype;
 import org.kaivos.röda.runtime.Function;
 import org.kaivos.röda.type.RödaBoolean;
 

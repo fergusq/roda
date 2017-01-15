@@ -8,8 +8,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Datatype;
 
 public class RödaMap extends RödaValue {
 

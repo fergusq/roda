@@ -3,7 +3,6 @@ package org.kaivos.röda.runtime;
 import java.util.List;
 
 import org.kaivos.röda.Parser.StatementTree;
-import org.kaivos.röda.Datatype;
 import org.kaivos.röda.Parser.ExpressionTree;
 
 public class Function {

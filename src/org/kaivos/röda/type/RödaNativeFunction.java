@@ -4,9 +4,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Datatype;
 import org.kaivos.röda.runtime.Function.Parameter;
 
 import static org.kaivos.röda.Interpreter.RödaScope;

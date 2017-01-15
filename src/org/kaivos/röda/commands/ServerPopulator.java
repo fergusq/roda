@@ -14,11 +14,11 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import org.kaivos.röda.Builtins;
-import org.kaivos.röda.Datatype;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.runtime.Function.Parameter;
+import org.kaivos.röda.runtime.Datatype;
 import org.kaivos.röda.runtime.Record;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaNativeFunction;
