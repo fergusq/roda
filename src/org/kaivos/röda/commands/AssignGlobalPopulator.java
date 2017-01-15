@@ -36,7 +36,7 @@ public final class AssignGlobalPopulator {
 			S.registerRecord(typeScope.getRecordDeclarations().get(typename));
 	    }, Arrays.asList(
 	    		new Parameter("typename", false, STRING),
-	    		new Parameter("namespace", false, NAMESPACE)), true));
+	    		new Parameter("source_namespace", false, NAMESPACE)), true));
 	
 	    S.setLocal("createGlobalType", RödaNativeFunction.of("createGlobalType", (typeargs, args, kwargs, scope, in, out) -> {
 			String typename = args.get(0).str();
@@ -48,6 +48,33 @@ public final class AssignGlobalPopulator {
 				S.registerRecord(typeScope.getRecordDeclarations().get(typename));
 	    }, Arrays.asList(
 	    		new Parameter("typename", false, STRING),
-	    		new Parameter("namespace", false, NAMESPACE)), true));
+	    		new Parameter("source_namespace", false, NAMESPACE)), true));
+		
+	    S.setLocal("assignType", RödaNativeFunction.of("assignType", (typeargs, args, kwargs, scope, in, out) -> {
+			RödaScope target = args.get(0).scope();
+	    	String typename = args.get(1).str();
+			if (args.size() > 3) argumentOverflow("assignType", 2, args.size());
+			RödaScope typeScope = args.size() == 1 ? scope : args.get(2).scope();
+			if (!typeScope.getRecords().containsKey(typename))
+				unknownName("record class '" + typename + "' not found");
+			target.registerRecord(typeScope.getRecordDeclarations().get(typename));
+	    }, Arrays.asList(
+	    		new Parameter("target_namespace", false, STRING),
+	    		new Parameter("typename", false, STRING),
+	    		new Parameter("source_namespace", false, NAMESPACE)), true));
+	
+	    S.setLocal("createType", RödaNativeFunction.of("createType", (typeargs, args, kwargs, scope, in, out) -> {
+			RödaScope target = args.get(0).scope();
+			String typename = args.get(1).str();
+			if (args.size() > 3) argumentOverflow("createType", 2, args.size());
+			RödaScope typeScope = args.size() == 1 ? scope : args.get(2).scope();
+			if (!typeScope.getRecords().containsKey(typename))
+				unknownName("record class '" + typename + "' not found");
+			if (!target.getRecords().containsKey(typename))
+				target.registerRecord(typeScope.getRecordDeclarations().get(typename));
+	    }, Arrays.asList(
+	    		new Parameter("target_namespace", false, STRING),
+	    		new Parameter("typename", false, STRING),
+	    		new Parameter("source_namespace", false, NAMESPACE)), true));
 	}
 }
