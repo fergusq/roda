@@ -60,7 +60,7 @@ public final class FilePopulator {
 				error(e);
 			}
 		});
-		addQueryType(I, "permissions", (file, out) ->{
+		addQueryType(I, "filePermissions", (file, out) ->{
 			try {
 				out.push(RödaInteger.of(permissionsToInt(Files.getPosixFilePermissions(file.toPath()))));
 			} catch (IOException e) {
