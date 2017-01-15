@@ -29,7 +29,7 @@ import jline.console.history.FileHistory;
  */
 public class Röda {
 	
-	public static final String RÖDA_VERSION_STRING = "0.11-alpha";
+	public static final String RÖDA_VERSION_STRING = "0.12-alpha";
 	
 	private static void printRödaException(Interpreter.RödaException e) {
 		System.err.println("[" + e.getErrorObject().basicIdentity() + "] " + e.getMessage());
@@ -58,7 +58,7 @@ public class Röda {
 		String file = null;
 		List<String> eval = new ArrayList<>();
 		List<String> argsForRöda = new ArrayList<>();
-		boolean interactive = System.console() != null, forcedI = false,
+		boolean interactive = System.console() != null, forcedI = false, disableInteraction = false,
 				enableDebug = true, enableProfiling = false, divideByInvocations = false;
 		String prompt = null;
 		
@@ -84,6 +84,9 @@ public class Röda {
 			case "-I":
 				interactive = false;
 				continue;
+			case "-n":
+				disableInteraction = true;
+				continue;
 			case "-D":
 				enableDebug = false;
 				continue;
@@ -105,6 +108,7 @@ public class Röda {
 				System.out.println("-e stmt          Evaluate the given statement before executing the given files");
 				System.out.println("-i               Enable console mode");
 				System.out.println("-I               Disable console mode");
+				System.out.println("-n               Disable interactive mode");
 				System.out.println("-p prompt        Change the prompt in interactive mode");
 				System.out.println("-P               Disable prompt in interactive mode");
 				System.out.println("--per-invocation Divide CPU time by invocation number in profiler output");
@@ -121,8 +125,8 @@ public class Röda {
 
 		if (prompt == null) prompt = interactive ? "! " : "";
 
-		if (file != null && forcedI) {
-			System.err.println("Usage: röda [options] file | röda [options] -i | röda [options]");
+		if ((file != null && forcedI) || (file != null && disableInteraction)) {
+			System.err.println("Usage: röda [options] file | röda [options] -n | röda [options] [-i|-I]");
 			System.exit(1);
 			return;
 		}
@@ -149,6 +153,11 @@ public class Röda {
 			} catch (Interpreter.RödaException e) {
 				printRödaException(e);
 			}
+		} else if (disableInteraction) {
+			Interpreter c = new Interpreter();
+			c.enableDebug = enableDebug;
+			c.enableProfiling = enableProfiling;
+			interpretEOption(c, eval);
 		} else if (interactive && System.console() != null) {
 
 			File historyFile = new File(System.getProperty("user.home") + "/.rödahist");
