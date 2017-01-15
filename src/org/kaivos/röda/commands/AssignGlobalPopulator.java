@@ -59,7 +59,7 @@ public final class AssignGlobalPopulator {
 				unknownName("record class '" + typename + "' not found");
 			target.registerRecord(typeScope.getRecordDeclarations().get(typename));
 	    }, Arrays.asList(
-	    		new Parameter("target_namespace", false, STRING),
+	    		new Parameter("target_namespace", false, NAMESPACE),
 	    		new Parameter("typename", false, STRING),
 	    		new Parameter("source_namespace", false, NAMESPACE)), true));
 	
@@ -73,7 +73,7 @@ public final class AssignGlobalPopulator {
 			if (!target.getRecords().containsKey(typename))
 				target.registerRecord(typeScope.getRecordDeclarations().get(typename));
 	    }, Arrays.asList(
-	    		new Parameter("target_namespace", false, STRING),
+	    		new Parameter("target_namespace", false, NAMESPACE),
 	    		new Parameter("typename", false, STRING),
 	    		new Parameter("source_namespace", false, NAMESPACE)), true));
 	}
