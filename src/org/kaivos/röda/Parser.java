@@ -113,7 +113,10 @@ public class Parser {
 		case "map":
 		case "string":
 		case "number":
+		case "integer":
+		case "floating":
 		case "boolean":
+		case "namespace":
 			return false;
 		default:
 			return true;
