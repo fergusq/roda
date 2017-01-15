@@ -82,7 +82,7 @@ public class Interpreter {
 		Map<String, RödaValue> map;
 		Map<String, Datatype> typeargs;
 		Map<String, RecordDeclaration> records = new HashMap<>();
-		RödaScope(Optional<RödaScope> parent) {
+		public RödaScope(Optional<RödaScope> parent) {
 			this.parent = parent;
 			this.map = new HashMap<>();
 			this.typeargs = new HashMap<>();
@@ -1757,6 +1757,11 @@ public class Interpreter {
 			else if (subtypes.size() == 1)
 				return RödaMap.empty(subtypes.get(0));
 			illegalArguments("wrong number of typearguments to 'map': 1 required, got " + subtypes.size());
+			return null;
+		case "namespace":
+			if (subtypes.size() == 0)
+				return RödaNamespace.empty();
+			illegalArguments("wrong number of typearguments to 'namespace': 0 required, got " + subtypes.size());
 			return null;
 		}
 		return newRecord(null, type, subtypes, args, scope);

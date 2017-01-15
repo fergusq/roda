@@ -5,6 +5,8 @@ import org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Interpreter.outOfBounds;
 import static org.kaivos.röda.Interpreter.unknownName;
 
+import java.util.Optional;
+
 import org.kaivos.röda.RödaValue;
 
 public class RödaNamespace extends RödaValue {
@@ -60,6 +62,10 @@ public class RödaNamespace extends RödaValue {
 	
 	public static RödaNamespace of(RödaScope scope) {
 		return new RödaNamespace(scope);
+	}
+	
+	public static RödaNamespace empty() {
+		return new RödaNamespace(new RödaScope(Optional.empty()));
 	}
 
 }
