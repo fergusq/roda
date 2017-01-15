@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.kaivos.röda.Datatype;
-import org.kaivos.röda.Parser.Record;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Record;
 
 public class RödaRecordInstance extends RödaValue {
 	private boolean isValueType;
@@ -79,28 +79,27 @@ public class RödaRecordInstance extends RödaValue {
 		return Collections.unmodifiableMap(fields);
 	}
 
-	public static RödaRecordInstance of(Record record, List<Datatype> typearguments,
-					    Map<String, Record> records) {
+	public static RödaRecordInstance of(Record record, List<Datatype> typearguments) {
 		Map<String, Datatype> fieldTypes = new HashMap<>();
 		List<Datatype> identities = new ArrayList<>();
-		construct(record, typearguments, records, fieldTypes, identities);
+		construct(record, typearguments, fieldTypes, identities);
 		return new RödaRecordInstance(identities, record.isValueType, new HashMap<>(), fieldTypes);
 	}
 
-	private static void construct(Record record, List<Datatype> typearguments, Map<String, Record> records,
+	private static void construct(Record record, List<Datatype> typearguments,
 				      Map<String, Datatype> fieldTypes,
 				      List<Datatype> identities) {
-		identities.add(new Datatype(record.name, typearguments));
+		identities.add(new Datatype(record.name, typearguments, record.declarationScope));
 		for (Record.Field field : record.fields) {
 			// TODO check double inheritance
 			fieldTypes.put(field.name, substitute(field.type, record.typeparams, typearguments));
 		}
 		for (Record.SuperExpression superExp : record.superTypes) {
 			Datatype superType = substitute(superExp.type, record.typeparams, typearguments);
-			Record r = records.get(superType.name);
+			Record r = superType.resolve();
 			if (r == null)
 				unknownName("super type " + superType.name + " not found");
-			construct(r, superType.subtypes, records, fieldTypes, identities);
+			construct(r, superType.subtypes, fieldTypes, identities);
 		}
 	}
 
@@ -116,6 +115,6 @@ public class RödaRecordInstance extends RödaValue {
 		for (Datatype t : type.subtypes) {
 			subtypes.add(substitute(t, typeparams, typeargs));
 		}
-		return new Datatype(type.name, subtypes);
+		return new Datatype(type.name, subtypes, type.scope);
 	}
 }

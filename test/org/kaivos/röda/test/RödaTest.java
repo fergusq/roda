@@ -16,25 +16,22 @@ import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.type.RödaString;
 
 public class RödaTest {
-	private Interpreter interpreter;
 	private ArrayList<RödaValue> results;
 	
 	@Before
 	public void init() {
 		results = new ArrayList<>();
-		RödaStream in = makeStream(v -> {}, () -> null, () -> {}, () -> true);
-		RödaStream out = makeStream(v -> results.add(v), () -> null, () -> {}, () -> true);
-		if (interpreter != null) cleanup();
-		interpreter = new Interpreter(in, out);
 	}
 
 	@After
 	public void cleanup() {
-		interpreter = null;
+		/* TODO */
 	}
 
 	private String eval(String code) {
-		interpreter.interpret(code, "<test>");
+		RödaStream in = makeStream(v -> {}, () -> null, () -> {}, () -> true);
+		RödaStream out = makeStream(v -> results.add(v), () -> null, () -> {}, () -> true);
+		Interpreter.INTERPRETER.interpret(code, "<test>", in, out);
 		return getResults();
 	}
 
@@ -188,29 +185,29 @@ public class RödaTest {
 
 	@Test
 	public void testReflectRecordName() {
-		assertEquals("Mimmi", eval("record Mimmi{}main{push reflect Mimmi.name}"));
+		assertEquals("Mimmi", eval("record Mimmi{}main{push((reflect Mimmi).name)}"));
 	}
 
 	@Test
 	public void testReflectFieldName() {
-		assertEquals("Miina", eval("record R{Miina:string}main{push reflect R.fields[0].name}"));
+		assertEquals("Miina", eval("record R{Miina:string}main{push((reflect R).fields[0].name)}"));
 	}
 
 	@Test
 	public void testReflectFieldType() {
-		assertEquals("S", eval("record R{Miina:S}record S{}main{push reflect R.fields[0].type.name}"));
+		assertEquals("S", eval("record R{Miina:S}record S{}main{push((reflect R).fields[0].type.name)}"));
 	}
 
 	@Test
 	public void testReflectRecordAnnotation() {
 		assertEquals("Salli", eval("function @A{push\"Salli\"}"
-					   + "@A;record R{}main{push reflect R.annotations[0]}"));
+					   + "@A;record R{}main{push((reflect R).annotations[0])}"));
 	}
 
 	@Test
 	public void testReflectFieldAnnotation() {
 		assertEquals("Maisa", eval("function @A{push\"Maisa\"}"
-					   + "record R{@A;f:number}main{push reflect R.fields[0].annotations[0]}"));
+					   + "record R{@A;f:number}main{push((reflect R).fields[0].annotations[0])}"));
 	}
 
 	/* README:n esimerkit (hieman muutettuina)*/
@@ -668,10 +665,12 @@ public class RödaTest {
 
 	@Test
 	public void testArguments() {
-		interpreter.interpret("main a, b{push b, a}",
+		RödaStream in = makeStream(v -> {}, () -> null, () -> {}, () -> true);
+		RödaStream out = makeStream(v -> results.add(v), () -> null, () -> {}, () -> true);
+		Interpreter.INTERPRETER.interpret("main a, b{push b, a}",
 				      Arrays.asList(RödaString.of("Anne"),
 						    RödaString.of("Sanna")),
-				      "<test>");
+				      "<test>", in, out);
 		assertEquals("Sanna,Anne", getResults());
 	}
 
@@ -682,10 +681,12 @@ public class RödaTest {
 
 	@Test
 	public void testArgumentList() {
-		interpreter.interpret("main a...{push a[1], a[0], #a}",
+		RödaStream in = makeStream(v -> {}, () -> null, () -> {}, () -> true);
+		RödaStream out = makeStream(v -> results.add(v), () -> null, () -> {}, () -> true);
+		Interpreter.INTERPRETER.interpret("main a...{push a[1], a[0], #a}",
 				      Arrays.asList(RödaString.of("Venla"),
 						    RödaString.of("Eveliina")),
-				      "<test>");
+				      "<test>", in, out);
 		assertEquals("Eveliina,Venla,2", getResults());
 	}
 }

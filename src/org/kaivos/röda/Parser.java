@@ -197,31 +197,63 @@ public class Parser {
 		return token.getToken();
 	}
 	
-	private static Datatype parseType(TokenList tl) {
-		String name = typename(tl);
-		List<Datatype> subtypes = new ArrayList<>();
+	public static class DatatypeTree {
+		public final List<String> name;
+		public final List<DatatypeTree> subtypes;
+
+		public DatatypeTree(List<String> name,
+				List<DatatypeTree> subtypes) {
+			this.name = Collections.unmodifiableList(name);
+			this.subtypes = Collections.unmodifiableList(subtypes);
+		}
+
+		public DatatypeTree(String name) {
+			this.name = Arrays.asList(name);
+			this.subtypes = Collections.emptyList();
+		}
+
+		@Override
+		public String toString() {
+			if (subtypes.isEmpty())
+				return name.stream().collect(joining("."));
+			return name + "<" + subtypes.stream()
+				.map(DatatypeTree::toString)
+				.collect(joining(", ")) + ">";
+		}
+	}
+	
+	private static List<String> typenameChain(TokenList tl) {
+		List<String> chain = new ArrayList<>();
+		chain.add(typename(tl));
+		while (acceptIfNext(tl, ".")) chain.add(typename(tl));
+		return chain;
+	}
+	
+	private static DatatypeTree parseType(TokenList tl) {
+		List<String> name = typenameChain(tl);
+		List<DatatypeTree> subtypes = new ArrayList<>();
 	        if (!name.equals("function")
 		    && !name.equals("string")
 		    && !name.equals("boolean")
 		    && !name.equals("number")
 		    && acceptIfNext(tl, "<<")) {
 			do {
-				Datatype t = parseType(tl);
+				DatatypeTree t = parseType(tl);
 				subtypes.add(t);
 			} while (acceptIfNext(tl, ","));
 			accept(tl, ">>");
 		}
-		return new Datatype(name, subtypes);
+		return new DatatypeTree(name, subtypes);
 	}
 	
-	static class Program {
-		List<Function> functions;
-		List<Record> records;
-		List<List<Statement>> preBlocks, postBlocks;
-		Program(List<Function> functions,
-			List<Record> records,
-			List<List<Statement>> preBlocks,
-			List<List<Statement>> postBlocks) {
+	static class ProgramTree {
+		List<FunctionTree> functions;
+		List<RecordTree> records;
+		List<List<StatementTree>> preBlocks, postBlocks;
+		ProgramTree(List<FunctionTree> functions,
+			List<RecordTree> records,
+			List<List<StatementTree>> preBlocks,
+			List<List<StatementTree>> postBlocks) {
 			this.functions = functions;
 			this.records = records;
 			this.preBlocks = preBlocks;
@@ -229,18 +261,18 @@ public class Parser {
 		}
 	}
 	
-	static Program parse(TokenList tl) {
+	static ProgramTree parse(TokenList tl) {
 		//System.err.println(tl);
 		if (acceptIfNext(tl, "#")) { // purkkaa, tee tämä lekseriin
 			while (!nextString(tl).equals("\n"));
 		}
 
-		List<Function> functions = new ArrayList<>();
-		List<List<Statement>> preBlocks = new ArrayList<>(), postBlocks = new ArrayList<>();
-		List<Record> records = new ArrayList<>();
+		List<FunctionTree> functions = new ArrayList<>();
+		List<List<StatementTree>> preBlocks = new ArrayList<>(), postBlocks = new ArrayList<>();
+		List<RecordTree> records = new ArrayList<>();
 		while (!isNext(tl, "<EOF>")) {
 			skipNewlines(tl);
-			List<Annotation> annotations = parseAnnotations(tl);
+			List<AnnotationTree> annotations = parseAnnotations(tl);
 			if (isNext(tl, "record")) {
 				records.add(parseRecord(tl, annotations));
 			}
@@ -251,7 +283,7 @@ public class Parser {
 			else if (validIdentifier(tl.seekString()) && tl.seekString(1).equals(":")) {
 				String eventName = nextString(tl);
 				accept(tl, ":");
-				List<Statement> block = parseBody(tl);
+				List<StatementTree> block = parseBody(tl);
 				if (eventName.equals("pre_load")) {
 					preBlocks.add(block);
 				}
@@ -263,17 +295,17 @@ public class Parser {
 				functions.add(parseFunction(tl, true));
 			}
 		}
-		return new Program(functions, records, preBlocks, postBlocks);
+		return new ProgramTree(functions, records, preBlocks, postBlocks);
 	}
 
-	public static class Annotation {
+	public static class AnnotationTree {
 		public final String name;
 		public final List<String> namespace;
-		public final Arguments args;
+		public final ArgumentsTree args;
 		final String file;
 		final int line;
-		public Annotation(String file, int line,
-				String name, List<String> namespace, Arguments args) {
+		public AnnotationTree(String file, int line,
+				String name, List<String> namespace, ArgumentsTree args) {
 			this.file = file;
 			this.line = line;
 			this.name = name;
@@ -282,8 +314,8 @@ public class Parser {
 		}
 	}
 
-	private static List<Annotation> parseAnnotations(TokenList tl) {
-		List<Annotation> annotations = new ArrayList<>();
+	private static List<AnnotationTree> parseAnnotations(TokenList tl) {
+		List<AnnotationTree> annotations = new ArrayList<>();
 		while (acceptIfNext(tl, "@")) {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
@@ -294,7 +326,7 @@ public class Parser {
 				skipNewlines(tl);
 			}
 			String name = "@" + identifier(tl);
-			Arguments arguments;
+			ArgumentsTree arguments;
 			if (acceptIfNext(tl, "(")) {
 				arguments = parseArguments(tl, true);
 				accept(tl, ")");
@@ -304,27 +336,27 @@ public class Parser {
 						"annotations can't have underscore arguments",
 						tl.seek());
 			}
-			annotations.add(new Annotation(file, line, name, namespace, arguments));
+			annotations.add(new AnnotationTree(file, line, name, namespace, arguments));
 		}
 		return annotations;
 	}
 
-	public static class Record {
-		public static class Field {
+	public static class RecordTree {
+		public static class FieldTree {
 			public final String name;
-			public final Datatype type;
-			final Expression defaultValue;
-			public final List<Annotation> annotations;
+			public final DatatypeTree type;
+			final ExpressionTree defaultValue;
+			public final List<AnnotationTree> annotations;
 
-			public Field(String name,
-			      Datatype type) {
+			public FieldTree(String name,
+			      DatatypeTree type) {
 				this(name, type, null, Collections.emptyList());
 			}
 
-			Field(String name,
-			      Datatype type,
-			      Expression defaultValue,
-			      List<Annotation> annotations) {
+			FieldTree(String name,
+			      DatatypeTree type,
+			      ExpressionTree defaultValue,
+			      List<AnnotationTree> annotations) {
 				this.name = name;
 				this.type = type;
 				this.defaultValue = defaultValue;
@@ -332,10 +364,10 @@ public class Parser {
 			}
 		}
 		public static class SuperExpression {
-			public final Datatype type;
-			final List<Expression> args;
+			public final DatatypeTree type;
+			final List<ExpressionTree> args;
 			
-			SuperExpression(Datatype type, List<Expression> args) {
+			SuperExpression(DatatypeTree type, List<ExpressionTree> args) {
 				this.type = type;
 				this.args = args;
 			}
@@ -344,24 +376,24 @@ public class Parser {
 		public final String name;
 		public final List<String> typeparams, params;
 		public final List<SuperExpression> superTypes;
-		public final List<Annotation> annotations;
-		public final List<Field> fields;
+		public final List<AnnotationTree> annotations;
+		public final List<FieldTree> fields;
 		public final boolean isValueType;
 
-		public Record(String name,
+		public RecordTree(String name,
 		       List<String> typeparams,
 		       List<SuperExpression> superTypes,
-		       List<Field> fields,
+		       List<FieldTree> fields,
 		       boolean isValueType) {
 			this(name, typeparams, Collections.emptyList(), superTypes, Collections.emptyList(), fields, isValueType);
 		}
 
-		Record(String name,
+		RecordTree(String name,
 		       List<String> typeparams,
 		       List<String> params,
 		       List<SuperExpression> superTypes,
-		       List<Annotation> annotations,
-		       List<Field> fields,
+		       List<AnnotationTree> annotations,
+		       List<FieldTree> fields,
 		       boolean isValueType) {
 			this.name = name;
 			this.typeparams = Collections.unmodifiableList(typeparams);
@@ -373,7 +405,7 @@ public class Parser {
 		}
 	}
 
-	static Record parseRecord(TokenList tl, List<Annotation> recordAnnotations) {
+	static RecordTree parseRecord(TokenList tl, List<AnnotationTree> recordAnnotations) {
 		accept(tl, "record");
 
 		boolean isValueType = acceptIfNext(tl, "value");
@@ -389,70 +421,70 @@ public class Parser {
 			accept(tl, ")");
 		}
 
-		List<Record.SuperExpression> superTypes = new ArrayList<>();
+		List<RecordTree.SuperExpression> superTypes = new ArrayList<>();
 		if (acceptIfNext(tl, ":")) {
 			do {
-				Datatype type = parseType(tl);
-				List<Expression> args = new ArrayList<>();
+				DatatypeTree type = parseType(tl);
+				List<ExpressionTree> args = new ArrayList<>();
 				if (acceptIfNext(tl, "(")) {
 					do {
 						args.add(parseExpression(tl));
 					} while (acceptIfNext(tl, ","));
 					accept(tl, ")");
 				}
-				superTypes.add(new Record.SuperExpression(type, args));
+				superTypes.add(new RecordTree.SuperExpression(type, args));
 			} while (acceptIfNext(tl, ","));
 		}
 		
-		List<Record.Field> fields = new ArrayList<>();
+		List<RecordTree.FieldTree> fields = new ArrayList<>();
 		
 		accept(tl, "{");
 		while (!isNext(tl, "}")) {
-			List<Annotation> annotations = parseAnnotations(tl);
+			List<AnnotationTree> annotations = parseAnnotations(tl);
 			if (isNext(tl, "function")) {
 				String file = seek(tl).getFile();
 				int line = seek(tl).getLine();
-				Function method = parseFunction(tl, false);
+				FunctionTree method = parseFunction(tl, false);
 				String fieldName = method.name;
-				Datatype type = new Datatype("function");
-				Expression defaultValue = expressionFunction(file, line, method);
-				fields.add(new Record.Field(fieldName, type, defaultValue, annotations));
+				DatatypeTree type = new DatatypeTree("function");
+				ExpressionTree defaultValue = expressionFunction(file, line, method);
+				fields.add(new RecordTree.FieldTree(fieldName, type, defaultValue, annotations));
 			}
 			else {
 				String fieldName = identifier(tl);
 				accept(tl, ":");
-				Datatype type = parseType(tl);
-				Expression defaultValue = null;
+				DatatypeTree type = parseType(tl);
+				ExpressionTree defaultValue = null;
 				if (acceptIfNext(tl, "=")) {
 					defaultValue = parseExpression(tl);
 				}
-				fields.add(new Record.Field(fieldName, type, defaultValue, annotations));
+				fields.add(new RecordTree.FieldTree(fieldName, type, defaultValue, annotations));
 			}
 		}
 		accept(tl, "}");
 
-		return new Record(name, typeparams, params, superTypes, recordAnnotations, fields, isValueType);
+		return new RecordTree(name, typeparams, params, superTypes, recordAnnotations, fields, isValueType);
 	}
 
-	public static class Function {
+	public static class FunctionTree {
 		public String name;
 		public List<String> typeparams;
-		public List<Parameter> parameters, kwparameters;
+		public List<ParameterTree> parameters, kwparameters;
 		public boolean isVarargs;
-		public List<Statement> body;
+		public List<StatementTree> body;
 
-		Function(String name,
+		FunctionTree(String name,
 			 List<String> typeparams,
-			 List<Parameter> parameters,
+			 List<ParameterTree> parameters,
 			 boolean isVarargs,
-			 List<Parameter> kwparameters,
-			 List<Statement> body) {
+			 List<ParameterTree> kwparameters,
+			 List<StatementTree> body) {
 			
-			for (Parameter p : parameters)
+			for (ParameterTree p : parameters)
 				if (p.defaultValue != null)
 					throw new IllegalArgumentException("non-kw parameters can't have default values");
 			
-			for (Parameter p : kwparameters)
+			for (ParameterTree p : kwparameters)
 				if (p.defaultValue == null)
 					throw new IllegalArgumentException("kw parameters must have default values");
 
@@ -465,21 +497,21 @@ public class Parser {
 		}
 	}
 
-	public static class Parameter {
+	public static class ParameterTree {
 		public String name;
 		public boolean reference;
-		public Datatype type;
-		public Expression defaultValue;
-        public Parameter(String name, boolean reference) {
+		public DatatypeTree type;
+		public ExpressionTree defaultValue;
+        public ParameterTree(String name, boolean reference) {
 			this(name, reference, null, null);
 		}
-        public Parameter(String name, boolean reference, Datatype type) {
+        public ParameterTree(String name, boolean reference, DatatypeTree type) {
 			this(name, reference, type, null);
 		}
-        public Parameter(String name, boolean reference, Expression dafaultValue) {
+        public ParameterTree(String name, boolean reference, ExpressionTree dafaultValue) {
 			this(name, reference, null, dafaultValue);
 		}
-        public Parameter(String name, boolean reference, Datatype type, Expression defaultValue) {
+        public ParameterTree(String name, boolean reference, DatatypeTree type, ExpressionTree defaultValue) {
         	if (reference && defaultValue != null)
         		throw new IllegalArgumentException("a reference parameter can't have a default value");
 			this.name = name;
@@ -489,38 +521,38 @@ public class Parser {
 		}
 	}
 
-	static Parameter parseParameter(TokenList tl, boolean allowTypes) {
+	static ParameterTree parseParameter(TokenList tl, boolean allowTypes) {
 		boolean reference = false;
 		if (acceptIfNext(tl, "&")) {
 			reference = true;
 		}
 		String name = varname(tl);
-		Datatype type = null;
+		DatatypeTree type = null;
 		if (!reference && allowTypes && isNext(tl, ":")) {
 			accept(tl, ":");
 			type = parseType(tl);
 		}
-		Expression expr = null;
+		ExpressionTree expr = null;
 		if (!reference && acceptIfNext(tl, "=")) {
 			expr = parseExpression(tl);
 		}
-		return new Parameter(name, reference, type, expr);
+		return new ParameterTree(name, reference, type, expr);
 	}
 	
-	static Function parseFunction(TokenList tl, boolean mayBeAnnotation) {
+	static FunctionTree parseFunction(TokenList tl, boolean mayBeAnnotation) {
 		acceptIfNext(tl, "function");
 
 		boolean isAnnotation = mayBeAnnotation ? acceptIfNext(tl, "@") : false;
 		String name = (isAnnotation ? "@" : "") + identifier(tl);
 		List<String> typeparams = parseTypeparameters(tl);
 
-		List<Parameter> parameters = new ArrayList<>();
-		List<Parameter> kwparameters = new ArrayList<>();
+		List<ParameterTree> parameters = new ArrayList<>();
+		List<ParameterTree> kwparameters = new ArrayList<>();
 		boolean kwargsMode = false;
 		boolean isVarargs = false;
 		boolean parentheses = acceptIfNext(tl, "(");
 		while (!isNext(tl, ":") && !isNext(tl, "{") && !isNext(tl, ")")) {
-			Parameter p = parseParameter(tl, parentheses);
+			ParameterTree p = parseParameter(tl, parentheses);
 			if (p.defaultValue != null || kwargsMode) {
 				kwargsMode = true;
 				kwparameters.add(p);
@@ -536,9 +568,9 @@ public class Parser {
 		}
 		if (parentheses) accept(tl, ")");
 
-		List<Statement> body = parseBody(tl);
+		List<StatementTree> body = parseBody(tl);
 
-		return new Function(name, typeparams, parameters, isVarargs, kwparameters, body);
+		return new FunctionTree(name, typeparams, parameters, isVarargs, kwparameters, body);
 	}
 
 	static List<String> parseTypeparameters(TokenList tl) {
@@ -553,9 +585,9 @@ public class Parser {
 		return typeparams;
 	}
 
-	static List<Statement> parseBody(TokenList tl) {
+	static List<StatementTree> parseBody(TokenList tl) {
 		accept(tl, "{");
-		List<Statement> body = new ArrayList<>();
+		List<StatementTree> body = new ArrayList<>();
 		while (!isNext(tl, "}")) {
 			body.add(parseStatement(tl));
 		}
@@ -563,9 +595,9 @@ public class Parser {
 		return body;
 	}
 
-	static class Statement {
+	public static class StatementTree {
 		List<Command> commands;
-		Statement(List<Command> commands) {
+		StatementTree(List<Command> commands) {
 			this.commands = commands;
 		}
 		
@@ -574,13 +606,13 @@ public class Parser {
 		}
 	}
 
-	static Statement parseStatement(TokenList tl) {
+	static StatementTree parseStatement(TokenList tl) {
 		List<Command> commands = new ArrayList<>();
 		commands.add(parseCommand(tl));
 		while (acceptIfNext(tl, "|")) {
 			commands.add(parseCommand(tl));
 		}
-		return new Statement(commands);
+		return new StatementTree(commands);
 	}
 
 	static class Command {
@@ -599,16 +631,16 @@ public class Parser {
 			DEL
 		}
 		Type type;
-		Expression name;
+		ExpressionTree name;
 		String operator;
-		List<Datatype> typearguments;
-		Arguments arguments;
+		List<DatatypeTree> typearguments;
+		ArgumentsTree arguments;
 		boolean negation;
-		Statement cond;
+		StatementTree cond;
 		String variable;
 		List<String> variables;
-		Expression list;
-		List<Statement> body, elseBody;
+		ExpressionTree list;
+		List<StatementTree> body, elseBody;
 		Command cmd;
 		Command() {} // käytä apufunktioita alla
 		String file;
@@ -655,39 +687,39 @@ public class Parser {
 		}
 	}
 	
-	static class Arguments {
-		List<Argument> arguments;
-		List<KwArgument> kwarguments;
+	static class ArgumentsTree {
+		List<ArgumentTree> arguments;
+		List<KwArgumentTree> kwarguments;
 		List<String> sfvarguments;
 	}
 
-	static class Argument {
+	static class ArgumentTree {
 		boolean flattened;
-		Expression expr;
+		ExpressionTree expr;
 	}
 	
-	static class KwArgument {
+	static class KwArgumentTree {
 		String name;
-		Expression expr;
+		ExpressionTree expr;
 	}
 
-	static Argument _makeArgument(boolean flattened, Expression expr) {
-		Argument arg = new Argument();
+	static ArgumentTree _makeArgument(boolean flattened, ExpressionTree expr) {
+		ArgumentTree arg = new ArgumentTree();
 		arg.flattened = flattened;
 		arg.expr = expr;
 		return arg;
 	}
 
-	static KwArgument _makeKwArgument(String name, Expression expr) {
-		KwArgument arg = new KwArgument();
+	static KwArgumentTree _makeKwArgument(String name, ExpressionTree expr) {
+		KwArgumentTree arg = new KwArgumentTree();
 		arg.name = name;
 		arg.expr = expr;
 		return arg;
 	}
 	
-	static Command _makeNormalCommand(String file, int line, Expression name,
-					  List<Datatype> typearguments,
-					  Arguments arguments) {
+	static Command _makeNormalCommand(String file, int line, ExpressionTree name,
+					  List<DatatypeTree> typearguments,
+					  ArgumentsTree arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.NORMAL;
 		cmd.file = file;
@@ -698,8 +730,8 @@ public class Parser {
 		return cmd;
 	}
 	
-	static Command _makeVariableCommand(String file, int line, Expression name,
-					    String operator, Arguments arguments) {
+	static Command _makeVariableCommand(String file, int line, ExpressionTree name,
+					    String operator, ArgumentsTree arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.VARIABLE;
 		cmd.file = file;
@@ -711,7 +743,7 @@ public class Parser {
 	}
 
 	static Command _makeIfOrWhileCommand(String file, int line, boolean isWhile, boolean isNegated,
-					     Statement cond, List<Statement> body, List<Statement> elseBody) {
+					     StatementTree cond, List<StatementTree> body, List<StatementTree> elseBody) {
 		Command cmd = new Command();
 		cmd.type = isWhile ? Command.Type.WHILE : Command.Type.IF;
 		cmd.file = file;
@@ -724,7 +756,7 @@ public class Parser {
 	}
 	
 	static Command _makeForCommand(String file, int line, List<String> variables,
-				       Expression list, Statement cond, List<Statement> body) {
+				       ExpressionTree list, StatementTree cond, List<StatementTree> body) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.FOR;
 		cmd.file = file;
@@ -736,8 +768,8 @@ public class Parser {
 		return cmd;
 	}
 
-	static Command _makeTryCommand(String file, int line, List<Statement> body,
-				       String catchVar, List<Statement> elseBody) {
+	static Command _makeTryCommand(String file, int line, List<StatementTree> body,
+				       String catchVar, List<StatementTree> elseBody) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.TRY_DO;
 		cmd.file = file;
@@ -757,7 +789,7 @@ public class Parser {
 		return cmd;
 	}
 	
-	static Command _makeReturnCommand(String file, int line, Arguments arguments) {
+	static Command _makeReturnCommand(String file, int line, ArgumentsTree arguments) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.RETURN;
 		cmd.file = file;
@@ -782,7 +814,7 @@ public class Parser {
 		return cmd;
 	}
 	
-	static Command _makeExpressionCommand(String file, int line, Expression expr) {
+	static Command _makeExpressionCommand(String file, int line, ExpressionTree expr) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.EXPRESSION;
 		cmd.file = file;
@@ -791,7 +823,7 @@ public class Parser {
 		return cmd;
 	}
 	
-	static Command _makeDelCommand(String file, int line, Expression expr) {
+	static Command _makeDelCommand(String file, int line, ExpressionTree expr) {
 		Command cmd = new Command();
 		cmd.type = Command.Type.DEL;
 		cmd.file = file;
@@ -811,13 +843,13 @@ public class Parser {
 			String commandName = nextString(tl);
 			boolean isWhile = commandName.equals("while") || commandName.equals("until");
 			boolean isUnless = commandName.equals("unless") || commandName.equals("until");
-			Statement cond = parseStatement(tl);
-			List<Statement> elseBody = null;
+			StatementTree cond = parseStatement(tl);
+			List<StatementTree> elseBody = null;
 			if (tl.acceptIfNext("else")) {
-				elseBody = Arrays.asList(new Statement(Arrays.asList(parseCommand(tl))));
+				elseBody = Arrays.asList(new StatementTree(Arrays.asList(parseCommand(tl))));
 			}
 			return _makeIfOrWhileCommand(cmd.file, cmd.line, isWhile, isUnless, cond,
-						     Arrays.asList(new Statement(Arrays.asList(cmd))), elseBody);
+						     Arrays.asList(new StatementTree(Arrays.asList(cmd))), elseBody);
 		}
 		else if (tl.acceptIfNext("for")) {
 			List<String> variables = new ArrayList<>();
@@ -825,8 +857,8 @@ public class Parser {
 			while (acceptIfNext(tl, ",")) {
 				variables.add(varname(tl));
 			}
-			Expression list = null;
-			Statement cond = null;
+			ExpressionTree list = null;
+			StatementTree cond = null;
 			if (acceptIfNext(tl, "in")) {
 				list = parseExpression(tl);
 			}
@@ -834,7 +866,7 @@ public class Parser {
 				cond = parseStatement(tl);
 			}
 			return _makeForCommand(cmd.file, cmd.line, variables, list, cond,
-					       Arrays.asList(new Statement(Arrays.asList(cmd))));
+					       Arrays.asList(new StatementTree(Arrays.asList(cmd))));
 		}
 		else return cmd;
 	}
@@ -846,9 +878,9 @@ public class Parser {
 			String commandName = nextString(tl);
 			boolean isWhile = commandName.equals("while") || commandName.equals("until");
 			boolean isUnless = commandName.equals("unless") || commandName.equals("until");
-			Statement cond = parseStatement(tl);
+			StatementTree cond = parseStatement(tl);
 			accept(tl, "do");
-			List<Statement> body = new ArrayList<>(), elseBody = null;
+			List<StatementTree> body = new ArrayList<>(), elseBody = null;
 			while (!isNext(tl, "done") && !isNext(tl, "else")) {
 				body.add(parseStatement(tl));
 				if (isNext(tl, "done")) break;
@@ -871,8 +903,8 @@ public class Parser {
 			while (acceptIfNext(tl, ",")) {
 				variables.add(varname(tl));
 			}
-			Expression list = null;
-			Statement cond = null;
+			ExpressionTree list = null;
+			StatementTree cond = null;
 			if (acceptIfNext(tl, "in")) {
 				list = parseExpression(tl);
 			}
@@ -880,7 +912,7 @@ public class Parser {
 				cond = parseStatement(tl);
 			}
 			accept(tl, "do");
-			List<Statement> body = new ArrayList<>();
+			List<StatementTree> body = new ArrayList<>();
 			while (!isNext(tl, "done")) {
 				body.add(parseStatement(tl));
 				if (isNext(tl, "done")) break;
@@ -892,13 +924,13 @@ public class Parser {
 		if (acceptIfNext(tl, "try")) {
 			if (isNext(tl, "do")) {
 				accept(tl, "do");
-				List<Statement> body = new ArrayList<>();
+				List<StatementTree> body = new ArrayList<>();
 				while (!isNext(tl, "catch", "done")) {
 					body.add(parseStatement(tl));
 					if (isNext(tl, "done")) break;
 				}
 				String catchVar = null;
-				List<Statement> elseBody = null;
+				List<StatementTree> elseBody = null;
 				if (acceptIfNext(tl, "catch")) {
 					catchVar = varname(tl);
 					elseBody = new ArrayList<>();
@@ -915,7 +947,7 @@ public class Parser {
 		}
 
 		if (acceptIfNext(tl, "return")) {
-			Arguments arguments = parseArguments(tl, false);
+			ArgumentsTree arguments = parseArguments(tl, false);
 			return _makeReturnCommand(file, line, arguments);
 		}
 
@@ -931,9 +963,9 @@ public class Parser {
 			return _makeDelCommand(file, line, parseExpressionPrimary(tl, false));
 		}
 
-		Expression name = parseExpressionPrimary(tl, false);
+		ExpressionTree name = parseExpressionPrimary(tl, false);
 		String operator = null;
-		List<Datatype> typeargs = new ArrayList<>();
+		List<DatatypeTree> typeargs = new ArrayList<>();
 		if (isNext(tl, ":=", "=", "++", "--", "+=", "-=", "*=", "/=", ".=", "~=", "?")) {
 			operator = nextString(tl);
 		}
@@ -943,7 +975,7 @@ public class Parser {
 			} while (acceptIfNext(tl, ","));
 			accept(tl, ">>");
 		}
-		Arguments arguments;
+		ArgumentsTree arguments;
 		
 		if (acceptIfNext(tl, "(")) {
 			arguments = parseArguments(tl, true);
@@ -964,7 +996,7 @@ public class Parser {
 					cmd.line,
 					arguments.sfvarguments,
 					null, null,
-					Arrays.asList(new Statement(Arrays.asList(cmd))));
+					Arrays.asList(new StatementTree(Arrays.asList(cmd))));
 		}
 		
 		return cmd;
@@ -972,8 +1004,8 @@ public class Parser {
 	
 	private static int SUGAR_FOR_VARNUM_COUNTER = 1;
 
-	private static Arguments parseArguments(TokenList tl, boolean allowNewlines) {
-		Arguments arguments = new Arguments();
+	private static ArgumentsTree parseArguments(TokenList tl, boolean allowNewlines) {
+		ArgumentsTree arguments = new ArgumentsTree();
 		arguments.arguments = new ArrayList<>();
 		arguments.kwarguments = new ArrayList<>();
 		arguments.sfvarguments = new ArrayList<>();
@@ -1006,7 +1038,7 @@ public class Parser {
 		return arguments;
 	}
 	
-	public static class Expression {
+	public static class ExpressionTree {
 		enum Type {
 			VARIABLE,
 			STRING,
@@ -1077,12 +1109,12 @@ public class Parser {
 		Pattern pattern;
 		int integer;
 		double floating;
-		Statement statement;
-		Function block;
-		List<Expression> list;
-		Expression sub, index, index1, index2, exprA, exprB;
+		StatementTree statement;
+		FunctionTree block;
+		List<ExpressionTree> list;
+		ExpressionTree sub, index, index1, index2, exprA, exprB;
 		String field;
-		Datatype datatype;
+		DatatypeTree datatype;
 
 		String file;
 		int line;
@@ -1123,7 +1155,7 @@ public class Parser {
 			case JOIN:
 				return exprA.asString() + "&" + exprB.asString();
 			case NEW:
-				return "new " + datatype.toString() + "(" + list.stream().map(Expression::asString).collect(joining(", ")) + ")";
+				return "new " + datatype.toString() + "(" + list.stream().map(ExpressionTree::asString).collect(joining(", ")) + ")";
 			case REFLECT:
 				return "reflect " + datatype.toString();
 			case TYPEOF:
@@ -1142,99 +1174,99 @@ public class Parser {
 		}
 	}
 
-	private static Expression expressionVariable(String file, int line, String t) {
-		Expression e = new Expression();
-		e.type = Expression.Type.VARIABLE;
+	private static ExpressionTree expressionVariable(String file, int line, String t) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.VARIABLE;
 		e.file = file;
 		e.line = line;
 		e.variable = t;
 		return e;
 	}
 
-	public static Expression expressionString(String file, int line, String t) {
-		Expression e = new Expression();
-		e.type = Expression.Type.STRING;
+	public static ExpressionTree expressionString(String file, int line, String t) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.STRING;
 		e.file = file;
 		e.line = line;
 		e.string = t;
 		return e;
 	}
 
-	public static Expression expressionPattern(String file, int line, String t) {
-		Expression e = new Expression();
-		e.type = Expression.Type.PATTERN;
+	public static ExpressionTree expressionPattern(String file, int line, String t) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.PATTERN;
 		e.file = file;
 		e.line = line;
 		e.pattern = Pattern.compile(t);
 		return e;
 	}
 
-	public static Expression expressionInt(String file, int line, int d) {
-		Expression e = new Expression();
-		e.type = Expression.Type.INTEGER;
+	public static ExpressionTree expressionInt(String file, int line, int d) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.INTEGER;
 		e.file = file;
 		e.line = line;
 		e.integer = d;
 		return e;
 	}
 
-	public static Expression expressionFloat(String file, int line, double d) {
-		Expression e = new Expression();
-		e.type = Expression.Type.FLOATING;
+	public static ExpressionTree expressionFloat(String file, int line, double d) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.FLOATING;
 		e.file = file;
 		e.line = line;
 		e.floating = d;
 		return e;
 	}
 
-	private static Expression expressionStatementList(String file, int line, Statement statement) {
-		Expression e = new Expression();
-		e.type = Expression.Type.STATEMENT_LIST;
+	private static ExpressionTree expressionStatementList(String file, int line, StatementTree statement) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.STATEMENT_LIST;
 		e.file = file;
 		e.line = line;
 		e.statement = statement;
 		return e;
 	}
 
-	private static Expression expressionStatementSingle(String file, int line, Statement statement) {
-		Expression e = new Expression();
-		e.type = Expression.Type.STATEMENT_SINGLE;
+	private static ExpressionTree expressionStatementSingle(String file, int line, StatementTree statement) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.STATEMENT_SINGLE;
 		e.file = file;
 		e.line = line;
 		e.statement = statement;
 		return e;
 	}
 
-	private static Expression expressionFunction(String file, int line, Function block) {
-		Expression e = new Expression();
-		e.type = Expression.Type.BLOCK;
+	private static ExpressionTree expressionFunction(String file, int line, FunctionTree block) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.BLOCK;
 		e.file = file;
 		e.line = line;
 		e.block = block;
 		return e;
 	}
 
-	private static Expression expressionList(String file, int line, List<Expression> list) { 
-		Expression e = new Expression();
-		e.type = Expression.Type.LIST;
+	private static ExpressionTree expressionList(String file, int line, List<ExpressionTree> list) { 
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.LIST;
 		e.file = file;
 		e.line = line;
 		e.list = list;
 		return e;
 	}
 
-	private static Expression expressionLength(String file, int line, Expression sub) {
-		Expression e = new Expression();
-		e.type = Expression.Type.LENGTH;
+	private static ExpressionTree expressionLength(String file, int line, ExpressionTree sub) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.LENGTH;
 		e.file = file;
 		e.line = line;
 		e.sub = sub;
 		return e;
 	}
 
-	private static Expression expressionElement(String file, int line, Expression list, Expression index) {
-		Expression e = new Expression();
-		e.type = Expression.Type.ELEMENT;
+	private static ExpressionTree expressionElement(String file, int line, ExpressionTree list, ExpressionTree index) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.ELEMENT;
 		e.file = file;
 		e.line = line;
 		e.sub = list;
@@ -1242,9 +1274,9 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionContains(String file, int line, Expression list, Expression index) {
-		Expression e = new Expression();
-		e.type = Expression.Type.CONTAINS;
+	private static ExpressionTree expressionContains(String file, int line, ExpressionTree list, ExpressionTree index) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.CONTAINS;
 		e.file = file;
 		e.line = line;
 		e.sub = list;
@@ -1252,9 +1284,9 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionField(String file, int line, Expression list, String field) {
-		Expression e = new Expression();
-		e.type = Expression.Type.FIELD;
+	private static ExpressionTree expressionField(String file, int line, ExpressionTree list, String field) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.FIELD;
 		e.file = file;
 		e.line = line;
 		e.sub = list;
@@ -1262,10 +1294,10 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionSlice(String file, int line,
-						  Expression list, Expression index1, Expression index2) {
-		Expression e = new Expression();
-		e.type = Expression.Type.SLICE;
+	private static ExpressionTree expressionSlice(String file, int line,
+						  ExpressionTree list, ExpressionTree index1, ExpressionTree index2) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.SLICE;
 		e.file = file;
 		e.line = line;
 		e.sub = list;
@@ -1274,9 +1306,9 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionConcat(String file, int line, Expression a, Expression b) {
-		Expression e = new Expression();
-		e.type = Expression.Type.CONCAT;
+	private static ExpressionTree expressionConcat(String file, int line, ExpressionTree a, ExpressionTree b) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.CONCAT;
 		e.file = file;
 		e.line = line;
 		e.exprA = a;
@@ -1284,9 +1316,9 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionConcatChildren(String file, int line, Expression a, Expression b) {
-		Expression e = new Expression();
-		e.type = Expression.Type.CONCAT_CHILDREN;
+	private static ExpressionTree expressionConcatChildren(String file, int line, ExpressionTree a, ExpressionTree b) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.CONCAT_CHILDREN;
 		e.file = file;
 		e.line = line;
 		e.exprA = a;
@@ -1294,9 +1326,9 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionJoin(String file, int line, Expression a, Expression b) {
-		Expression e = new Expression();
-		e.type = Expression.Type.JOIN;
+	private static ExpressionTree expressionJoin(String file, int line, ExpressionTree a, ExpressionTree b) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.JOIN;
 		e.file = file;
 		e.line = line;
 		e.exprA = a;
@@ -1304,10 +1336,10 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionCalculator(String file, int line, Expression.CType type,
-						       Expression a, Expression b) {
-		Expression e = new Expression();
-		e.type = Expression.Type.CALCULATOR;
+	private static ExpressionTree expressionCalculator(String file, int line, ExpressionTree.CType type,
+						       ExpressionTree a, ExpressionTree b) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.CALCULATOR;
 		e.ctype = type;
 		e.isUnary = false;
 		e.file = file;
@@ -1317,10 +1349,10 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionCalculatorUnary(String file, int line, Expression.CType type,
-							    Expression sub) {
-		Expression e = new Expression();
-		e.type = Expression.Type.CALCULATOR;
+	private static ExpressionTree expressionCalculatorUnary(String file, int line, ExpressionTree.CType type,
+							    ExpressionTree sub) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.CALCULATOR;
 		e.ctype = type;
 		e.isUnary = true;
 		e.file = file;
@@ -1329,9 +1361,9 @@ public class Parser {
 		return e;
 	}
 
-	public static Expression expressionNew(String file, int line, Datatype datatype, List<Expression> args) {
-		Expression e = new Expression();
-		e.type = Expression.Type.NEW;
+	public static ExpressionTree expressionNew(String file, int line, DatatypeTree datatype, List<ExpressionTree> args) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.NEW;
 		e.file = file;
 		e.line = line;
 		e.datatype = datatype;
@@ -1339,27 +1371,27 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionReflect(String file, int line, Datatype datatype) {
-		Expression e = new Expression();
-		e.type = Expression.Type.REFLECT;
+	private static ExpressionTree expressionReflect(String file, int line, DatatypeTree datatype) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.REFLECT;
 		e.file = file;
 		e.line = line;
 		e.datatype = datatype;
 		return e;
 	}
 
-	private static Expression expressionTypeof(String file, int line, Expression sub) {
-		Expression e = new Expression();
-		e.type = Expression.Type.TYPEOF;
+	private static ExpressionTree expressionTypeof(String file, int line, ExpressionTree sub) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.TYPEOF;
 		e.file = file;
 		e.line = line;
 		e.sub = sub;
 		return e;
 	}
 
-	private static Expression expressionIs(String file, int line, Expression sub, Datatype datatype) {
-		Expression e = new Expression();
-		e.type = Expression.Type.IS;
+	private static ExpressionTree expressionIs(String file, int line, ExpressionTree sub, DatatypeTree datatype) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.IS;
 		e.file = file;
 		e.line = line;
 		e.sub = sub;
@@ -1367,9 +1399,9 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression expressionIn(String file, int line, Expression a, Expression b) {
-		Expression e = new Expression();
-		e.type = Expression.Type.IN;
+	private static ExpressionTree expressionIn(String file, int line, ExpressionTree a, ExpressionTree b) {
+		ExpressionTree e = new ExpressionTree();
+		e.type = ExpressionTree.Type.IN;
 		e.file = file;
 		e.line = line;
 		e.exprA = a;
@@ -1377,15 +1409,15 @@ public class Parser {
 		return e;
 	}
 
-	private static Expression parseArrayAccessIfPossible(TokenList tl, Expression ans, boolean allowCalls) {
+	private static ExpressionTree parseArrayAccessIfPossible(TokenList tl, ExpressionTree ans, boolean allowCalls) {
 		while (isNext(tl, ".", "is") || tl.isNext("[") || allowCalls && (isNext(tl, "<<") || tl.isNext("("))) {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
 			if (acceptIfNext(tl, "[")) {
-				Expression e1 = isNext(tl, ":") ? null : parseExpression(tl);
+				ExpressionTree e1 = isNext(tl, ":") ? null : parseExpression(tl);
 				if (isNext(tl, ":")) {
 					accept(tl, ":");
-					Expression e2 = isNext(tl, "]") ? null : parseExpression(tl);
+					ExpressionTree e2 = isNext(tl, "]") ? null : parseExpression(tl);
 					accept(tl, "]");
 					ans = expressionSlice(file, line, ans, e1, e2);
 				}
@@ -1400,7 +1432,7 @@ public class Parser {
 				}
 			}
 			else if (allowCalls && isNext(tl, "<<", "(")) {
-				List<Datatype> typeargs = new ArrayList<>();
+				List<DatatypeTree> typeargs = new ArrayList<>();
 				if (acceptIfNext(tl, "<<")) {
 					do {
 						typeargs.add(parseType(tl));
@@ -1408,7 +1440,7 @@ public class Parser {
 					accept(tl, ">>");
 				}
 				accept(tl, "(");
-				Arguments args = parseArguments(tl, true);
+				ArgumentsTree args = parseArguments(tl, true);
 				if (!args.sfvarguments.isEmpty()) {
 					throw new ParsingException("the first command in the pipeline in an expression "
 							+ "can't have underscore arguments", tl.seek());
@@ -1420,14 +1452,14 @@ public class Parser {
 				while (acceptIfNext(tl, "|")) {
 					commands.add(parseCommand(tl));
 				}
-				ans = expressionStatementSingle(file,  line, new Statement(commands));
+				ans = expressionStatementSingle(file,  line, new StatementTree(commands));
 			}
 			else if (acceptIfNext(tl, ".")) {
 				String field = identifier(tl);
 				ans = expressionField(file, line, ans, field);
 			}
 			else if (acceptIfNext(tl, "is")) {
-				Datatype dt = parseType(tl);
+				DatatypeTree dt = parseType(tl);
 				ans = expressionIs(file, line, ans, dt);
 			}
 			else assert false;
@@ -1435,10 +1467,10 @@ public class Parser {
 		return ans;
 	}
 	
-	private static OperatorLibrary<Expression> library;
-	private static OperatorPrecedenceParser<Expression> opparser;
+	private static OperatorLibrary<ExpressionTree> library;
+	private static OperatorPrecedenceParser<ExpressionTree> opparser;
 
-	private static BinaryOperator<Expression> op(Expression.CType type) {
+	private static BinaryOperator<ExpressionTree> op(ExpressionTree.CType type) {
 		return (a, b) -> expressionCalculator(a.file, a.line, type, a, b);
 	}
 	
@@ -1447,57 +1479,57 @@ public class Parser {
 		library = new OperatorLibrary<>(tl -> parseExpressionPrimary(tl, true));
 		
 		/* Declares the operators */
-		library.add("and", op(Expression.CType.AND));
-		library.add("or", op(Expression.CType.OR));
-		library.add("xor", op(Expression.CType.XOR));
+		library.add("and", op(ExpressionTree.CType.AND));
+		library.add("or", op(ExpressionTree.CType.OR));
+		library.add("xor", op(ExpressionTree.CType.XOR));
 		library.increaseLevel();
-		library.add("=", op(Expression.CType.EQ));
-		library.add("=~", op(Expression.CType.MATCHES));
-		library.add("!=", op(Expression.CType.NEQ));
+		library.add("=", op(ExpressionTree.CType.EQ));
+		library.add("=~", op(ExpressionTree.CType.MATCHES));
+		library.add("!=", op(ExpressionTree.CType.NEQ));
 		library.increaseLevel();
 		library.add("..", (a, b) -> expressionConcat(a.file, a.line, a, b));
 		library.add("...", (a, b) -> expressionConcatChildren(a.file, a.line, a, b));
 		library.increaseLevel();
 		library.add("&", (a, b) -> expressionJoin(a.file, a.line, a, b));
 		library.increaseLevel();
-		library.add("<", op(Expression.CType.LT));
-		library.add(">", op(Expression.CType.GT));
-		library.add("<=", op(Expression.CType.LE));
-		library.add(">=", op(Expression.CType.GE));
+		library.add("<", op(ExpressionTree.CType.LT));
+		library.add(">", op(ExpressionTree.CType.GT));
+		library.add("<=", op(ExpressionTree.CType.LE));
+		library.add(">=", op(ExpressionTree.CType.GE));
 		library.add("in", (a, b) -> expressionIn(a.file, a.line, a, b));
 		library.increaseLevel();
-		library.add("b_and", op(Expression.CType.BAND));
-		library.add("b_or", op(Expression.CType.BOR));
-		library.add("b_xor", op(Expression.CType.BXOR));
-		library.add("b_shiftl", op(Expression.CType.BLSHIFT));
-		library.add("b_shiftr", op(Expression.CType.BRSHIFT));
-		library.add("b_shiftrr", op(Expression.CType.BRRSHIFT));
+		library.add("b_and", op(ExpressionTree.CType.BAND));
+		library.add("b_or", op(ExpressionTree.CType.BOR));
+		library.add("b_xor", op(ExpressionTree.CType.BXOR));
+		library.add("b_shiftl", op(ExpressionTree.CType.BLSHIFT));
+		library.add("b_shiftr", op(ExpressionTree.CType.BRSHIFT));
+		library.add("b_shiftrr", op(ExpressionTree.CType.BRRSHIFT));
 		library.increaseLevel();
-		library.add("+", op(Expression.CType.ADD));
-		library.add("-", op(Expression.CType.SUB));
+		library.add("+", op(ExpressionTree.CType.ADD));
+		library.add("-", op(ExpressionTree.CType.SUB));
 		library.increaseLevel();
-		library.add("*", op(Expression.CType.MUL));
-		library.add("/", op(Expression.CType.DIV));
-		library.add("//", op(Expression.CType.IDIV));
-		library.add("%", op(Expression.CType.MOD));
+		library.add("*", op(ExpressionTree.CType.MUL));
+		library.add("/", op(ExpressionTree.CType.DIV));
+		library.add("//", op(ExpressionTree.CType.IDIV));
+		library.add("%", op(ExpressionTree.CType.MOD));
 		
 		/* Declares the OPP */
 		opparser = OperatorPrecedenceParser.fromLibrary(library);
 	}
 	
-	private static Expression parseExpression(TokenList tl) {
-		Expression e = opparser.parse(tl);
+	private static ExpressionTree parseExpression(TokenList tl) {
+		ExpressionTree e = opparser.parse(tl);
 		return e;
 	}
 
-	private static Expression parseExpressionPrimary(TokenList tl, boolean allowCalls) {
+	private static ExpressionTree parseExpressionPrimary(TokenList tl, boolean allowCalls) {
 		skipNewlines(tl);
 		String file = seek(tl).getFile();
 		int line = seek(tl).getLine();
-		Expression ans = null;
+		ExpressionTree ans = null;
 		if (acceptIfNext(tl, "new")) {
-			Datatype type = parseType(tl);
-			List<Expression> args = new ArrayList<>();
+			DatatypeTree type = parseType(tl);
+			List<ExpressionTree> args = new ArrayList<>();
 			if (acceptIfNext(tl, "(")) {
 				if (!isNext(tl, ")")) {
 					args.add(parseExpression(tl));
@@ -1509,26 +1541,26 @@ public class Parser {
 			ans = expressionNew(file, line, type, args);
 		}
 		else if (acceptIfNext(tl, "reflect")) {
-			Datatype type = parseType(tl);
+			DatatypeTree type = parseType(tl);
 			ans = expressionReflect(file, line, type);
 		}
 		else if (acceptIfNext(tl, "typeof")) {
-			Expression e = parseExpressionPrimary(tl, true);
+			ExpressionTree e = parseExpressionPrimary(tl, true);
 			return expressionTypeof(file, line, e);
 		}
 		else if (acceptIfNext(tl, "#")) {
-			Expression e = parseExpressionPrimary(tl, true);
+			ExpressionTree e = parseExpressionPrimary(tl, true);
 			return expressionLength(file, line, e);
 		}
 		else if (isNext(tl, "{")) {
-			List<Parameter> parameters = new ArrayList<>();
-			List<Parameter> kwparameters = new ArrayList<>();
+			List<ParameterTree> parameters = new ArrayList<>();
+			List<ParameterTree> kwparameters = new ArrayList<>();
 			boolean isVarargs = false, kwargsMode = false;
 			accept(tl, "{");
 			if (isNext(tl, "|")) {
 				accept(tl, "|");
 				while (!isNext(tl, "|")) {
-					Parameter p = parseParameter(tl, true);
+					ParameterTree p = parseParameter(tl, true);
 					if (p.defaultValue != null || kwargsMode) {
 						kwargsMode = true;
 						kwparameters.add(p);
@@ -1544,13 +1576,13 @@ public class Parser {
 				}
 				accept(tl, "|");
 			}
-			List<Statement> body = new ArrayList<>();
+			List<StatementTree> body = new ArrayList<>();
 			while (!isNext(tl, "}")) {
 				body.add(parseStatement(tl));
 			}
 			accept(tl, "}");
 			ans = expressionFunction(file, line,
-					new Function("<block at " + file + ":" + line + ">",
+					new FunctionTree("<block at " + file + ":" + line + ">",
 							Collections.emptyList(),
 							parameters, isVarargs,
 							kwparameters, body));
@@ -1561,36 +1593,36 @@ public class Parser {
 		    ans = expressionString(file, line, s);
 		}
 		else if (acceptIfNext(tl, "[")) {
-			List<Expression> list = new ArrayList<>();
+			List<ExpressionTree> list = new ArrayList<>();
 			while (!isNext(tl, "]")) {
 				list.add(parseExpression(tl));
 				if (!isNext(tl, "]")) accept(tl, ",");
 			}
 			accept(tl, "]");
-			if (list.size() == 1 && list.get(0).type == Expression.Type.STATEMENT_SINGLE) {
+			if (list.size() == 1 && list.get(0).type == ExpressionTree.Type.STATEMENT_SINGLE) {
 				ans = expressionStatementList(file, line, list.get(0).statement);
 			}
 			else ans = expressionList(file, line, list);
 		}
 		else if (acceptIfNext(tl, "-")) {
-			return expressionCalculatorUnary(file, line, Expression.CType.NEG,
+			return expressionCalculatorUnary(file, line, ExpressionTree.CType.NEG,
 							 parseExpressionPrimary(tl, true));
 		}
 		else if (acceptIfNext(tl, "b_not")) {
-			return expressionCalculatorUnary(file, line, Expression.CType.BNOT,
+			return expressionCalculatorUnary(file, line, ExpressionTree.CType.BNOT,
 							 parseExpressionPrimary(tl, true));
 		}
 		else if (acceptIfNext(tl, "not")) {
-			return expressionCalculatorUnary(file, line, Expression.CType.NOT,
+			return expressionCalculatorUnary(file, line, ExpressionTree.CType.NOT,
 							 parseExpressionPrimary(tl, true));
 		}
 		else if (acceptIfNext(tl, "(")) {
-			Expression e = parseExpression(tl);
+			ExpressionTree e = parseExpression(tl);
 			accept(tl, ")");
 			ans = e;
 		}
 		else if (isNext(tl, "if", "while", "unless", "until", "for", "try")) {
-			Statement s = parseStatement(tl);
+			StatementTree s = parseStatement(tl);
 			ans = expressionStatementSingle(file, line, s);
 		}
 		else if (acceptIfNext(tl, "@")) {

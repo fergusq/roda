@@ -17,9 +17,9 @@ import org.kaivos.röda.Builtins;
 import org.kaivos.röda.Datatype;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
-import org.kaivos.röda.Parser.Record;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
+import org.kaivos.röda.runtime.Record;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaRecordInstance;
@@ -34,7 +34,7 @@ public final class ServerPopulator {
 		Record serverRecord = new Record("Server", Collections.emptyList(), Collections.emptyList(),
 				Arrays.asList(new Record.Field("accept", new Datatype("function")),
 						new Record.Field("close", new Datatype("function"))),
-				false);
+				false, I.G);
 		I.G.preRegisterRecord(serverRecord);
 
 		Record socketRecord = new Record("Socket", Collections.emptyList(), Collections.emptyList(), Arrays.asList(
@@ -45,7 +45,7 @@ public final class ServerPopulator {
 				new Record.Field("readLine", new Datatype("function")),
 				new Record.Field("close", new Datatype("function")), new Record.Field("ip", new Datatype("string")),
 				new Record.Field("hostname", new Datatype("string")), new Record.Field("port", new Datatype("number")),
-				new Record.Field("localport", new Datatype("number"))), false);
+				new Record.Field("localport", new Datatype("number"))), false, I.G);
 		I.G.preRegisterRecord(socketRecord);
 		
 		I.G.postRegisterRecord(serverRecord);
@@ -60,7 +60,7 @@ public final class ServerPopulator {
 
 				ServerSocket server = new ServerSocket((int) port);
 
-				RödaValue serverObject = RödaRecordInstance.of(serverRecord, Collections.emptyList(), I.G.getRecords());
+				RödaValue serverObject = RödaRecordInstance.of(serverRecord, Collections.emptyList());
 				serverObject.setField("accept", RödaNativeFunction.of("Server.accept", (ra, a, k, s, i, o) -> {
 					checkArgs("Server.accept", 0, a.size());
 					Socket socket;
@@ -74,7 +74,7 @@ public final class ServerPopulator {
 						error(e);
 						return;
 					}
-					RödaValue socketObject = RödaRecordInstance.of(socketRecord, Collections.emptyList(), I.G.getRecords());
+					RödaValue socketObject = RödaRecordInstance.of(socketRecord, Collections.emptyList());
 					socketObject.setField("readBytes", Builtins.genericReadBytesOrString("Socket.readBytes", _in, I, false));
 					socketObject.setField("readString", Builtins.genericReadBytesOrString("Socket.readString", _in, I, true));
 					socketObject.setField("readLine", Builtins.genericReadLine("Socket.readLine", _in, I));

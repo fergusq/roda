@@ -3,8 +3,8 @@ package org.kaivos.röda.commands;
 import java.util.Arrays;
 
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaNativeFunction;
 
 public final class ErrprintPopulator {

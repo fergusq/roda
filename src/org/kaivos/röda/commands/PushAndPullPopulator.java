@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.function.Function;
 
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaBoolean;
 import org.kaivos.röda.type.RödaNativeFunction;
 

@@ -1,13 +1,13 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.outOfBounds;
+import static org.kaivos.röda.Parser.expressionInt;
 import static org.kaivos.röda.RödaValue.INTEGER;
 
 import java.util.Arrays;
 
 import org.kaivos.röda.Interpreter.RödaScope;
-import static org.kaivos.röda.Parser.expressionInt;
-import org.kaivos.röda.Parser.Parameter;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaNativeFunction;
 

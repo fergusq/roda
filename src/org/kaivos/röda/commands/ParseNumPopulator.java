@@ -10,8 +10,8 @@ import java.util.Arrays;
 
 import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.Parser;
-import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaFloating;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaNativeFunction;

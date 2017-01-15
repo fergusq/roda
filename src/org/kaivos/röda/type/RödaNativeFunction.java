@@ -7,7 +7,7 @@ import java.util.Map;
 import org.kaivos.röda.Datatype;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
-import org.kaivos.röda.Parser.Parameter;
+import org.kaivos.röda.runtime.Function.Parameter;
 
 import static org.kaivos.röda.Interpreter.RödaScope;
 

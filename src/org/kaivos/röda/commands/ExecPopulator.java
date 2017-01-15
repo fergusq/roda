@@ -2,8 +2,8 @@ package org.kaivos.röda.commands;
 
 import static java.util.stream.Collectors.toList;
 import static org.kaivos.röda.Interpreter.argumentUnderflow;
-import static org.kaivos.röda.Interpreter.checkString;
 import static org.kaivos.röda.Interpreter.checkMap;
+import static org.kaivos.röda.Interpreter.checkString;
 import static org.kaivos.röda.Interpreter.error;
 
 import java.io.BufferedReader;
@@ -19,12 +19,12 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import org.kaivos.röda.Datatype;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaException;
 import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.Parser;
-import org.kaivos.röda.Parser.Parameter;
+import org.kaivos.röda.Parser.DatatypeTree;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaString;
@@ -107,7 +107,7 @@ public final class ExecPopulator {
 			}
 		}, Arrays.asList(new Parameter("command", false), new Parameter("args", false)), true,
 				Arrays.asList(new Parameter("env", false,
-						Parser.expressionNew("<exec populator>", -1, new Datatype("map"), Collections.emptyList())))));
+						Parser.expressionNew("<exec populator>", -1, new DatatypeTree("map"), Collections.emptyList())))));
 	}
 
 	public static void populateExec(Interpreter I, RödaScope S) {

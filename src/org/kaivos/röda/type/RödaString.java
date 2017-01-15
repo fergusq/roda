@@ -5,7 +5,7 @@ import static org.kaivos.röda.Interpreter.typeMismatch;
 
 import java.util.regex.Pattern;
 
-import org.kaivos.röda.Parser.Expression.CType;
+import org.kaivos.röda.Parser.ExpressionTree.CType;
 import org.kaivos.röda.RödaValue;
 
 public class RödaString extends RödaValue {

@@ -1,6 +1,7 @@
 package org.kaivos.röda;
 
 import static java.util.stream.Collectors.toList;
+import static org.kaivos.röda.Interpreter.INTERPRETER;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,8 +17,9 @@ import java.util.stream.Collectors;
 
 import org.kaivos.nept.parser.ParsingException;
 import org.kaivos.röda.Interpreter.RödaException;
-import org.kaivos.röda.Parser.Parameter;
+import org.kaivos.röda.RödaStream.ISLineStream;
 import org.kaivos.röda.RödaStream.OSStream;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaString;
 
@@ -44,9 +46,18 @@ public class Röda {
 		}
 	}
 	
-	private static void interpretEOption(Interpreter i, List<String> eval) {
+	private static RödaStream STDIN, STDOUT;
+	static {
+		InputStreamReader ir = new InputStreamReader(System.in);
+		BufferedReader in = new BufferedReader(ir);
+		PrintWriter out = new PrintWriter(System.out);
+		STDIN = new ISLineStream(in);
+		STDOUT = new OSStream(out);
+	}
+	
+	private static void interpretEOption(List<String> eval) {
 		try {
-			for (String stmt : eval) i.interpretStatement(stmt, "<option -e>");
+			for (String stmt : eval) INTERPRETER.interpretStatement(stmt, "<option -e>", STDIN, STDOUT);
 		} catch (ParsingException e) {
 			System.err.println("[E] " + e.getMessage());
 		} catch (Interpreter.RödaException e) {
@@ -130,6 +141,10 @@ public class Röda {
 			System.exit(1);
 			return;
 		}
+		
+		INTERPRETER.enableDebug = enableDebug;
+		INTERPRETER.enableProfiling = enableProfiling;
+		interpretEOption(eval);
 
 		if (file != null) {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
@@ -139,26 +154,17 @@ public class Röda {
 				code += line + "\n";
 			}
 			in.close();
-			Interpreter c = new Interpreter();
-			c.enableDebug = enableDebug;
-			c.enableProfiling = enableProfiling;
-			interpretEOption(c, eval);
 			List<RödaValue> valueArgs = argsForRöda.stream()
 				.map(RödaString::of)
 				.collect(Collectors.toList());
 			try {
-				c.interpret(code, valueArgs, file);
+				INTERPRETER.interpret(code, valueArgs, file, STDIN, STDOUT);
 			} catch (ParsingException e) {
 				System.err.println("[E] " + e.getMessage());
 			} catch (Interpreter.RödaException e) {
 				printRödaException(e);
 			}
-		} else if (disableInteraction) {
-			Interpreter c = new Interpreter();
-			c.enableDebug = enableDebug;
-			c.enableProfiling = enableProfiling;
-			interpretEOption(c, eval);
-		} else if (interactive && System.console() != null) {
+		} else if (!disableInteraction && interactive && System.console() != null) {
 
 			File historyFile = new File(System.getProperty("user.home") + "/.rödahist");
 
@@ -171,26 +177,21 @@ public class Röda {
 
 			PrintWriter out = new PrintWriter(in.getOutput());
 
-			Interpreter c = new Interpreter(RödaStream.makeEmptyStream(),
-					new OSStream(out));
-			
-			c.enableDebug = enableDebug;
-			c.enableProfiling = enableProfiling;
-			
-			interpretEOption(c, eval);
+			RödaStream inStream = RödaStream.makeEmptyStream(), 
+					outStream = new OSStream(out);
 
-			c.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, k, s, i, o) -> {
+			INTERPRETER.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, k, s, i, o) -> {
 						Interpreter.checkString("prompt", a.get(0));
 						in.setPrompt(a.get(0).str());
 					}, Arrays.asList(new Parameter("prompt_string", false)), false));
 			
 			in.addCompleter((b, k, l) -> {
-					if (b == null) l.addAll(c.G.map.keySet());
+					if (b == null) l.addAll(INTERPRETER.G.map.keySet());
 					else {
 						int i = Math.max(b.lastIndexOf(" "), Math.max(b.lastIndexOf("|"), Math.max(b.lastIndexOf("{"), b.lastIndexOf(";"))))+1;
 						String a = b.substring(0, i);
 						b = b.substring(i);
-						TreeSet<String> vars = new TreeSet<>(c.G.map.keySet());
+						TreeSet<String> vars = new TreeSet<>(INTERPRETER.G.map.keySet());
 						for (String match : vars.tailSet(b)) {
 							if (!match.startsWith(b)) break;
 							l.add(a + match + " ");
@@ -203,7 +204,7 @@ public class Röda {
 			while ((line = in.readLine()) != null) {
 				if (!line.trim().isEmpty()) {
 					try {
-						c.interpretStatement(line, "<line "+ i++ +">");
+						INTERPRETER.interpretStatement(line, "<line "+ i++ +">", inStream, outStream);
 					} catch (ParsingException e) {
 						out.println("[E] " + e.getMessage());
 					} catch (Interpreter.RödaException e) {
@@ -216,20 +217,16 @@ public class Röda {
 
 			System.out.println();
 
-		} else {
+		} else if (!disableInteraction) {
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-			Interpreter c = new Interpreter();
-			c.enableDebug = enableDebug;
-			c.enableProfiling = enableProfiling;
-			interpretEOption(c, eval);
 			String line = "";
 			int i = 1;
 			System.out.print(prompt);
 			while ((line = in.readLine()) != null) {
 				if (!line.trim().isEmpty()) {
 					try {
-						c.interpretStatement(line, "<line "+ i++ +">");
+						INTERPRETER.interpretStatement(line, "<line "+ i++ +">", STDIN, STDOUT);
 					} catch (ParsingException e) {
 						System.err.println("[E] " + e.getMessage());
 					} catch (Interpreter.RödaException e) {

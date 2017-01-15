@@ -12,10 +12,10 @@ import org.kaivos.röda.Datatype;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaException;
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
-import org.kaivos.röda.Parser.Record;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
+import org.kaivos.röda.runtime.Record;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaRecordInstance;
 
@@ -32,7 +32,7 @@ public final class ThreadPopulator {
 						new Record.Field("peek", new Datatype("function")),
 						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function"))),
-				false);
+				false, I.G);
 		I.G.preRegisterRecord(threadRecord);
 		I.G.postRegisterRecord(threadRecord);
 
@@ -40,7 +40,7 @@ public final class ThreadPopulator {
 			RödaValue function = args.get(0);
 
 			RödaScope newScope = !function.is(RödaValue.NFUNCTION) && function.localScope() != null
-					? new RödaScope(I, function.localScope()) : new RödaScope(I, I.G);
+					? new RödaScope(function.localScope()) : new RödaScope(I.G);
 			RödaStream _in = RödaStream.makeStream();
 			RödaStream _out = RödaStream.makeStream();
 
@@ -65,7 +65,7 @@ public final class ThreadPopulator {
 				_out.finish();
 			};
 
-			RödaValue threadObject = RödaRecordInstance.of(threadRecord, Collections.emptyList(), I.G.getRecords());
+			RödaValue threadObject = RödaRecordInstance.of(threadRecord, Collections.emptyList());
 			threadObject.setField("start", RödaNativeFunction.of("Thread.start", (ra, a, k, s, i, o) -> {
 				checkArgs("Thread.start", 0, a.size());
 				if (p.started)

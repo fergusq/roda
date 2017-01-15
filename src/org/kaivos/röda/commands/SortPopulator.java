@@ -15,12 +15,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.kaivos.röda.RödaStream;
-import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Expression.CType;
-import org.kaivos.röda.Parser.Parameter;
+import org.kaivos.röda.Parser.ExpressionTree.CType;
+import org.kaivos.röda.RödaStream;
+import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaNativeFunction;
 
 public class SortPopulator {
@@ -33,7 +33,7 @@ public class SortPopulator {
 		I.exec("<sort populator>", 0,
 				key,
 				Collections.emptyList(), Arrays.asList(arg), Collections.emptyMap(),
-				new RödaScope(I, I.G), in, out);
+				new RödaScope(I.G), in, out);
 		out.finish();
 		RödaValue retval = null;
 		while (true) {
@@ -50,7 +50,7 @@ public class SortPopulator {
 		I.exec("<sort populator>", 0,
 				cmp,
 				Collections.emptyList(), Arrays.asList(a, b), Collections.emptyMap(),
-				new RödaScope(I, I.G), in, out);
+				new RödaScope(I.G), in, out);
 		out.finish();
 		boolean useBool = false, retval = true;
 		while (true) {

@@ -5,10 +5,10 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.kaivos.röda.runtime.Function;
 import org.kaivos.röda.type.RödaBoolean;
 
 import static org.kaivos.röda.type.RödaNativeFunction.NativeFunction;
-import static org.kaivos.röda.Parser.Function;
 import static org.kaivos.röda.Interpreter.RödaScope;
 import static org.kaivos.röda.Interpreter.typeMismatch;
 
@@ -180,7 +180,7 @@ public abstract class RödaValue {
 		typeMismatch("can't cast " + typeString() + " to reference");
 	}
 	
-	public RödaValue callOperator(Parser.Expression.CType operator, RödaValue value) {
+	public RödaValue callOperator(Parser.ExpressionTree.CType operator, RödaValue value) {
 		switch (operator) {
 		case EQ:
 			return RödaBoolean.of(this.halfEq(value));

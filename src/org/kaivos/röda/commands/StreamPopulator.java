@@ -8,10 +8,10 @@ import org.kaivos.röda.Builtins;
 import org.kaivos.röda.Datatype;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
-import org.kaivos.röda.Parser.Record;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
+import org.kaivos.röda.runtime.Record;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaRecordInstance;
 
@@ -30,13 +30,13 @@ public final class StreamPopulator {
 						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function")),
 						new Record.Field("finish", new Datatype("function"))),
-				false);
+				false, I.G);
 		I.G.preRegisterRecord(streamRecord);
 		I.G.postRegisterRecord(streamRecord);
 
 		Supplier<RödaValue> getStreamObj = () -> {
 			RödaStream stream = RödaStream.makeStream();
-			RödaValue streamObject = RödaRecordInstance.of(streamRecord, Collections.emptyList(), I.G.getRecords());
+			RödaValue streamObject = RödaRecordInstance.of(streamRecord, Collections.emptyList());
 			
 			streamObject.setField("pull", Builtins.genericPull("Stream.pull", stream, false, true));
 			streamObject.setField("tryPull", Builtins.genericTryPull("Stream.tryPull", stream, false));

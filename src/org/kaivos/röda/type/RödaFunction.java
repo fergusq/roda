@@ -1,8 +1,8 @@
 package org.kaivos.röda.type;
 
+import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.Interpreter.RödaScope;
-import static org.kaivos.röda.Parser.Function;
+import org.kaivos.röda.runtime.Function;
 
 public class RödaFunction extends RödaValue {
 	private Function function;

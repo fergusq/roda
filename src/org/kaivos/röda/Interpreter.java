@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -47,18 +46,20 @@ import java.util.regex.PatternSyntaxException;
 
 import org.kaivos.nept.parser.ParsingException;
 import org.kaivos.nept.parser.TokenList;
-import org.kaivos.röda.Parser.Annotation;
-import org.kaivos.röda.Parser.Argument;
+import org.kaivos.röda.Parser.AnnotationTree;
+import org.kaivos.röda.Parser.ArgumentTree;
 import org.kaivos.röda.Parser.Command;
-import org.kaivos.röda.Parser.Expression;
-import org.kaivos.röda.Parser.Function;
-import org.kaivos.röda.Parser.KwArgument;
-import org.kaivos.röda.Parser.Parameter;
-import org.kaivos.röda.Parser.Program;
-import org.kaivos.röda.Parser.Record;
-import org.kaivos.röda.Parser.Statement;
-import org.kaivos.röda.RödaStream.ISLineStream;
-import org.kaivos.röda.RödaStream.OSStream;
+import org.kaivos.röda.Parser.DatatypeTree;
+import org.kaivos.röda.Parser.ExpressionTree;
+import org.kaivos.röda.Parser.FunctionTree;
+import org.kaivos.röda.Parser.KwArgumentTree;
+import org.kaivos.röda.Parser.ParameterTree;
+import org.kaivos.röda.Parser.ProgramTree;
+import org.kaivos.röda.Parser.RecordTree;
+import org.kaivos.röda.Parser.StatementTree;
+import org.kaivos.röda.runtime.Function;
+import org.kaivos.röda.runtime.Function.Parameter;
+import org.kaivos.röda.runtime.Record;
 import org.kaivos.röda.type.RödaBoolean;
 import org.kaivos.röda.type.RödaFloating;
 import org.kaivos.röda.type.RödaFunction;
@@ -76,19 +77,17 @@ public class Interpreter {
 	/*** INTERPRETER ***/
 
 	public static class RödaScope {
-		Interpreter context;
 		Optional<RödaScope> parent;
 		Map<String, RödaValue> map;
 		Map<String, Datatype> typeargs;
 		Map<String, RecordDeclaration> records = new HashMap<>();
-		RödaScope(Interpreter context, Optional<RödaScope> parent) {
-			this.context = context;
+		RödaScope(Optional<RödaScope> parent) {
 			this.parent = parent;
 			this.map = new HashMap<>();
 			this.typeargs = new HashMap<>();
 		}
-		public RödaScope(Interpreter context, RödaScope parent) {
-			this(context, Optional.of(parent));
+		public RödaScope(RödaScope parent) {
+			this(Optional.of(parent));
 		}
 
 		public synchronized RödaValue resolve(String name) {
@@ -128,6 +127,30 @@ public class Interpreter {
 			return null;
 		}
 
+		public Datatype substitute(DatatypeTree type) {
+			if (type.name.size() == 1) {
+				Datatype typearg = getTypearg(type.name.get(0));
+				if (typearg != null) {
+					if (!type.subtypes.isEmpty())
+						error("a typeparameter can't have subtypes");
+					return typearg;
+				}
+			}
+			List<Datatype> subtypes = new ArrayList<>();
+			for (DatatypeTree t : type.subtypes) {
+				subtypes.add(substitute(t));
+			}
+			RödaScope scope = this;
+			for (int i = 0; i < type.name.size()-1; i++) {
+				String namespace = type.name.get(i);
+				RödaValue value = scope.resolve(namespace);
+				if (value == null || !value.is(NAMESPACE))
+					typeMismatch("invalid datatype (namespace not found): " + type.toString());
+				scope = value.scope();
+			}
+			return new Datatype(type.name.get(type.name.size()-1), subtypes, scope);
+		}
+		
 		public Datatype substitute(Datatype type) {
 			Datatype typearg = getTypearg(type.name);
 			if (typearg != null) {
@@ -139,7 +162,7 @@ public class Interpreter {
 			for (Datatype t : type.subtypes) {
 				subtypes.add(substitute(t));
 			}
-			return new Datatype(type.name, subtypes);
+			return new Datatype(type.name, subtypes, this);
 		}
 		
 		public Map<String, Record> getRecords() {
@@ -161,11 +184,11 @@ public class Interpreter {
 		}
 
 		public void preRegisterRecord(Record record) {
-			records.put(record.name, new RecordDeclaration(record, this, context.createRecordClassReflection(record, this)));
+			records.put(record.name, new RecordDeclaration(record, INTERPRETER.createRecordClassReflection(record, this)));
 		}
 
 		public void postRegisterRecord(Record record) {
-			context.createFieldReflections(record, records.get(record.name).reflection, this);
+			INTERPRETER.createFieldReflections(record, records.get(record.name).reflection, this);
 		}
 		
 		public void registerRecord(RecordDeclaration record) {
@@ -175,50 +198,60 @@ public class Interpreter {
 	
 	public static class RecordDeclaration {
 		Record tree;
-		RödaScope declarationScope;
 		RödaValue reflection;
 		
-		public RecordDeclaration(Record record, RödaScope declarationScope, RödaValue reflection) {
+		public RecordDeclaration(Record record, RödaValue reflection) {
 			this.tree = record;
-			this.declarationScope = declarationScope;
 			this.reflection = reflection;
 		}
 	}
+	
+	private static Record treeToRecord(RecordTree recordTree, RödaScope scope) {
+		return new Record(recordTree.name, recordTree.typeparams,
+				recordTree.params,
+				recordTree.superTypes.stream().map(st -> new Record.SuperExpression(scope.substitute(st.type), st.args)).collect(toList()),
+				recordTree.annotations,
+				recordTree.fields.stream().map(f -> new Record.Field(f.name, scope.substitute(f.type), f.defaultValue, f.annotations)).collect(toList()),
+				recordTree.isValueType, scope);
+	}
+	
+	private static Function treeToFunction(FunctionTree funcTree, RödaScope scope) {
+		return new Function(funcTree.name, funcTree.typeparams,
+				funcTree.parameters.stream().map(p -> treeToParameter(p, scope)).collect(toList()),
+				funcTree.isVarargs,
+				funcTree.kwparameters.stream().map(p -> treeToParameter(p, scope)).collect(toList()),
+				funcTree.body);
+	}
+	
+	private static Parameter treeToParameter(ParameterTree parTree, RödaScope scope) {
+		return new Parameter(parTree.name, parTree.reference,
+				parTree.type == null ? null : scope.substitute(parTree.type), parTree.defaultValue);
+	}
 
-	public RödaScope G = new RödaScope(this, Optional.empty());
-
-	RödaStream STDIN, STDOUT;
+	public RödaScope G = new RödaScope(Optional.empty());
 
 	public File currentDir = new File(System.getProperty("user.dir"));
-
-	private void initializeIO() {
-		InputStreamReader ir = new InputStreamReader(System.in);
-		BufferedReader in = new BufferedReader(ir);
-		PrintWriter out = new PrintWriter(System.out);
-		STDIN = new ISLineStream(in);
-		STDOUT = new OSStream(out);
-	}
 	
-	private static Record errorSubtype(String name) {
+	private Record errorSubtype(String name) {
 		return new Record(name,
 				emptyList(),
-				Arrays.asList(new Record.SuperExpression(new Datatype("Error"), emptyList())),
+				Arrays.asList(new Record.SuperExpression(new Datatype("Error", G), emptyList())),
 				emptyList(),
-				false);
+				false, G);
 	}
 	
-	private static Record errorSubtype(String name, String... superTypes) {
+	private Record errorSubtype(String name, String... superTypes) {
 		return new Record(name,
 				emptyList(),
 				Arrays.asList(superTypes).stream()
-					.map(t -> new Record.SuperExpression(new Datatype(t), emptyList()))
+					.map(t -> new Record.SuperExpression(new Datatype(t, G), emptyList()))
 					.collect(toList()),
 				emptyList(),
-				false);
+				false, G);
 	}
 
-	private static final Record errorRecord, typeRecord, fieldRecord;
-	private static final Record
+	private final Record errorRecord, typeRecord, fieldRecord;
+	private final Record
 		javaErrorRecord,
 		leakyPipeErrorRecord,
 		emptyStreamErrorRecord,
@@ -227,7 +260,7 @@ public class Interpreter {
 		unknownNameErrorRecord,
 		typeMismatchErrorRecord,
 		outOfBoundsErrorRecord;
-	static {
+	{
 		errorRecord = new Record("Error",
 				emptyList(),
 				emptyList(),
@@ -237,29 +270,29 @@ public class Interpreter {
 						new Record.Field("javastack",
 								new Datatype("list", Arrays.asList(new Datatype("string")))),
 						new Record.Field("causes",
-								new Datatype("list", Arrays.asList(new Datatype("Error"))))
+								new Datatype("list", Arrays.asList(new Datatype("Error", G))))
 						),
-				false);
+				false, G);
 		typeRecord = new Record("Type",
 				emptyList(),
 				emptyList(),
 				Arrays.asList(new Record.Field("name", new Datatype("string")),
 						new Record.Field("annotations", new Datatype("list")),
 						new Record.Field("fields",
-								new Datatype("list", Arrays.asList(new Datatype("Field")))),
+								new Datatype("list", Arrays.asList(new Datatype("Field", G)))),
 						new Record.Field("newInstance", new Datatype("function"))
 						),
-				false);
+				false, G);
 		fieldRecord = new Record("Field",
 				emptyList(),
 				emptyList(),
 				Arrays.asList(new Record.Field("name", new Datatype("string")),
 						new Record.Field("annotations", new Datatype("list")),
-						new Record.Field("type", new Datatype("Type")),
+						new Record.Field("type", new Datatype("Type", G)),
 						new Record.Field("get", new Datatype("function")),
 						new Record.Field("set", new Datatype("function"))
 						),
-				false);
+				false, G);
 		
 		javaErrorRecord = errorSubtype("JavaError");
 		leakyPipeErrorRecord = errorSubtype("LeakyPipeError");
@@ -270,8 +303,8 @@ public class Interpreter {
 		typeMismatchErrorRecord = errorSubtype("TypeMismatchError", "IllegalArgumentsError");
 		outOfBoundsErrorRecord = errorSubtype("OutOfBoundsError", "IllegalArgumentsError");
 	}
-	private static final Record[] builtinRecords = {
-			errorRecord, typeRecord, fieldRecord,
+	private final Record[] builtinRecords = {
+			typeRecord, errorRecord, fieldRecord,
 			leakyPipeErrorRecord,
 			javaErrorRecord,
 			emptyStreamErrorRecord,
@@ -280,22 +313,17 @@ public class Interpreter {
 			unknownNameErrorRecord,
 			typeMismatchErrorRecord,
 			outOfBoundsErrorRecord
-			};
-	private static final Map<String, Record> builtinRecordMap = new HashMap<>();
-	static {
-		for (Record r : builtinRecords) {
-			builtinRecordMap.put(r.name, r);
-		}
-	}
+	};
 
-	{
-		Builtins.populate(this);
+	private void populateBuiltins() {
 		for (Record r : builtinRecords) {
 			G.preRegisterRecord(r);
 		}
 		for (Record r : builtinRecords) {
 			G.postRegisterRecord(r);
 		}
+		
+		Builtins.populate(this);
 
 		G.setLocal("ENV", RödaMap.of(System.getenv().entrySet().stream()
 				.collect(toMap(e -> e.getKey(),
@@ -305,13 +333,13 @@ public class Interpreter {
 	private RödaValue createRecordClassReflection(Record record, RödaScope scope) {
 		if (enableDebug) callStack.get().push("creating reflection object of record "
 				+ record.name + "\n\tat <runtime>");
-		RödaValue typeObj = RödaRecordInstance.of(typeRecord, emptyList(), G.getRecords());
+		RödaValue typeObj = RödaRecordInstance.of(typeRecord, emptyList());
 		typeObj.setField("name", RödaString.of(record.name));
 		typeObj.setField("annotations", evalAnnotations(record.annotations, scope));
 		typeObj.setField("newInstance", RödaNativeFunction
 				.of("Type.newInstance",
 						(ta, a, k, s, i, o) -> {
-							o.push(newRecord(new Datatype(record.name), ta, a, scope));
+							o.push(newRecord(new Datatype(record.name, emptyList(), scope), ta, a, scope));
 						}, emptyList(), false));
 		if (enableDebug) callStack.get().pop();
 		return typeObj;
@@ -320,7 +348,7 @@ public class Interpreter {
 	private void createFieldReflections(Record record, RödaValue typeObj, RödaScope scope) {
 		if (enableDebug) callStack.get().push("creating field reflection objects of record "
 				+ record.name + "\n\tat <runtime>");
-		typeObj.setField("fields", RödaList.of("Field", record.fields.stream()
+		typeObj.setField("fields", RödaList.of(new Datatype("Field", G), record.fields.stream()
 				.map(f -> createFieldReflection(record, f, scope))
 				.collect(toList())));
 		if (enableDebug) callStack.get().pop();
@@ -329,14 +357,14 @@ public class Interpreter {
 	private RödaValue createFieldReflection(Record record, Record.Field field, RödaScope scope) {
 		if (enableDebug) callStack.get().push("creating reflection object of field "
 				+ record.name + "." + field.name + "\n\tat <runtime>");
-		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, emptyList(), G.getRecords());
+		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, emptyList());
 		fieldObj.setField("name", RödaString.of(field.name));
 		fieldObj.setField("annotations", evalAnnotations(field.annotations, scope));
 		fieldObj.setField("get", RödaNativeFunction
 				.of("Field.get",
 						(ta, a, k, s, i, o) -> {
 							RödaValue obj = a.get(0);
-							if (!obj.is(new Datatype(record.name))) {
+							if (!obj.is(new Datatype(record.name, emptyList(), scope))) {
 								illegalArguments("illegal argument for Field.get: "
 										+ record.name + " required, got " + obj.typeString());
 							}
@@ -346,7 +374,7 @@ public class Interpreter {
 				.of("Field.set",
 						(ta, a, k, s, i, o) -> {
 							RödaValue obj = a.get(0);
-							if (!obj.is(new Datatype(record.name))) {
+							if (!obj.is(new Datatype(record.name, emptyList(), scope))) {
 								illegalArguments("illegal argument for Field.get: "
 										+ record.name + " required, got " + obj.typeString());
 							}
@@ -360,7 +388,7 @@ public class Interpreter {
 		return fieldObj;
 	}
 
-	private RödaValue evalAnnotations(List<Annotation> annotations, RödaScope scope) {
+	private RödaValue evalAnnotations(List<AnnotationTree> annotations, RödaScope scope) {
 		return annotations.stream()
 				.map(a -> {
 					RödaScope annotationScope = scope;
@@ -400,14 +428,9 @@ public class Interpreter {
 		executor.shutdown();
 	}
 
-	public Interpreter() {
-		initializeIO();
-	}
-
-	public Interpreter(RödaStream in, RödaStream out) {
-		STDIN = in;
-		STDOUT = out;
-	}
+	public static final Interpreter INTERPRETER = new Interpreter();
+	
+	private Interpreter() {}
 
 	/* kutsupino */
 	
@@ -442,6 +465,10 @@ public class Interpreter {
 	}
 	
 	private static ThreadLocal<ArrayDeque<Timer>> timerStack = ThreadLocal.withInitial(ArrayDeque::new);
+	
+	static {
+		INTERPRETER.populateBuiltins();
+	}
 	
 	public boolean enableDebug = true, enableProfiling = false;
 
@@ -486,19 +513,16 @@ public class Interpreter {
 
 	private static RödaValue makeErrorObject(Record record, String message,
 			StackTraceElement[] javaStackTrace, Throwable... causes) {
-		RödaValue errorObject = RödaRecordInstance
-				.of(record,
-						emptyList(),
-						builtinRecordMap); // Purkkaa, mutta toimii: errorilla ei ole ulkoisia riippuvuuksia
+		RödaValue errorObject = RödaRecordInstance.of(record, emptyList());
 		errorObject.setField("message", RödaString.of(message));
 		errorObject.setField("stack", RödaList.of("string", callStack.get().stream()
 				.map(RödaString::of).collect(toList())));
 		errorObject.setField("javastack", RödaList.of("string", Arrays.stream(javaStackTrace)
 				.map(StackTraceElement::toString).map(RödaString::of)
 				.collect(toList())));
-		errorObject.setField("causes", RödaList.of("Error", Arrays.stream(causes)
+		errorObject.setField("causes", RödaList.of(new Datatype("Error", INTERPRETER.G), Arrays.stream(causes)
 				.map(cause -> cause instanceof RödaException ? ((RödaException) cause).getErrorObject()
-						: makeErrorObject(javaErrorRecord,
+						: makeErrorObject(INTERPRETER.javaErrorRecord,
 								cause.getClass().getName() + ": " + cause.getMessage(), cause.getStackTrace()))
 				.collect(toList())));
 		return errorObject;
@@ -510,31 +534,31 @@ public class Interpreter {
 	}
 	
 	public static void error(String message) {
-		throw createRödaException(errorRecord, message);
+		throw createRödaException(INTERPRETER.errorRecord, message);
 	}
 	
 	public static void emptyStream(String message) {
-		throw createRödaException(emptyStreamErrorRecord, message);
+		throw createRödaException(INTERPRETER.emptyStreamErrorRecord, message);
 	}
 	
 	public static void fullStream(String message) {
-		throw createRödaException(fullStreamErrorRecord, message);
+		throw createRödaException(INTERPRETER.fullStreamErrorRecord, message);
 	}
 	
 	public static void illegalArguments(String message) {
-		throw createRödaException(illegalArgumentsErrorRecord, message);
+		throw createRödaException(INTERPRETER.illegalArgumentsErrorRecord, message);
 	}
 	
 	public static void unknownName(String message) {
-		throw createRödaException(unknownNameErrorRecord, message);
+		throw createRödaException(INTERPRETER.unknownNameErrorRecord, message);
 	}
 	
 	public static void typeMismatch(String message) {
-		throw createRödaException(typeMismatchErrorRecord, message);
+		throw createRödaException(INTERPRETER.typeMismatchErrorRecord, message);
 	}
 	
 	public static void outOfBounds(String message) {
-		throw createRödaException(outOfBoundsErrorRecord, message);
+		throw createRödaException(INTERPRETER.outOfBoundsErrorRecord, message);
 	}
 	
 	private static RödaException createRödaException(Throwable...causes) {
@@ -548,7 +572,7 @@ public class Interpreter {
 		if (causes.length == 1) javaStackTrace = causes[0].getStackTrace();
 		else javaStackTrace = Thread.currentThread().getStackTrace();
 		
-		RödaValue errorObject = makeErrorObject(causes.length == 1 ? javaErrorRecord : errorRecord,
+		RödaValue errorObject = makeErrorObject(causes.length == 1 ? INTERPRETER.javaErrorRecord : INTERPRETER.errorRecord,
 				message, javaStackTrace, causes);
 		return new RödaException(causes, new ArrayDeque<>(callStack.get()), errorObject);
 	}
@@ -569,15 +593,15 @@ public class Interpreter {
 		}
 	}
 
-	public void interpret(String code) {
-		interpret(code, "<input>");
+	public void interpret(String code, RödaStream in, RödaStream out) {
+		interpret(code, "<input>", in, out);
 	}
 
-	public void interpret(String code, String filename) {
-		interpret(code, new ArrayList<>(), "<input>");
+	public void interpret(String code, String filename, RödaStream in, RödaStream out) {
+		interpret(code, new ArrayList<>(), filename, in, out);
 	}
 
-	public void interpret(String code, List<RödaValue> args, String filename) {
+	public void interpret(String code, List<RödaValue> args, String filename, RödaStream in, RödaStream out) {
 		try {
 			load(code, filename, G);
 
@@ -586,7 +610,7 @@ public class Interpreter {
 			if (!main.is(FUNCTION) || main.is(NFUNCTION))
 				typeMismatch("The variable 'main' must be a function");
 
-			exec("<runtime>", 0, main, emptyList(), args, Collections.emptyMap(), G, STDIN, STDOUT);
+			exec("<runtime>", 0, main, emptyList(), args, Collections.emptyMap(), G, in, out);
 		} catch (ParsingException|RödaException e) {
 			throw e;
 		} catch (Exception e) {
@@ -596,20 +620,20 @@ public class Interpreter {
 
 	public void load(String code, String filename, RödaScope scope, boolean overwrite) {
 		try {
-			Program program = parse(t.tokenize(code, filename));
-			for (List<Statement> f : program.preBlocks) {
+			ProgramTree program = parse(t.tokenize(code, filename));
+			for (List<StatementTree> f : program.preBlocks) {
 				execBlock(f, scope);
 			}
-			for (Function f : program.functions) {
-				scope.setLocal(f.name, RödaFunction.of(f, scope));
+			for (FunctionTree f : program.functions) {
+				scope.setLocal(f.name, RödaFunction.of(treeToFunction(f, scope), scope));
 			}
-			for (Record r : program.records) {
-				scope.preRegisterRecord(r);
+			for (RecordTree r : program.records) {
+				scope.preRegisterRecord(treeToRecord(r, scope));
 			}
-			for (Record r : program.records) {
-				scope.postRegisterRecord(r);
+			for (RecordTree r : program.records) {
+				scope.postRegisterRecord(treeToRecord(r, scope));
 			}
-			for (List<Statement> f : program.postBlocks) {
+			for (List<StatementTree> f : program.postBlocks) {
 				execBlock(f, scope);
 			}
 		} catch (ParsingException|RödaException e) {
@@ -619,10 +643,10 @@ public class Interpreter {
 		}
 	}
 	
-	private void execBlock(List<Statement> block, RödaScope scope) {
+	private void execBlock(List<StatementTree> block, RödaScope scope) {
 		RödaStream in = RödaStream.makeEmptyStream();
 		RödaStream out = RödaStream.makeEmptyStream();
-		for (Statement s : block) {
+		for (StatementTree s : block) {
 			evalStatement(s, scope, in, out, false);
 		}
 	}
@@ -651,12 +675,12 @@ public class Interpreter {
 		loadFile(file, scope, true);
 	}
 
-	public void interpretStatement(String code, String filename) {
+	public void interpretStatement(String code, String filename, RödaStream in, RödaStream out) {
 		try {
 			TokenList tl = t.tokenize(code, filename);
-			Statement statement = parseStatement(tl);
+			StatementTree statement = parseStatement(tl);
 			tl.accept("<EOF>");
-			evalStatement(statement, G, STDIN, STDOUT, false);
+			evalStatement(statement, G, in, out, false);
 		} catch (RödaException e) {
 			throw e;
 		} catch (ParsingException e) {
@@ -924,7 +948,7 @@ public class Interpreter {
 
 			// joko nimettömän funktion paikallinen scope tai ylätason scope
 			RödaScope newScope = value.localScope() == null
-					? new RödaScope(this, G) : new RödaScope(this, value.localScope());
+					? new RödaScope(G) : new RödaScope(value.localScope());
 			
 			newScope.setLocal("caller_namespace", RödaNamespace.of(scope));
 			
@@ -954,7 +978,7 @@ public class Interpreter {
 			for (Parameter p : kwparameters) {
 				newScope.setLocal(p.name, kwargs.get(p.name));
 			}
-			for (Statement s : value.function().body) {
+			for (StatementTree s : value.function().body) {
 				try {
 					evalStatement(s, newScope, in, out, false);
 				} catch (ReturnException e) {
@@ -973,7 +997,7 @@ public class Interpreter {
 		typeMismatch("can't execute a value of type " + value.typeString());
 	}
 
-	private void evalStatement(Statement statement, RödaScope scope,
+	private void evalStatement(StatementTree statement, RödaScope scope,
 			RödaStream in, RödaStream out, boolean redirected) {
 		RödaStream _in = in;
 		int i = 0;
@@ -1071,12 +1095,12 @@ public class Interpreter {
 	private static final BreakOrContinueException BREAK_EXCEPTION = new BreakOrContinueException(true);
 	private static final BreakOrContinueException CONTINUE_EXCEPTION = new BreakOrContinueException(false);
 
-	private List<RödaValue> flattenArguments(List<Argument> arguments,
+	private List<RödaValue> flattenArguments(List<ArgumentTree> arguments,
 			RödaScope scope,
 			RödaStream in, RödaStream out,
 			boolean canResolve) {
 		List<RödaValue> args = new ArrayList<>();
-		for (Argument arg : arguments) {
+		for (ArgumentTree arg : arguments) {
 			RödaValue value = evalExpression(arg.expr, scope, in, out, true);
 			if (canResolve || arg.flattened) value = value.impliciteResolve();
 			if (arg.flattened) {
@@ -1088,12 +1112,12 @@ public class Interpreter {
 		return args;
 	}
 
-	private Map<String, RödaValue> kwargsToMap(List<KwArgument> arguments,
+	private Map<String, RödaValue> kwargsToMap(List<KwArgumentTree> arguments,
 			RödaScope scope,
 			RödaStream in, RödaStream out,
 			boolean canResolve) {
 		Map<String, RödaValue> map = new HashMap<>();
-		for (KwArgument arg : arguments) {
+		for (KwArgumentTree arg : arguments) {
 			RödaValue value = evalExpression(arg.expr, scope, in, out, true);
 			if (canResolve) value = value.impliciteResolve();
 			map.put(arg.name, value);
@@ -1118,11 +1142,11 @@ public class Interpreter {
 		}
 		
 		if (cmd.type == Command.Type.DEL) {
-			Expression e = cmd.name;
-			if (e.type != Expression.Type.ELEMENT
-					&& e.type != Expression.Type.SLICE)
+			ExpressionTree e = cmd.name;
+			if (e.type != ExpressionTree.Type.ELEMENT
+					&& e.type != ExpressionTree.Type.SLICE)
 				error("bad lvalue for del: " + e.asString());
-			if (e.type == Expression.Type.ELEMENT) {
+			if (e.type == ExpressionTree.Type.ELEMENT) {
 				return () -> {
 					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
 					RödaValue index = evalExpression(e.index, scope, in, out)
@@ -1130,7 +1154,7 @@ public class Interpreter {
 					list.del(index);
 				};
 			}
-			else if (e.type == Expression.Type.SLICE) {
+			else if (e.type == ExpressionTree.Type.SLICE) {
 				return () -> {
 					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
 					RödaValue index1 = evalExpression(e.index1, scope, in, out)
@@ -1144,14 +1168,14 @@ public class Interpreter {
 
 		if (cmd.type == Command.Type.VARIABLE) {
 			List<RödaValue> args = flattenArguments(cmd.arguments.arguments, scope, in, out, true);
-			Expression e = cmd.name;
-			if (e.type != Expression.Type.VARIABLE
-					&& e.type != Expression.Type.ELEMENT
-					&& e.type != Expression.Type.SLICE
-					&& e.type != Expression.Type.FIELD)
+			ExpressionTree e = cmd.name;
+			if (e.type != ExpressionTree.Type.VARIABLE
+					&& e.type != ExpressionTree.Type.ELEMENT
+					&& e.type != ExpressionTree.Type.SLICE
+					&& e.type != ExpressionTree.Type.FIELD)
 				error("bad lvalue for '" + cmd.operator + "': " + e.asString());
 			Consumer<RödaValue> assign, assignLocal;
-			if (e.type == Expression.Type.VARIABLE) {
+			if (e.type == ExpressionTree.Type.VARIABLE) {
 				assign = v -> {
 					RödaValue value = scope.resolve(e.variable);
 					if (value == null || !value.is(REFERENCE))
@@ -1165,7 +1189,7 @@ public class Interpreter {
 					value.assignLocal(v);
 				};
 			}
-			else if (e.type == Expression.Type.ELEMENT) {
+			else if (e.type == ExpressionTree.Type.ELEMENT) {
 				assign = v -> {
 					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
 					RödaValue index = evalExpression(e.index, scope, in, out).impliciteResolve();
@@ -1173,7 +1197,7 @@ public class Interpreter {
 				};
 				assignLocal = assign;
 			}
-			else if (e.type == Expression.Type.SLICE) {
+			else if (e.type == ExpressionTree.Type.SLICE) {
 				assign = v -> {
 					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
 					RödaValue index1 = evalExpression(e.index1, scope, in, out).impliciteResolve();
@@ -1299,7 +1323,7 @@ public class Interpreter {
 			} break;
 			case "?": {
 				r = () -> {
-					if (e.type != Expression.Type.VARIABLE)
+					if (e.type != ExpressionTree.Type.VARIABLE)
 						error("bad lvalue for '?': " + e.asString());
 					_out.push(RödaBoolean.of(scope.resolve(e.variable) != null));
 				};
@@ -1335,11 +1359,11 @@ public class Interpreter {
 			Runnable r = () -> {
 				boolean goToElse = true;
 				do {
-					RödaScope newScope = new RödaScope(this, scope);
+					RödaScope newScope = new RödaScope(scope);
 					if (evalCond(commandName, cmd.cond, scope, _in) ^ neg) break;
 					goToElse = false;
 					try {
-						for (Statement s : cmd.body) {
+						for (StatementTree s : cmd.body) {
 							evalStatement(s, newScope, _in, _out, false);
 						}
 					} catch (BreakOrContinueException e) {
@@ -1348,8 +1372,8 @@ public class Interpreter {
 					}
 				} while (isWhile);
 				if (goToElse && cmd.elseBody != null) {
-					RödaScope newScope = new RödaScope(this, scope);
-					for (Statement s : cmd.elseBody) {
+					RödaScope newScope = new RödaScope(scope);
+					for (StatementTree s : cmd.elseBody) {
 						evalStatement(s, newScope, _in, _out, false);
 					}
 				}
@@ -1365,12 +1389,12 @@ public class Interpreter {
 				checkList("for", list);
 				r = () -> {
 					for (RödaValue val : list.list()) {
-						RödaScope newScope = new RödaScope(this, scope);
+						RödaScope newScope = new RödaScope(scope);
 						newScope.setLocal(cmd.variables.get(0), val);
 						if (cmd.cond != null && evalCond("for if", cmd.cond, newScope, _in))
 							continue;
 						try {
-							for (Statement s : cmd.body) {
+							for (StatementTree s : cmd.body) {
 								evalStatement(s, newScope, _in, _out, false);
 							}
 						} catch (BreakOrContinueException e) {
@@ -1386,7 +1410,7 @@ public class Interpreter {
 						RödaValue val = _in.pull();
 						if (val == null) break;
 
-						RödaScope newScope = new RödaScope(this, scope);
+						RödaScope newScope = new RödaScope(scope);
 						newScope.setLocal(firstVar, val);
 						for (String var : otherVars) {
 							val = _in.pull();
@@ -1405,7 +1429,7 @@ public class Interpreter {
 								&& evalCond("for if", cmd.cond, newScope, _in))
 							continue;
 						try {
-							for (Statement s : cmd.body) {
+							for (StatementTree s : cmd.body) {
 								evalStatement(s, newScope, _in, _out, false);
 							}
 						} catch (BreakOrContinueException e) {
@@ -1420,8 +1444,8 @@ public class Interpreter {
 		if (cmd.type == Command.Type.TRY_DO) {
 			Runnable r = () -> {
 				try {
-					RödaScope newScope = new RödaScope(this, scope);
-					for (Statement s : cmd.body) {
+					RödaScope newScope = new RödaScope(scope);
+					for (StatementTree s : cmd.body) {
 						evalStatement(s, newScope, _in, _out, false);
 					}
 				} catch (ReturnException e) {
@@ -1430,7 +1454,7 @@ public class Interpreter {
 					throw e;
 				} catch (Exception e) {
 					if (cmd.variable != null) {
-						RödaScope newScope = new RödaScope(this, scope);
+						RödaScope newScope = new RödaScope(scope);
 						RödaValue errorObject;
 						if (e instanceof RödaException)
 							errorObject = ((RödaException) e).getErrorObject();
@@ -1438,7 +1462,7 @@ public class Interpreter {
 								+ e.getMessage(),
 								e.getStackTrace());
 						newScope.setLocal(cmd.variable, errorObject);
-						for (Statement s : cmd.elseBody) {
+						for (StatementTree s : cmd.elseBody) {
 							evalStatement(s, newScope, _in, _out, false);
 						}
 					}
@@ -1490,7 +1514,7 @@ public class Interpreter {
 		return null;
 	}
 
-	private boolean evalCond(String cmd, Statement cond, RödaScope scope, RödaStream in) {
+	private boolean evalCond(String cmd, StatementTree cond, RödaScope scope, RödaStream in) {
 		RödaStream condOut = RödaStream.makeStream();
 		evalStatement(cond, scope, in, condOut, true);
 		boolean brk = false;
@@ -1503,11 +1527,11 @@ public class Interpreter {
 		return brk;
 	}
 
-	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out) {
+	private RödaValue evalExpression(ExpressionTree exp, RödaScope scope, RödaStream in, RödaStream out) {
 		return evalExpressionWithoutErrorHandling(exp, scope, in, out, false);
 	}
 
-	private RödaValue evalExpression(Expression exp, RödaScope scope, RödaStream in, RödaStream out,
+	private RödaValue evalExpression(ExpressionTree exp, RödaScope scope, RödaStream in, RödaStream out,
 			boolean variablesAreReferences) {
 		if (enableDebug) callStack.get().push("expression " + exp.asString() + "\n\tat " + exp.file + ":" + exp.line);
 		RödaValue value;
@@ -1525,33 +1549,31 @@ public class Interpreter {
 	}
 
 	@SuppressWarnings("incomplete-switch")
-	private RödaValue evalExpressionWithoutErrorHandling(Expression exp, RödaScope scope,
+	private RödaValue evalExpressionWithoutErrorHandling(ExpressionTree exp, RödaScope scope,
 			RödaStream in, RödaStream out,
 			boolean variablesAreReferences) {
-		if (exp.type == Expression.Type.STRING) return RödaString.of(exp.string);
-		if (exp.type == Expression.Type.PATTERN) return RödaString.of(exp.pattern);
-		if (exp.type == Expression.Type.INTEGER) return RödaInteger.of(exp.integer);
-		if (exp.type == Expression.Type.FLOATING) return RödaFloating.of(exp.floating);
-		if (exp.type == Expression.Type.BLOCK) return RödaFunction.of(exp.block, scope);
-		if (exp.type == Expression.Type.LIST) return RödaList.of(exp.list
+		if (exp.type == ExpressionTree.Type.STRING) return RödaString.of(exp.string);
+		if (exp.type == ExpressionTree.Type.PATTERN) return RödaString.of(exp.pattern);
+		if (exp.type == ExpressionTree.Type.INTEGER) return RödaInteger.of(exp.integer);
+		if (exp.type == ExpressionTree.Type.FLOATING) return RödaFloating.of(exp.floating);
+		if (exp.type == ExpressionTree.Type.BLOCK) return RödaFunction.of(treeToFunction(exp.block, scope), scope);
+		if (exp.type == ExpressionTree.Type.LIST) return RödaList.of(exp.list
 				.stream()
 				.map(e -> evalExpression(e, scope, in, out).impliciteResolve())
 				.collect(toList()));
-		if (exp.type == Expression.Type.REFLECT
-				|| exp.type == Expression.Type.TYPEOF) {
+		if (exp.type == ExpressionTree.Type.REFLECT
+				|| exp.type == ExpressionTree.Type.TYPEOF) {
 			Datatype type;
-			if (exp.type == Expression.Type.REFLECT) {
+			if (exp.type == ExpressionTree.Type.REFLECT) {
 				type = scope.substitute(exp.datatype);
 			}
 			else { // TYPEOF
 				RödaValue value = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 				type = value.basicIdentity();
 			}
-			if (!scope.getRecordDeclarations().containsKey(type.name))
-				unknownName("reflect: unknown record class '" + type + "'");
-			return scope.getRecordDeclarations().get(type.name).reflection;
+			return type.resolveReflection();
 		}
-		if (exp.type == Expression.Type.NEW) {
+		if (exp.type == ExpressionTree.Type.NEW) {
 			Datatype type = scope.substitute(exp.datatype);
 			List<Datatype> subtypes = exp.datatype.subtypes.stream()
 					.map(scope::substitute).collect(toList());
@@ -1561,22 +1583,22 @@ public class Interpreter {
 					.collect(toList());
 			return newRecord(type, subtypes, args, scope);
 		}
-		if (exp.type == Expression.Type.LENGTH
-				|| exp.type == Expression.Type.ELEMENT
-				|| exp.type == Expression.Type.SLICE
-				|| exp.type == Expression.Type.CONTAINS) {
+		if (exp.type == ExpressionTree.Type.LENGTH
+				|| exp.type == ExpressionTree.Type.ELEMENT
+				|| exp.type == ExpressionTree.Type.SLICE
+				|| exp.type == ExpressionTree.Type.CONTAINS) {
 			RödaValue list = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 
-			if (exp.type == Expression.Type.LENGTH) {
+			if (exp.type == ExpressionTree.Type.LENGTH) {
 				return list.length();
 			}
 
-			if (exp.type == Expression.Type.ELEMENT) {
+			if (exp.type == ExpressionTree.Type.ELEMENT) {
 				RödaValue index = evalExpression(exp.index, scope, in, out).impliciteResolve();
 				return list.get(index);
 			}
 
-			if (exp.type == Expression.Type.SLICE) {
+			if (exp.type == ExpressionTree.Type.SLICE) {
 				RödaValue start, end;
 
 				if (exp.index1 != null)
@@ -1592,16 +1614,16 @@ public class Interpreter {
 				return list.slice(start, end);
 			}
 
-			if (exp.type == Expression.Type.CONTAINS) {
+			if (exp.type == ExpressionTree.Type.CONTAINS) {
 				RödaValue index = evalExpression(exp.index, scope, in, out).impliciteResolve();
 				return list.contains(index);
 			}
 		}
-		if (exp.type == Expression.Type.FIELD) {
+		if (exp.type == ExpressionTree.Type.FIELD) {
 			return evalExpression(exp.sub, scope, in, out).impliciteResolve()
 					.getField(exp.field);
 		}
-		if (exp.type == Expression.Type.CONCAT) {
+		if (exp.type == ExpressionTree.Type.CONCAT) {
 			RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue val2 = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			if (val1.is(LIST) && val2.is(LIST)) {
@@ -1612,27 +1634,27 @@ public class Interpreter {
 			}
 			else return RödaString.of(val1.str() + val2.str());
 		}
-		if (exp.type == Expression.Type.CONCAT_CHILDREN) {
+		if (exp.type == ExpressionTree.Type.CONCAT_CHILDREN) {
 			RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue val2 = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			return concat(val1, val2);
 		}
-		if (exp.type == Expression.Type.JOIN) {
+		if (exp.type == ExpressionTree.Type.JOIN) {
 			RödaValue list = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue separator = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			return list.join(separator);
 		}
-		if (exp.type == Expression.Type.IS) {
+		if (exp.type == ExpressionTree.Type.IS) {
 			Datatype type = scope.substitute(exp.datatype);
 			RödaValue value = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 			return RödaBoolean.of(value.is(type));
 		}
-		if (exp.type == Expression.Type.IN) {
+		if (exp.type == ExpressionTree.Type.IN) {
 			RödaValue value = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue list = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			return list.containsValue(value);
 		}
-		if (exp.type == Expression.Type.STATEMENT_LIST) {
+		if (exp.type == ExpressionTree.Type.STATEMENT_LIST) {
 			RödaStream _out = RödaStream.makeStream();
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
@@ -1640,7 +1662,7 @@ public class Interpreter {
 				emptyStream("empty stream (in statement expression: " + exp.asString() + ")");
 			return val;
 		}
-		if (exp.type == Expression.Type.STATEMENT_SINGLE) {
+		if (exp.type == ExpressionTree.Type.STATEMENT_SINGLE) {
 			RödaStream _out = RödaStream.makeStream();
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
@@ -1650,7 +1672,7 @@ public class Interpreter {
 				fullStream("stream is full (in statement expression: " + exp.asString() + ")");
 			return val.list().get(0);
 		}
-		if (exp.type == Expression.Type.VARIABLE) {
+		if (exp.type == ExpressionTree.Type.VARIABLE) {
 			if (variablesAreReferences) {
 				return RödaReference.of(exp.variable, scope, exp.file, exp.line);
 			}
@@ -1658,7 +1680,7 @@ public class Interpreter {
 			if (v == null) unknownName("variable not found: " + exp.variable);
 			return v;
 		}
-		if (exp.type == Expression.Type.CALCULATOR) {
+		if (exp.type == ExpressionTree.Type.CALCULATOR) {
 			if (exp.isUnary) {
 				RödaValue sub = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 				switch (exp.ctype) {
@@ -1741,19 +1763,16 @@ public class Interpreter {
 
 	private RödaValue newRecord(RödaValue value,
 			Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
-		Map<String, RecordDeclaration> records = scope.getRecordDeclarations();
-		Record r = records.get(type.name).tree;
-		RödaScope declarationScope = records.get(type.name).declarationScope;
-		if (r == null)
-			unknownName("record class '" + type.name + "' not found");
+		Record r = type.resolve();
+		RödaScope declarationScope = type.resolve().declarationScope;
 		if (r.typeparams.size() != subtypes.size())
 			illegalArguments("wrong number of typearguments for '" + r.name + "': "
 					+ r.typeparams.size() + " required, got " + subtypes.size());
 		if (r.params.size() != args.size())
 			illegalArguments("wrong number of arguments for '" + r.name + "': "
 					+ r.params.size() + " required, got " + args.size());
-		value = value != null ? value : RödaRecordInstance.of(r, subtypes, scope.getRecords());
-		RödaScope recordScope = new RödaScope(this, declarationScope);
+		value = value != null ? value : RödaRecordInstance.of(r, subtypes);
+		RödaScope recordScope = new RödaScope(declarationScope);
 		recordScope.setLocal("self", value);
 		for (int i = 0; i < subtypes.size(); i++) {
 			recordScope.addTypearg(r.typeparams.get(i), subtypes.get(i));

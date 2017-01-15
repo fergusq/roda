@@ -1,19 +1,26 @@
 package org.kaivos.röda;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.ArrayList;
+import static org.kaivos.röda.Interpreter.argumentOverflow;
+import static org.kaivos.röda.Interpreter.argumentUnderflow;
+import static org.kaivos.röda.Interpreter.checkArgs;
+import static org.kaivos.röda.Interpreter.checkNumber;
+import static org.kaivos.röda.Interpreter.checkReference;
+import static org.kaivos.röda.Interpreter.checkString;
+import static org.kaivos.röda.Interpreter.emptyStream;
+import static org.kaivos.röda.Interpreter.error;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Consumer;
 
-import org.kaivos.röda.IOUtils;
-import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.commands.AssignGlobalPopulator;
 import org.kaivos.röda.commands.BtosAndStobPopulator;
 import org.kaivos.röda.commands.CdAndPwdPopulator;
@@ -50,10 +57,12 @@ import org.kaivos.röda.commands.ThreadPopulator;
 import org.kaivos.röda.commands.TrueAndFalsePopulator;
 import org.kaivos.röda.commands.UndefinePopulator;
 import org.kaivos.röda.commands.WcatPopulator;
-
-import org.kaivos.röda.type.*;
-import static org.kaivos.röda.Interpreter.*;
-import static org.kaivos.röda.Parser.*;
+import org.kaivos.röda.runtime.Function.Parameter;
+import org.kaivos.röda.type.RödaBoolean;
+import org.kaivos.röda.type.RödaInteger;
+import org.kaivos.röda.type.RödaList;
+import org.kaivos.röda.type.RödaNativeFunction;
+import org.kaivos.röda.type.RödaString;
 
 public class Builtins {
 

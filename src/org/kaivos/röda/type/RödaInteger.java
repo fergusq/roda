@@ -30,7 +30,7 @@ public class RödaInteger extends RödaValue {
 	}
 	
 	@Override
-	public RödaValue callOperator(Parser.Expression.CType operator, RödaValue value) {
+	public RödaValue callOperator(Parser.ExpressionTree.CType operator, RödaValue value) {
 		if (!value.is(INTEGER)) typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
 		switch (operator) {
 		case MUL:

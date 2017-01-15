@@ -6,7 +6,7 @@ import static org.kaivos.röda.RödaValue.MAP;
 import java.util.Arrays;
 
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaString;

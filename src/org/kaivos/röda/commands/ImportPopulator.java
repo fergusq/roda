@@ -8,8 +8,8 @@ import java.util.Arrays;
 import org.kaivos.röda.IOUtils;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaNamespace;
 import org.kaivos.röda.type.RödaNativeFunction;
 
@@ -44,7 +44,7 @@ public final class ImportPopulator {
 			for (RödaValue value : args) {
 				String filename = value.str();
 				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
-				RödaScope newScope = new RödaScope(I, I.G);
+				RödaScope newScope = new RödaScope(I.G);
 				I.loadFile(file, newScope);
 				out.push(RödaNamespace.of(newScope));
 			}
@@ -53,7 +53,7 @@ public final class ImportPopulator {
 			for (RödaValue value : args) {
 				String filename = value.str();
 				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
-				RödaScope newScope = new RödaScope(I, scope);
+				RödaScope newScope = new RödaScope(scope);
 				I.loadFile(file, newScope);
 				out.push(RödaNamespace.of(newScope));
 			}
