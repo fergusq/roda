@@ -467,6 +467,26 @@ public class Interpreter {
 	
 	private static ThreadLocal<ArrayDeque<Timer>> timerStack = ThreadLocal.withInitial(ArrayDeque::new);
 	
+	private void pushTimer() {
+		ArrayDeque<Timer> ts = timerStack.get();
+		if (!ts.isEmpty()) {
+			ts.peek().stop();
+		}
+		Timer t = new Timer();
+		ts.push(t);
+		t.start();
+	}
+	
+	private void popTimer(String name) {
+		ArrayDeque<Timer> ts = timerStack.get();
+		Timer t = ts.pop();
+		t.stop();
+		updateProfilerData(name, t.timeNanos());
+		if (!ts.isEmpty()) {
+			ts.peek().start();
+		}
+	}
+	
 	static {
 		INTERPRETER.populateBuiltins();
 	}
@@ -623,7 +643,7 @@ public class Interpreter {
 		try {
 			ProgramTree program = parse(t.tokenize(code, filename));
 			for (List<StatementTree> f : program.preBlocks) {
-				execBlock(f, scope);
+				execBlock("pre_load", f, scope);
 			}
 			for (FunctionTree f : program.functions) {
 				scope.setLocal(f.name, RödaFunction.of(treeToFunction(f, scope), scope));
@@ -635,7 +655,7 @@ public class Interpreter {
 				scope.postRegisterRecord(treeToRecord(r, scope));
 			}
 			for (List<StatementTree> f : program.postBlocks) {
-				execBlock(f, scope);
+				execBlock("post_load", f, scope);
 			}
 		} catch (ParsingException|RödaException e) {
 			throw e;
@@ -644,11 +664,19 @@ public class Interpreter {
 		}
 	}
 	
-	private void execBlock(List<StatementTree> block, RödaScope scope) {
-		RödaStream in = RödaStream.makeEmptyStream();
-		RödaStream out = RödaStream.makeEmptyStream();
-		for (StatementTree s : block) {
-			evalStatement(s, scope, in, out, false);
+	private void execBlock(String name, List<StatementTree> block, RödaScope scope) {
+		if (enableProfiling) pushTimer();
+		if (enableDebug) callStack.get().push("calling block " + name + "\n\tat <load>");
+		try {
+			RödaStream in = RödaStream.makeEmptyStream();
+			RödaStream out = RödaStream.makeEmptyStream();
+			for (StatementTree s : block) {
+				evalStatement(s, scope, in, out, false);
+			}
+		}
+		finally {
+			if (enableDebug) callStack.get().pop();
+			if (enableProfiling) popTimer(name);
 		}
 	}
 	
@@ -880,13 +908,7 @@ public class Interpreter {
 		}
 
 		if (enableProfiling) {
-			ArrayDeque<Timer> ts = timerStack.get();
-			if (!ts.isEmpty()) {
-				ts.peek().stop();
-			}
-			Timer t = new Timer();
-			ts.push(t);
-			t.start();
+			pushTimer();
 		}
 		if (enableDebug) {
 			if (args.size() > 0) {
@@ -913,13 +935,7 @@ public class Interpreter {
 				callStack.get().pop();
 			}
 			if (enableProfiling) {
-				ArrayDeque<Timer> ts = timerStack.get();
-				Timer t = ts.pop();
-				t.stop();
-				updateProfilerData(value.str(), t.timeNanos());
-				if (!ts.isEmpty()) {
-					ts.peek().start();
-				}
+				popTimer(value.str());
 			}
 		}
 	}
