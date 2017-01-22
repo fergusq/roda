@@ -1033,8 +1033,15 @@ public class Interpreter {
 						timerStack.get().push(timer);
 						timer.start();
 					}
+					if (enableDebug)
+						callStack.get().push("command " + command.asString()
+							+ "\n\tat " + command.file + ":" + command.line);
 					tr.run();
 				} finally {
+					if (enableDebug) {
+						if (runnables.length > 1) callStack.get().clear();
+						else callStack.get().pop();
+					}
 					if (enableProfiling) {
 						timer.stop();
 						timerStack.get().pop();
