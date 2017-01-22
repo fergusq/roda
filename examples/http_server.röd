@@ -91,6 +91,7 @@ record HttpServer(port_value) {
 				try do
 					request.handle()
 				catch e
+					errprint((typeof e).name, ": ", e.message, "\n")
 					request.send500(e)
 				done
 			else
@@ -101,7 +102,7 @@ record HttpServer(port_value) {
 	
 	function update {
 		connection := self.socket.accept()
-		date := "["..[bufferedExec("date", "+%d.%m.%Y/%H:%M")][0].."]"
+		date := "["..[{}()|bufferedExec("date", "+%d.%m.%Y/%H:%M")][0].."]"
 		print(date.." Connection from "..connection.hostname.." ("..connection.ip..":"..connection.port..").")
 		handler := thread({ self.handle(connection) })
 		handler.start()
@@ -206,7 +207,7 @@ record Response(request) {
 			headers .= "Date: "
 			env := new map
 			env["LC_TIME"] = "c.UTF-8"
-			headers .= [exec("date", "-u", "+%a, %b %d %Y %H:%M:%S GMT", env=env)][:-1]&"".."\r\n"
+			headers .= [{}()|exec("date", "-u", "+%a, %b %d %Y %H:%M:%S GMT", env=env)][:-1]&"".."\r\n"
 			headers .= content_headers
 			headers .= self.cookieHeaders()
 			headers .= "Connection: keep-alive\r\n"
