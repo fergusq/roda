@@ -163,7 +163,7 @@ public class Interpreter {
 			for (Datatype t : type.subtypes) {
 				subtypes.add(substitute(t));
 			}
-			return new Datatype(type.name, subtypes, this);
+			return new Datatype(type.name, subtypes, type.scope);
 		}
 		
 		public Map<String, Record> getRecords() {
@@ -1793,7 +1793,7 @@ public class Interpreter {
 	private RödaValue newRecord(RödaValue value,
 			Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
 		Record r = type.resolve();
-		RödaScope declarationScope = type.resolve().declarationScope;
+		RödaScope declarationScope = r.declarationScope;
 		if (r.typeparams.size() != subtypes.size())
 			illegalArguments("wrong number of typearguments for '" + r.name + "': "
 					+ r.typeparams.size() + " required, got " + subtypes.size());
