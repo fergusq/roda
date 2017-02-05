@@ -394,16 +394,17 @@ public class Interpreter {
 				.map(a -> {
 					RödaScope annotationScope = scope;
 					for (String var : a.namespace) {
-						RödaValue val = annotationScope.resolve(var).impliciteResolve();
+						RödaValue val = annotationScope.resolve(var);
 						if (val == null)
 							unknownName("namespace '" + var + "' not found");
 						if (!val.is(NAMESPACE)) {
 							typeMismatch("type mismatch: expected namespace, got " + val.typeString());
 						}
-						annotationScope = val.scope();
+						annotationScope = val.impliciteResolve().scope();
 					}
 					RödaValue function = annotationScope.resolve(a.name);
 					if (function == null) unknownName("annotation function '" + a.name + "' not found");
+					function = function.impliciteResolve();
 					List<RödaValue> args = flattenArguments(a.args.arguments, scope,
 							RödaStream.makeEmptyStream(),
 							RödaStream.makeStream(),
