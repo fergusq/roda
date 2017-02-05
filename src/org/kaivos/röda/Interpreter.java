@@ -394,7 +394,7 @@ public class Interpreter {
 				.map(a -> {
 					RödaScope annotationScope = scope;
 					for (String var : a.namespace) {
-						RödaValue val = annotationScope.resolve(var);
+						RödaValue val = annotationScope.resolve(var).impliciteResolve();
 						if (val == null)
 							unknownName("namespace '" + var + "' not found");
 						if (!val.is(NAMESPACE)) {
