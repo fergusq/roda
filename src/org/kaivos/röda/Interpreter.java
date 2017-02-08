@@ -1127,7 +1127,9 @@ public class Interpreter {
 		List<RödaValue> args = new ArrayList<>();
 		for (ArgumentTree arg : arguments) {
 			RödaValue value = evalExpression(arg.expr, scope, in, out, true);
-			if (canResolve || arg.flattened) value = value.impliciteResolve();
+			if (canResolve || arg.flattened) {
+				while (value.is(REFERENCE)) value = value.impliciteResolve();
+			}
 			if (arg.flattened) {
 				checkList("*", value);
 				args.addAll(value.list());
