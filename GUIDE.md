@@ -45,11 +45,11 @@ done
 ```
 
 Like in Bourne shell, condition is a command. It can be an arithmetic command `[]` or a normal function call like below.
-`file :e` is used to check if the file exists.
+`fileExists` is used to check if the file exists.
 
 ```sh
-if file :e, "log.txt" do
-	exec "rm", "log.txt"
+if fileExists "log.txt" do
+	{} | exec "rm", "log.txt" | {}
 done
 ```
 
@@ -109,7 +109,7 @@ Examples:
 ```sh
 names := [get_name(client) for client in clients]
 adults := [push(client) for client in clients if [ client.age >= 18 ]]
-pwdir := !pwd
+pwdir := pwd()
 directories := [push(pwdir.."/"..f) for f in files if isDirectory(f)]
 ```
 
@@ -118,8 +118,8 @@ directories := [push(pwdir.."/"..f) for f in files if isDirectory(f)]
 `for` can also used in pipes. `if` and `unless` are right-associative, so braces `{}` should be used around them.
 
 ```ruby
-["Pictures/", "Music/"] | exec(:l, "ls", dir) for dir | { [ f ] for f unless isDirectory(f) } | for f do
-	print f.." "..file(:m, f)
+["Pictures/", "Music/"] | bufferedExec("ls", dir) for dir | { [ f ] for f unless isDirectory(f) } | for f do
+	print f.." "..mimeType(f)
 done
 ```
 
@@ -134,7 +134,7 @@ done
 Ensures that the condition is true for all elements in list.
 
 ```sh
-if isDirectory(f) for f in [exec(:l, "ls")] do
+if isDirectory(f) for f in [ls(".")] do
 	print "All files are directories!"
 done
 ```
