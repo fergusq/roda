@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.Parser.ExpressionTree.CType;
 import org.kaivos.röda.runtime.Datatype;
 
 public class RödaList extends RödaValue {
@@ -173,6 +174,33 @@ public class RödaList extends RödaValue {
 		for (int i = 0; i < list.size(); i++)
 			ans &= list.get(i).strongEq(value.list().get(i));
 		return ans;
+	}
+	
+	@Override
+	public RödaValue callOperator(CType operator, RödaValue value) {
+		if (operator == CType.MUL && !value.is(INTEGER))
+			typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
+		switch (operator) {
+		case MUL: {
+			List<RödaValue> newList = new ArrayList<>();
+			for (int i = 0; i < value.integer(); i++) {
+				newList.addAll(this.list);
+			}
+			return of(newList);
+		}
+		case ADD: {
+			List<RödaValue> newList = new ArrayList<>(this.list);
+			newList.add(value);
+			return of(newList);
+		}
+		case SUB: {
+			List<RödaValue> newList = new ArrayList<>(this.list);
+			newList.remove(value);
+			return of(newList);
+		}
+		default:
+			return super.callOperator(operator, value);
+		}
 	}
 
 	public static RödaList of(List<RödaValue> list) {

@@ -1,8 +1,10 @@
 package org.kaivos.röda.type;
 
+import static java.util.stream.Collectors.toList;
 import static org.kaivos.röda.Interpreter.outOfBounds;
 import static org.kaivos.röda.Interpreter.typeMismatch;
 
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 import org.kaivos.röda.Parser.ExpressionTree.CType;
@@ -72,6 +74,8 @@ public class RödaString extends RödaValue {
 			String a = "";
 			for (int i = 0; i < value.integer(); i++) a += this.str();
 			return RödaString.of(a);
+		case DIV:
+			return RödaList.of(Arrays.stream(this.str().split(value.str())).map(RödaString::of).collect(toList()));
 		case LT:
 			return RödaBoolean.of(this.str().compareTo(value.str()) < 0);
 		case GT:

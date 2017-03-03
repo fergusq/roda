@@ -249,4 +249,18 @@ public abstract class RödaValue {
 	public String toString() {
 			return "RödaValue{str=" + str() + "}";
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof RödaValue) {
+			if (!((RödaValue) obj).is(REFERENCE)) {
+				return strongEq((RödaValue) obj);
+			} else if (is(REFERENCE)) {
+				RödaValue target = unsafeResolve();
+				return target.equals(((RödaValue) obj).unsafeResolve());
+			}
+			else return false;
+		}
+		return super.equals(obj);
+	}
 }
