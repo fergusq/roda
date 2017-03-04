@@ -1326,7 +1326,7 @@ public class Interpreter {
 			case "~=": {
 				r = () -> {
 					RödaValue rval = resolve.get();
-					checkString(".=", rval);
+					checkString("~=", rval);
 					boolean quoteMode = false; // TODO: päätä, pitääkö tämä toteuttaa myöhemmin
 					if (args.size() % 2 != 0) illegalArguments("illegal arguments for '~=': even number required (got " + (args.size()-1) + ")");
 					String text = rval.str();
