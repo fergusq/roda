@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.ProcessBuilder.Redirect;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -48,6 +49,7 @@ public final class ExecPopulator {
 			
 			try {
 				ProcessBuilder b = new ProcessBuilder(params);
+				b.redirectError(Redirect.INHERIT);
 				b.directory(I.currentDir);
 				b.environment().putAll(envVars);
 				Process p = b.start();
@@ -55,7 +57,7 @@ public final class ExecPopulator {
 				PrintWriter pin = new PrintWriter(p.getOutputStream());
 				Runnable input = () -> {
 					if (true) {
-						while (true) {
+						while (p.isAlive()) {
 							RödaValue value = in.pull();
 							if (value == null)
 								break;
