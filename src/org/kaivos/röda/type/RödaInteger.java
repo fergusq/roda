@@ -73,6 +73,11 @@ public class RödaInteger extends RödaValue {
 	@Override public boolean strongEq(RödaValue value) {
 		return value.is(INTEGER) && value.integer() == number;
 	}
+	
+	@Override
+	public int hashCode() {
+		return Long.hashCode(number);
+	}
 
 	public static RödaInteger of(long number) {
 		return new RödaInteger(number);

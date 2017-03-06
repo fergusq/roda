@@ -78,6 +78,11 @@ public class RödaRecordInstance extends RödaValue {
 	@Override public Map<String, RödaValue> fields() {
 		return Collections.unmodifiableMap(fields);
 	}
+	
+	@Override
+	public int hashCode() {
+		return basicIdentity().hashCode() + fields.hashCode();
+	}
 
 	public static RödaRecordInstance of(Record record, List<Datatype> typearguments) {
 		Map<String, Datatype> fieldTypes = new HashMap<>();

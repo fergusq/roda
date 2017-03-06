@@ -84,4 +84,9 @@ public class Datatype {
 
 		return true;
 	}
+	
+	@Override
+	public int hashCode() {
+		return name.hashCode() + subtypes.hashCode();
+	}
 }

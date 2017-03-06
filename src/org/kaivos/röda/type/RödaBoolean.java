@@ -25,6 +25,11 @@ public class RödaBoolean extends RödaValue {
 	@Override public boolean strongEq(RödaValue value) {
 		return value.is(BOOLEAN) && value.bool() == bool;
 	}
+	
+	@Override
+	public int hashCode() {
+		return Boolean.hashCode(bool);
+	}
 
 	public static RödaBoolean of(boolean value) {
 		return new RödaBoolean(value);

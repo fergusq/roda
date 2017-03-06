@@ -60,6 +60,11 @@ public class RödaReference extends RödaValue {
 		error("can't compare a reference");
 		return false;
 	}
+	
+	@Override
+	public int hashCode() {
+		return target.hashCode() + scope.hashCode();
+	}
 
 	public static RödaReference of(String target, RödaScope scope, String file, int line) {
 		return new RödaReference(target, scope, file, line);

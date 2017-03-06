@@ -202,6 +202,11 @@ public class RödaList extends RödaValue {
 			return super.callOperator(operator, value);
 		}
 	}
+	
+	@Override
+	public int hashCode() {
+		return list.hashCode();
+	}
 
 	public static RödaList of(List<RödaValue> list) {
 		return new RödaList(new ArrayList<>(list));

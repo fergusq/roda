@@ -50,6 +50,11 @@ public class RödaNativeFunction extends RödaValue {
 	@Override public boolean strongEq(RödaValue value) {
 		return value.is(NFUNCTION) && value.nfunction() == function;
 	}
+	
+	@Override
+	public int hashCode() {
+		return function.body.hashCode();
+	}
 
 	public static RödaNativeFunction of(NativeFunction function) {
 		return new RödaNativeFunction(function);

@@ -60,6 +60,11 @@ public class RödaNamespace extends RödaValue {
 		return scope;
 	}
 	
+	@Override
+	public int hashCode() {
+		return scope.hashCode();
+	}
+	
 	public static RödaNamespace of(RödaScope scope) {
 		return new RödaNamespace(scope);
 	}

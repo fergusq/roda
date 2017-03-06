@@ -57,6 +57,7 @@ import org.kaivos.röda.commands.StrsizePopulator;
 import org.kaivos.röda.commands.ThreadPopulator;
 import org.kaivos.röda.commands.TrueAndFalsePopulator;
 import org.kaivos.röda.commands.UndefinePopulator;
+import org.kaivos.röda.commands.UniqPopulator;
 import org.kaivos.röda.commands.WcatPopulator;
 import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaBoolean;
@@ -105,6 +106,7 @@ public class Builtins {
 		HeadAndTailPopulator.populateHeadAndTail(S);
 		InterleavePopulator.populateInterleave(S);
 		SortPopulator.populateSort(I, S);
+		UniqPopulator.populateUniq(S);
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 

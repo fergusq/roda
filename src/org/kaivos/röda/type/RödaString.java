@@ -98,6 +98,11 @@ public class RödaString extends RödaValue {
 	@Override public boolean strongEq(RödaValue value) {
 		return value.is(STRING) && value.str().equals(text);
 	}
+	
+	@Override
+	public int hashCode() {
+		return text.hashCode();
+	}
 
 	public static RödaString of(String text) {
 		return new RödaString(text);

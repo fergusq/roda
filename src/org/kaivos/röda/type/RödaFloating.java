@@ -57,6 +57,11 @@ public class RödaFloating extends RödaValue {
 	@Override public boolean strongEq(RödaValue value) {
 		return value.is(INTEGER) && value.integer() == number;
 	}
+	
+	@Override
+	public int hashCode() {
+		return Double.hashCode(number);
+	}
 
 	public static RödaFloating of(double number) {
 		return new RödaFloating(number);

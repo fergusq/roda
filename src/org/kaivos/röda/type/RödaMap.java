@@ -88,6 +88,11 @@ public class RödaMap extends RödaValue {
 			ans &= map.get(i).strongEq(value.map().get(i));
 		return ans;
 	}
+	
+	@Override
+	public int hashCode() {
+		return map.hashCode();
+	}
 
 	public static RödaMap of(Map<String, RödaValue> map) {
 		return new RödaMap(new HashMap<>(map));

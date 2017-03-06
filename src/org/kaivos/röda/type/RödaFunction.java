@@ -39,6 +39,11 @@ public class RödaFunction extends RödaValue {
 	@Override public boolean strongEq(RödaValue value) {
 		return value.is(FUNCTION) && !value.is(NFUNCTION) && value.function() == function;
 	}
+	
+	@Override
+	public int hashCode() {
+		return function.hashCode() + localScope.hashCode();
+	}
 
 	public static RödaFunction of(Function function) {
 		return new RödaFunction(function);
