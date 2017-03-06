@@ -333,7 +333,7 @@ public class Parser {
 			if (acceptIfNext(tl, "(")) {
 				arguments = parseArguments(tl, true);
 				accept(tl, ")");
-			} else arguments = parseArguments(tl, false);
+			} else arguments = parseArguments(tl, false, true);
 			if (!arguments.sfvarguments.isEmpty()) {
 				throw new ParsingException(
 						"annotations can't have underscore arguments",
@@ -984,7 +984,7 @@ public class Parser {
 			arguments = parseArguments(tl, true);
 			accept(tl, ")");
 		}
-		else arguments = parseArguments(tl, false);
+		else arguments = parseArguments(tl, false, operator != null);
 		
 		Command cmd;
 		
@@ -1006,14 +1006,19 @@ public class Parser {
 	}
 	
 	private static int SUGAR_FOR_VARNUM_COUNTER = 1;
-
+	
 	private static ArgumentsTree parseArguments(TokenList tl, boolean allowNewlines) {
+		return parseArguments(tl, allowNewlines, allowNewlines);
+	}
+
+	private static ArgumentsTree parseArguments(TokenList tl, boolean allowNewlines, boolean allowPrefixes) {
 		ArgumentsTree arguments = new ArgumentsTree();
 		arguments.arguments = new ArrayList<>();
 		arguments.kwarguments = new ArrayList<>();
 		arguments.sfvarguments = new ArrayList<>();
 		boolean kwargMode = false;
-		while ((allowNewlines || !tl.isNext(";", "\n", "for", "while", "until", "if", "until"))
+		while ((allowNewlines || !tl.isNext(";", "\n"))
+				&& (allowPrefixes || !tl.isNext("for", "while", "until", "if", "until"))
 				&& !isNext(tl, "|", ")", "]", "}", "in", "do", "else", "done", "<EOF>")) {
 			if (seekString(tl).equals("_")) {
 				String sfvname = "<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">";
