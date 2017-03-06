@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.commands.AssignGlobalPopulator;
 import org.kaivos.röda.commands.BtosAndStobPopulator;
+import org.kaivos.röda.commands.CasePopulator;
 import org.kaivos.röda.commands.CdAndPwdPopulator;
 import org.kaivos.röda.commands.ChrAndOrdPopulator;
 import org.kaivos.röda.commands.CurrentTimePopulator;
@@ -119,6 +120,7 @@ public class Builtins {
 		BtosAndStobPopulator.populateBtosAndStob(S);
 		StrsizePopulator.populateStrsize(S);
 		ChrAndOrdPopulator.populateChrAndOrd(S);
+		CasePopulator.populateUpperAndLowerCase(S);;
 
 		/* Konstruktorit */
 
