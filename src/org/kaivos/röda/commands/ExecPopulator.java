@@ -37,13 +37,13 @@ public final class ExecPopulator {
 	public static void addExecFunction(Interpreter I, String name, boolean lineMode) {
 		I.G.setLocal(name, RödaNativeFunction.of(name, (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() < 1)
-				argumentUnderflow("exec", 1, args.size());
+				argumentUnderflow(name, 1, args.size());
 			List<String> params = args.stream().map(v -> v.str()).collect(toList());
 			
 			HashMap<String, String> envVars = new HashMap<>();
-			checkMap("exec", kwargs.get("env"));
+			checkMap(name, kwargs.get("env"));
 			for (Entry<String, RödaValue> e : kwargs.get("env").map().entrySet()) {
-				checkString("exec", e.getValue());
+				checkString(name, e.getValue());
 				envVars.put(e.getKey(), e.getValue().str());
 			}
 			
