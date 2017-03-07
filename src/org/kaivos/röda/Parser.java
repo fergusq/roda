@@ -1,22 +1,23 @@
 package org.kaivos.röda;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-import java.util.function.BinaryOperator;
-
 import static java.util.stream.Collectors.joining;
 
-import org.kaivos.nept.parser.Token;
-import org.kaivos.nept.parser.TokenList;
-import org.kaivos.nept.parser.TokenScanner;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.List;
+import java.util.function.BinaryOperator;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
 import org.kaivos.nept.parser.OperatorLibrary;
 import org.kaivos.nept.parser.OperatorPrecedenceParser;
 import org.kaivos.nept.parser.ParsingException;
+import org.kaivos.nept.parser.Token;
+import org.kaivos.nept.parser.TokenList;
+import org.kaivos.nept.parser.TokenScanner;
 
 public class Parser {
 
@@ -337,11 +338,6 @@ public class Parser {
 				arguments = parseArguments(tl, true);
 				accept(tl, ")");
 			} else arguments = parseArguments(tl, false, true);
-			if (!arguments.sfvarguments.isEmpty()) {
-				throw new ParsingException(
-						"annotations can't have underscore arguments",
-						tl.seek());
-			}
 			annotations.add(new AnnotationTree(file, line, name, namespace, arguments));
 		}
 		return annotations;
@@ -696,7 +692,6 @@ public class Parser {
 	static class ArgumentsTree {
 		List<ArgumentTree> arguments;
 		List<KwArgumentTree> kwarguments;
-		List<String> sfvarguments;
 	}
 
 	static class ArgumentTree {
@@ -983,6 +978,8 @@ public class Parser {
 		}
 		ArgumentsTree arguments;
 		
+		sugarVars.push(new ArrayList<>());
+		
 		if (acceptIfNext(tl, "(")) {
 			arguments = parseArguments(tl, true);
 			accept(tl, ")");
@@ -996,11 +993,13 @@ public class Parser {
 		else
 			cmd = _makeVariableCommand(file, line, name, operator, arguments);
 		
-		if (!arguments.sfvarguments.isEmpty()) {
+		List<String> sfvs = sugarVars.pop();
+		
+		if (!sfvs.isEmpty()) {
 			cmd = _makeForCommand(
 					cmd.file,
 					cmd.line,
-					arguments.sfvarguments,
+					sfvs,
 					null, null,
 					Arrays.asList(new StatementTree(Arrays.asList(cmd))));
 		}
@@ -1010,6 +1009,8 @@ public class Parser {
 	
 	private static int SUGAR_FOR_VARNUM_COUNTER = 1;
 	
+	private static Deque<List<String>> sugarVars = new ArrayDeque<>();
+	
 	private static ArgumentsTree parseArguments(TokenList tl, boolean allowNewlines) {
 		return parseArguments(tl, allowNewlines, allowNewlines);
 	}
@@ -1018,22 +1019,11 @@ public class Parser {
 		ArgumentsTree arguments = new ArgumentsTree();
 		arguments.arguments = new ArrayList<>();
 		arguments.kwarguments = new ArrayList<>();
-		arguments.sfvarguments = new ArrayList<>();
 		boolean kwargMode = false;
 		while ((allowNewlines || !tl.isNext(";", "\n"))
 				&& (allowPrefixes || !tl.isNext("for", "while", "until", "if", "until"))
 				&& !isNext(tl, "|", ")", "]", "}", "in", "do", "else", "done", "<EOF>")) {
-			if (seekString(tl).equals("_")) {
-				String sfvname = "<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">";
-				arguments.arguments.add(_makeArgument(false,
-						expressionVariable(
-								tl.seek().getFile(),
-								tl.seek().getLine(),
-								sfvname)));
-				accept(tl, "_");
-				arguments.sfvarguments.add(sfvname);
-			}
-			else if (validIdentifier(tl.seekString()) && tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
+			if (validIdentifier(tl.seekString()) && tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
 				kwargMode = true;
 				String name = identifier(tl);
 				accept(tl, "=");
@@ -1453,10 +1443,6 @@ public class Parser {
 				}
 				accept(tl, "(");
 				ArgumentsTree args = parseArguments(tl, true);
-				if (!args.sfvarguments.isEmpty()) {
-					throw new ParsingException("the first command in the pipeline in an expression "
-							+ "can't have underscore arguments", tl.seek());
-				}
 				Command cmd = _makeNormalCommand(file, line, ans, typeargs, args);
 				accept(tl, ")");
 				List<Command> commands = new ArrayList<>();
@@ -1686,6 +1672,15 @@ public class Parser {
 			String s = tl.nextString();
 			tl.accept("\"");
 		    ans = expressionPattern(file, line, s);
+		}
+		else if (!sugarVars.isEmpty() && seekString(tl).equals("_")) {
+			accept(tl, "_");
+			String sfvname = "<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">";
+			ans = expressionVariable(
+							tl.seek().getFile(),
+							tl.seek().getLine(),
+							sfvname);
+			sugarVars.peek().add(sfvname);
 		}
 		else {
 			String name = identifier(tl);
