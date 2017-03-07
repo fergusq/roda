@@ -42,8 +42,23 @@ public class RödaTest {
 	// Merkkijonoliteraali
 
 	@Test
-	public void testNormalLiteral() {
+	public void testNormalStringLiteral() {
 		assertEquals("abba", eval("main{push\"abba\"}"));
+	}
+
+	@Test
+	public void testBacktickStringLiteral() {
+		assertEquals("abba", eval("main{push`abba`}"));
+	}
+
+	@Test
+	public void testBacktickStringLiteralWithASubstitution() {
+		assertEquals("abba 2 cabba", eval("main{x:=2;push`abba $x cabba`}"));
+	}
+
+	@Test
+	public void testBacktickStringLiteralWithASubstitutionInBraces() {
+		assertEquals("abba2cabba", eval("main{x:=2;push`abba${x}cabba`}"));
 	}
 	
 	// Peek-komento

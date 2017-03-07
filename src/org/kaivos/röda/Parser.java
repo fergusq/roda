@@ -51,6 +51,7 @@ public class Parser {
 		.addCommentRule("/*", "*/")
 		.addCommentRule("#!", "\n")
 		.addStringRule('"','"','\\')
+		.addStringRule('`','`','\\')
 		.addEscapeCode('\\', "\\")
 		.addEscapeCode('n', "\n")
 		.addEscapeCode('r', "\r")
@@ -60,6 +61,8 @@ public class Parser {
 		.addCharacterEscapeCode('x', 2, 16)
 		.appendOnEOF("<EOF>");
 
+	private static String operatorCharacters = "<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$_\"";
+	
 	private static Token seek(TokenList tl) {
 		int i = 1;
 		while (tl.has(i)) {
@@ -124,7 +127,7 @@ public class Parser {
 	}
 
 	private static boolean validTypename(String applicant) {
-		if (applicant.length() == 1 && "<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$_\"".indexOf(applicant.charAt(0)) >= 0) return false;
+		if (applicant.length() == 1 && operatorCharacters.indexOf(applicant.charAt(0)) >= 0) return false;
 		switch (applicant) {
 		/* avainsanat */
 		case "if":
@@ -1600,6 +1603,38 @@ public class Parser {
 			String s = tl.nextString();
 			tl.accept("\"");
 		    ans = expressionString(file, line, s);
+		}
+		else if (acceptIfNext(tl, "`")) {
+			Token t = tl.next();
+			String s = t.getToken();
+			String[] fragments = s.split("\\$");
+		    ans = expressionString(file, line, fragments[0]);
+		    for (int i = 1; i < fragments.length; i++) {
+		    	int stringStart = fragments[i].length();
+		    	if (stringStart == 0) throw new ParsingException("No variable name after $.", t);
+		    	boolean surrounded = fragments[i].charAt(0) == '{';
+		    	for (int j = 0; j < fragments[i].length(); j++) {
+		    		char c = fragments[i].charAt(j);
+		    		if (surrounded && c == '}') {
+		    			stringStart = j+1;
+		    			break;
+		    		}
+		    		else if (!surrounded && (Character.isWhitespace(c) || operatorCharacters.indexOf(c) >= 0)) {
+		    			stringStart = j;
+		    			break;
+		    		}
+		    	}
+		    	String var = fragments[i].substring(0, stringStart);
+		    	if (surrounded) var = var.substring(1, var.length()-1);
+				if (!validIdentifier(var))
+					throw new ParsingException(TokenList.expected("identifier"), t);
+		    	ans = expressionConcat(file, line, ans, expressionVariable(file, line, var));
+		    	if (stringStart < fragments[i].length()) {
+		    		ExpressionTree strExp = expressionString(file, line, fragments[i].substring(stringStart));
+		    		ans = expressionConcat(file, line, ans, strExp);
+		    	}
+		    }
+			tl.accept("`");
 		}
 		else if (acceptIfNext(tl, "[")) {
 			List<ExpressionTree> list = new ArrayList<>();
