@@ -86,8 +86,8 @@ public class RödaString extends RödaValue {
 			return RödaBoolean.of(this.str().compareTo(value.str()) >= 0);
 		case MATCHES:
 			if (!value.is(STRING)) typeMismatch("tried to MATCH " + value.typeString());
-			if (pattern != null)
-				return RödaBoolean.of(pattern.matcher(value.str()).matches());
+			if (((RödaString) value).pattern != null)
+				return RödaBoolean.of(((RödaString) value).pattern.matcher(text).matches());
 			else
 				return RödaBoolean.of(text.matches(value.str()));
 		default:
