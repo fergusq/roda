@@ -46,7 +46,7 @@ public class RödaMap extends RödaValue {
 	}
 
 	@Override public String str() {
-		return "<map instance "+hashCode()+">";
+		return "<map instance "+super.hashCode()+">";
 	}
 
 	@Override public Map<String, RödaValue> map() {
