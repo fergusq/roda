@@ -52,7 +52,7 @@ public class Parser {
 		.addCommentRule("/*", "*/")
 		.addCommentRule("#!", "\n")
 		.addStringRule('"','"','\\')
-		.addStringRule('`','`','\\')
+		.addStringRule('`','`','\0')
 		.addEscapeCode('\\', "\\")
 		.addEscapeCode('n', "\n")
 		.addEscapeCode('r', "\r")
@@ -62,7 +62,8 @@ public class Parser {
 		.addCharacterEscapeCode('x', 2, 16)
 		.appendOnEOF("<EOF>");
 
-	private static String operatorCharacters = "<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$_\"";
+	private static String operatorCharacters = "<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$\"";
+	private static String notIdentifierStart = operatorCharacters + "_";
 	
 	private static Token seek(TokenList tl) {
 		int i = 1;
@@ -128,7 +129,7 @@ public class Parser {
 	}
 
 	private static boolean validTypename(String applicant) {
-		if (applicant.length() == 1 && operatorCharacters.indexOf(applicant.charAt(0)) >= 0) return false;
+		if (applicant.length() == 1 && notIdentifierStart.indexOf(applicant.charAt(0)) >= 0) return false;
 		switch (applicant) {
 		/* avainsanat */
 		case "if":
@@ -1590,7 +1591,7 @@ public class Parser {
 			tl.accept("\"");
 		    ans = expressionString(file, line, s);
 		}
-		else if (acceptIfNext(tl, "`")) {
+		else if (acceptIfNext(tl, "`")) { /* mallineliteraali */
 			Token t = tl.next();
 			String s = t.getToken();
 			String[] fragments = s.split("\\$");
@@ -1598,23 +1599,44 @@ public class Parser {
 		    for (int i = 1; i < fragments.length; i++) {
 		    	int stringStart = fragments[i].length();
 		    	if (stringStart == 0) throw new ParsingException("No variable name after $.", t);
-		    	boolean surrounded = fragments[i].charAt(0) == '{';
+		    	/* aaltosulut merkitsevät, että upotus sisältää kokonaisen lausekkeen */
+		    	boolean expression = fragments[i].charAt(0) == '{';
+		    	int depth = 0;
 		    	for (int j = 0; j < fragments[i].length(); j++) {
 		    		char c = fragments[i].charAt(j);
-		    		if (surrounded && c == '}') {
-		    			stringStart = j+1;
-		    			break;
+		    		/* pidetään kirjaa aaltosuluista ja katkaistaan lauseke uloimpaan sulkevaan aaltosulkuun */
+		    		if (expression && c == '{') depth++;
+		    		else if (expression && c == '}') {
+		    			depth--;
+		    			if (depth == 0) {
+			    			stringStart = j+1;
+			    			break;
+		    			}
 		    		}
-		    		else if (!surrounded && (Character.isWhitespace(c) || operatorCharacters.indexOf(c) >= 0)) {
+		    		/* katkaistaan muuttujanimi ensimmäiseen merkkiin, joka ei voi olla osa muuttujanimeä */
+		    		else if (!expression && (Character.isWhitespace(c) || operatorCharacters.indexOf(c) >= 0)) {
 		    			stringStart = j;
 		    			break;
 		    		}
 		    	}
 		    	String var = fragments[i].substring(0, stringStart);
-		    	if (surrounded) var = var.substring(1, var.length()-1);
-				if (!validIdentifier(var))
-					throw new ParsingException(TokenList.expected("identifier"), t);
-		    	ans = expressionConcat(file, line, ans, expressionVariable(file, line, var));
+		    	ExpressionTree varExp;
+		    	if (expression) {
+		    		var = var.substring(1, var.length()-1); // poistetaan aaltosulut
+		    		TokenList tl2 = Parser.t.tokenize(var, file, line);
+		    		varExp = parseExpression(tl2); // parsitaan lauseke
+		    		tl2.accept("<EOF>"); // varmistetaan, että lauseke on loppunut
+		    	}
+		    	else {
+			    	if (!sugarVars.isEmpty() && var.equals("_")) {
+			    		var = "<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">";
+			    		sugarVars.peek().add(var);
+			    	}
+					if (!validIdentifier(var))
+						throw new ParsingException(TokenList.expected("identifier"), t);
+					varExp = expressionVariable(file, line, var);
+		    	}
+				ans = expressionConcat(file, line, ans, varExp);
 		    	if (stringStart < fragments[i].length()) {
 		    		ExpressionTree strExp = expressionString(file, line, fragments[i].substring(stringStart));
 		    		ans = expressionConcat(file, line, ans, strExp);
