@@ -964,6 +964,8 @@ public class Parser {
 		if (acceptIfNext(tl, "del")) {
 			return _makeDelCommand(file, line, parseExpressionPrimary(tl, false));
 		}
+		
+		sugarVars.push(new ArrayList<>());
 
 		ExpressionTree name = parseExpressionPrimary(tl, false);
 		String operator = null;
@@ -978,8 +980,6 @@ public class Parser {
 			accept(tl, ">>");
 		}
 		ArgumentsTree arguments;
-		
-		sugarVars.push(new ArrayList<>());
 		
 		if (acceptIfNext(tl, "(")) {
 			arguments = parseArguments(tl, true);
