@@ -20,6 +20,7 @@ public final class SeqPopulator {
 			long from = args.get(0).integer();
 			long to = args.get(1).integer();
 			long step = kwargs.get("step").integer();
+			if (to < from && step > 0 || from < to && step < 0) step = -step;
 			if (step > 0) {
 				for (long i = from; i <= to; i += step)
 					out.push(RödaInteger.of(i));
