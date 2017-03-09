@@ -1,7 +1,7 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.argumentUnderflow;
-import static org.kaivos.röda.Interpreter.checkNumber;
+import static org.kaivos.röda.Interpreter.checkInteger;
 import static org.kaivos.röda.Interpreter.error;
 import static org.kaivos.röda.Interpreter.outOfBounds;
 import static org.kaivos.röda.RödaValue.STRING;
@@ -22,7 +22,7 @@ public final class ParseNumPopulator {
 
 	public static void populateParseNum(RödaScope S) {
 		S.setLocal("parseInteger", RödaNativeFunction.of("parseInteger", (typeargs, args, kwargs, scope, in, out) -> {
-			checkNumber("parseInteger", kwargs.get("radix"));
+			checkInteger("parseInteger", kwargs.get("radix"));
 			long radixl = kwargs.get("radix").integer();
 			if (radixl < Character.MIN_RADIX || radixl > Character.MAX_RADIX)
 				outOfBounds("parseInteger: radix out of bounds: " + radixl);

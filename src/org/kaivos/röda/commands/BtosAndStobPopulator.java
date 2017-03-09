@@ -1,7 +1,7 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.checkList;
-import static org.kaivos.röda.Interpreter.checkNumber;
+import static org.kaivos.röda.Interpreter.checkInteger;
 import static org.kaivos.röda.Interpreter.checkString;
 import static org.kaivos.röda.Interpreter.outOfBounds;
 import static org.kaivos.röda.RödaValue.LIST;
@@ -34,7 +34,7 @@ public final class BtosAndStobPopulator {
 				byte[] arr = new byte[(int) v.list().size()];
 				int c = 0;
 				for (RödaValue i : v.list()) {
-					checkNumber("bytesToString", i);
+					checkInteger("bytesToString", i);
 					long l = i.integer();
 					if (l > Byte.MAX_VALUE * 2)
 						outOfBounds("byteToString: too large byte: " + l);

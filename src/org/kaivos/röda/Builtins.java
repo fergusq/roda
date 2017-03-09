@@ -3,7 +3,7 @@ package org.kaivos.röda;
 import static org.kaivos.röda.Interpreter.argumentOverflow;
 import static org.kaivos.röda.Interpreter.argumentUnderflow;
 import static org.kaivos.röda.Interpreter.checkArgs;
-import static org.kaivos.röda.Interpreter.checkNumber;
+import static org.kaivos.röda.Interpreter.checkInteger;
 import static org.kaivos.röda.Interpreter.checkReference;
 import static org.kaivos.röda.Interpreter.checkString;
 import static org.kaivos.röda.Interpreter.emptyStream;
@@ -259,7 +259,7 @@ public class Builtins {
 		return RödaNativeFunction.of(name, (ra, args, kwargs, scope, in, out) -> {
 			try {
 				RödaValue sizeVal = args.get(0);
-				checkNumber(name, sizeVal);
+				checkInteger(name, sizeVal);
 				long size = sizeVal.integer();
 				if (size > Integer.MAX_VALUE)
 					error(name + ": can't read more than " + Integer.MAX_VALUE + " bytes " + "at time");

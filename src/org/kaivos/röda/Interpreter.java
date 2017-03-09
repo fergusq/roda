@@ -1,7 +1,6 @@
 package org.kaivos.röda;
 
 import static java.util.Collections.emptyList;
-
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -9,12 +8,14 @@ import static org.kaivos.röda.Parser.parse;
 import static org.kaivos.röda.Parser.parseStatement;
 import static org.kaivos.röda.Parser.t;
 import static org.kaivos.röda.RödaValue.BOOLEAN;
+import static org.kaivos.röda.RödaValue.FLOATING;
 import static org.kaivos.röda.RödaValue.FUNCTION;
 import static org.kaivos.röda.RödaValue.INTEGER;
 import static org.kaivos.röda.RödaValue.LIST;
 import static org.kaivos.röda.RödaValue.MAP;
 import static org.kaivos.röda.RödaValue.NAMESPACE;
 import static org.kaivos.röda.RödaValue.NFUNCTION;
+import static org.kaivos.röda.RödaValue.NUMBER;
 import static org.kaivos.röda.RödaValue.REFERENCE;
 import static org.kaivos.röda.RödaValue.STRING;
 
@@ -776,9 +777,9 @@ public class Interpreter {
 	}
 
 	public static void checkListOrNumber(String function, RödaValue arg) {
-		if (!arg.is(LIST) && !arg.is(INTEGER)) {
+		if (!arg.is(LIST) && !arg.is(NUMBER)) {
 			typeMismatch("illegal argument for '" + function
-					+ "': list or integer expected (got " + arg.typeString() + ")");
+					+ "': list or number expected (got " + arg.typeString() + ")");
 		}
 	}
 
@@ -790,6 +791,13 @@ public class Interpreter {
 	}
 
 	public static void checkNumber(String function, RödaValue arg) {
+		if (!arg.is(NUMBER)) {
+			typeMismatch("illegal argument for '" + function
+					+ "': number expected (got " + arg.typeString() + ")");
+		}
+	}
+
+	public static void checkInteger(String function, RödaValue arg) {
 		if (!arg.is(INTEGER)) {
 			typeMismatch("illegal argument for '" + function
 					+ "': integer expected (got " + arg.typeString() + ")");
@@ -1259,14 +1267,20 @@ public class Interpreter {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkNumber("++", v);
-					assign.accept(RödaInteger.of(v.integer()+1));
+					if (v.is(INTEGER))
+						assign.accept(RödaInteger.of(v.integer()+1));
+					else if (v.is(FLOATING))
+						assign.accept(RödaFloating.of(v.floating()+1.0));
 				};
 			} break;
 			case "--": {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkNumber("--", v);
-					assign.accept(RödaInteger.of(v.integer()-1));
+					if (v.is(INTEGER))
+						assign.accept(RödaInteger.of(v.integer()-1));
+					else if (v.is(FLOATING))
+						assign.accept(RödaFloating.of(v.floating()-1.0));
 				};
 			} break;
 			case "+=": {
@@ -1277,8 +1291,11 @@ public class Interpreter {
 						v.add(args.get(0));
 					}
 					else {
-						checkNumber("+=", args.get(0));
-						assign.accept(RödaInteger.of(v.integer()+args.get(0).integer()));
+						checkInteger("+=", args.get(0));
+						if (v.is(INTEGER))
+							assign.accept(RödaInteger.of(v.integer()+args.get(0).integer()));
+						else if (v.is(FLOATING))
+							assign.accept(RödaFloating.of(v.floating()+args.get(0).floating()));
 					}
 				};
 			} break;
@@ -1287,7 +1304,10 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkNumber("-=", v);
 					checkNumber("-=", args.get(0));
-					assign.accept(RödaInteger.of(v.integer()-args.get(0).integer()));
+					if (v.is(INTEGER))
+						assign.accept(RödaInteger.of(v.integer()-args.get(0).integer()));
+					else if (v.is(FLOATING))
+						assign.accept(RödaFloating.of(v.floating()-args.get(0).floating()));
 				};
 			} break;
 			case "*=": {
@@ -1295,7 +1315,10 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkNumber("*=", v);
 					checkNumber("*=", args.get(0));
-					assign.accept(RödaInteger.of(v.integer()*args.get(0).integer()));
+					if (v.is(INTEGER))
+						assign.accept(RödaInteger.of(v.integer()*args.get(0).integer()));
+					else if (v.is(FLOATING))
+						assign.accept(RödaFloating.of(v.floating()*args.get(0).floating()));
 				};
 			} break;
 			case "/=": {
@@ -1303,7 +1326,10 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkNumber("/=", v);
 					checkNumber("/=", args.get(0));
-					assign.accept(RödaInteger.of(v.integer()/args.get(0).integer()));
+					if (v.is(INTEGER))
+						assign.accept(RödaInteger.of(v.integer()/args.get(0).integer()));
+					else if (v.is(FLOATING))
+						assign.accept(RödaFloating.of(v.floating()/args.get(0).floating()));
 				};
 			} break;
 			case ".=": {
