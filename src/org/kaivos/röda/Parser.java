@@ -985,7 +985,9 @@ public class Parser {
 			arguments = parseArguments(tl, true);
 			accept(tl, ")");
 		}
-		else arguments = parseArguments(tl, false, operator != null);
+		else arguments = parseArguments(tl, false, operator != null && !operator.equals("++") && !operator.equals("--"));
+		//                                                             ^ purkkaa, ++:lle ja --:lle ei pitäisi parsia
+		//                                                               argumentteja ollenkaan
 		
 		Command cmd;
 		
