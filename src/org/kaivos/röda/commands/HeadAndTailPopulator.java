@@ -4,6 +4,7 @@ import static org.kaivos.röda.Interpreter.argumentOverflow;
 import static org.kaivos.röda.Interpreter.emptyStream;
 import static org.kaivos.röda.Interpreter.outOfBounds;
 import static org.kaivos.röda.RödaValue.INTEGER;
+import static org.kaivos.röda.RödaValue.LIST;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,5 +68,24 @@ public final class HeadAndTailPopulator {
 			}
 
 		}, Arrays.asList(new Parameter("number", false, INTEGER)), true));
+
+		S.setLocal("reverse", RödaNativeFunction.of("reverse", (typeargs, args, kwargs, scope, in, out) -> {
+			if (args.size() > 1)
+				argumentOverflow("reverse", 1, args.size());
+
+			List<RödaValue> values;
+			
+			if (args.size() == 0) {
+				values = new ArrayList<>();
+				in.forAll(values::add);
+			} else {
+				values = args.get(0).list();
+			}
+
+			for (int i = values.size() - 1; i >= 0; i--) {
+				out.push(values.get(i));
+			}
+
+		}, Arrays.asList(new Parameter("list", false, LIST)), true));
 	}
 }
