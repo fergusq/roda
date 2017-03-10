@@ -62,7 +62,7 @@ public class RödaString extends RödaValue {
 		else {
 			end = endVal.integer();
 			if (end < 0) end = text.length()+end;
-			if (end == 0 && start > 0) end = text.length();
+			if (step > 0 && end == 0 && start > 0) end = text.length();
 		}
 		if (start > Integer.MAX_VALUE || end > Integer.MAX_VALUE)
 			outOfBounds("string index out of bounds: too large number: " + (start > end ? start : end));

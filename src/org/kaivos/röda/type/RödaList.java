@@ -93,9 +93,7 @@ public class RödaList extends RödaValue {
 		if (endVal == null && step < 0) return -1;
 		long end = endVal != null ? endVal.integer() : list.size();
 		if (end < 0) end = list.size()+end;
-		if (step > 0) {
-			if (end == 0 && start > 0) end = list.size();
-		}
+		if (step > 0 && end == 0 && start > 0) end = list.size();
 		checkInRange(end, true);
 		return (int) end;
 	}
