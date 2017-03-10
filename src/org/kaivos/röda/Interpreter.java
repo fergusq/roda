@@ -1192,11 +1192,16 @@ public class Interpreter {
 			else if (e.type == ExpressionTree.Type.SLICE) {
 				return () -> {
 					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
-					RödaValue index1 = evalExpression(e.index1, scope, in, out)
+					RödaValue index1 = e.index1 == null ? null :
+						evalExpression(e.index1, scope, in, out)
 							.impliciteResolve();
-					RödaValue index2 = evalExpression(e.index2, scope, in, out)
+					RödaValue index2 = e.index2 == null ? null :
+						evalExpression(e.index2, scope, in, out)
 							.impliciteResolve();
-					list.delSlice(index1, index2);
+					RödaValue step = e.step == null ? null :
+						evalExpression(e.step, scope, in, out)
+							.impliciteResolve();
+					list.delSlice(index1, index2, step);
 				};
 			}
 		}
@@ -1235,9 +1240,13 @@ public class Interpreter {
 			else if (e.type == ExpressionTree.Type.SLICE) {
 				assign = v -> {
 					RödaValue list = evalExpression(e.sub, scope, in, out).impliciteResolve();
-					RödaValue index1 = evalExpression(e.index1, scope, in, out).impliciteResolve();
-					RödaValue index2 = evalExpression(e.index2, scope, in, out).impliciteResolve();
-					list.setSlice(index1, index2, v);
+					RödaValue index1 = e.index1 == null ? null :
+						evalExpression(e.index1, scope, in, out).impliciteResolve();
+					RödaValue index2 = e.index2 == null ? null :
+						evalExpression(e.index2, scope, in, out).impliciteResolve();
+					RödaValue step = e.step == null ? null :
+						evalExpression(e.step, scope, in, out).impliciteResolve();
+					list.setSlice(index1, index2, step, v);
 				};
 				assignLocal = assign;
 			}
@@ -1652,19 +1661,16 @@ public class Interpreter {
 			}
 
 			if (exp.type == ExpressionTree.Type.SLICE) {
-				RödaValue start, end;
+				RödaValue start, end, step;
 
-				if (exp.index1 != null)
-					start = evalExpression(exp.index1, scope, in, out)
-					.impliciteResolve();
-				else start = null;
+				start = exp.index1 == null ? null :
+					evalExpression(exp.index1, scope, in, out).impliciteResolve();
+				end = exp.index2 == null ? null :
+					evalExpression(exp.index2, scope, in, out).impliciteResolve();
+				step = exp.step == null ? null :
+					evalExpression(exp.step, scope, in, out).impliciteResolve();
 
-				if (exp.index2 != null)
-					end = evalExpression(exp.index2, scope, in, out)
-					.impliciteResolve();
-				else end = null;
-
-				return list.slice(start, end);
+				return list.slice(start, end, step);
 			}
 
 			if (exp.type == ExpressionTree.Type.CONTAINS) {

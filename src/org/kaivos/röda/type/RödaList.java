@@ -82,32 +82,66 @@ public class RödaList extends RödaValue {
 		list.set((int) index, value);
 	}
 	
-	private int sliceStart(RödaValue startVal) {
-		long start = startVal == null ? 0 : startVal.integer();
+	private int sliceStart(long step, RödaValue startVal) {
+		long start = startVal != null ? startVal.integer() : step > 0 ? 0 : -1;
 		if (start < 0) start = list.size()+start;
 		checkInRange(start, true);
 		return (int) start;
 	}
 	
-	private int sliceEnd(int start, RödaValue endVal) {
-		long end = endVal == null ? list.size() : endVal.integer();
+	private int sliceEnd(long step, int start, RödaValue endVal) {
+		if (endVal == null && step < 0) return -1;
+		long end = endVal != null ? endVal.integer() : list.size();
 		if (end < 0) end = list.size()+end;
-		if (end == 0 && start > 0) end = list.size();
+		if (step > 0) {
+			if (end == 0 && start > 0) end = list.size();
+		}
 		checkInRange(end, true);
 		return (int) end;
 	}
-
-	@Override public void setSlice(RödaValue startVal, RödaValue endVal, RödaValue value) {
-		int start = sliceStart(startVal);
-		int end = sliceEnd(start, endVal);
-		for (int i = start; i < end; i++) list.remove(start);
-		list.addAll(start, value.list());
+	
+	private long sliceStep(RödaValue stepVal) {
+		long step = stepVal == null ? 1 : stepVal.integer();
+		return step;
 	}
 
-	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal) {
-		int start = sliceStart(startVal);
-		int end = sliceEnd(start, endVal);
-		return of(list.subList((int) start, (int) end));
+	@Override public void setSlice(RödaValue startVal, RödaValue endVal, RödaValue stepVal, RödaValue value) {
+		long step = sliceStep(stepVal);
+		int start = sliceStart(step, startVal);
+		int end = sliceEnd(step, start, endVal);
+		List<RödaValue> sublist = value.list();
+		if (step == 1) {
+			for (int i = start; i < end; i++) list.remove(start);
+			list.addAll(start, sublist);
+		}
+		else if (step == -1) {
+			for (int i = start; i > end; i--) list.remove(end+1);
+			sublist = new ArrayList<>(sublist);
+			Collections.reverse(sublist);
+			list.addAll(end+1, sublist);
+		}
+		else if (step > 0) {
+			for (int i = start, j = 0; i < end; i += step, j++) list.set(i, sublist.get(j));
+		}
+		else if (step < 0) {
+			for (int i = start, j = 0; i > end; i += step, j++) list.set(i, sublist.get(j));
+		}
+	}
+
+	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal, RödaValue stepVal) {
+		long step = sliceStep(stepVal);
+		int start = sliceStart(step, startVal);
+		int end = sliceEnd(step, start, endVal);
+		if (step == 1)
+			return of(list.subList((int) start, (int) end));
+		List<RödaValue> newList = new ArrayList<>();
+		if (step > 0) {
+			for (int i = start; i < end; i += step) newList.add(list.get(i));
+		}
+		else if (step < 0) {
+			for (int i = start; i > end; i += step) newList.add(list.get(i));
+		}
+		return of(newList);
 	}
 
 	@Override public void del(RödaValue indexVal) {
@@ -117,10 +151,16 @@ public class RödaList extends RödaValue {
 		list.remove((int) index);
 	}
 
-	@Override public void delSlice(RödaValue startVal, RödaValue endVal) {
-		int start = sliceStart(startVal);
-		int end = sliceEnd(start, endVal);
-		for (int i = start; i < end; i++) list.remove(start);
+	@Override public void delSlice(RödaValue startVal, RödaValue endVal, RödaValue stepVal) {
+		long step = sliceStep(stepVal);
+		int start = sliceStart(step, startVal);
+		int end = sliceEnd(step, start, endVal);
+		if (step > 0) {
+			for (int i = start; i < end; i += step-1, end--) list.remove(i);
+		}
+		else if (step < 0) {
+			for (int i = start; i > end; i += step) list.remove(i);
+		}
 	}
 
 	@Override public RödaValue contains(RödaValue indexVal) {

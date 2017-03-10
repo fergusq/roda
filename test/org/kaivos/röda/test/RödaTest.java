@@ -529,15 +529,51 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testListSliceStep() {
+		assertEquals("[Annamari, Vilma]",
+			     eval("main{push([\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"][::2])}"));
+	}
+
+	@Test
+	public void testListSliceNegativeStep() {
+		assertEquals("[Susanna, Reetta]",
+			     eval("main{push([\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"][3:0:-2])}"));
+	}
+
+	@Test
 	public void testListSetSlice() {
 		assertEquals("[Annamari, Janna, Tuuli, Susanna]",
 			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];l[1:3]=[\"Janna\", \"Tuuli\"];push(l)}"));
+	}
+	
+	@Test
+	public void testListSetSliceStep() {
+		assertEquals("[Annamari, Janna, Vilma, Tuuli]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];l[1::2]=[\"Janna\", \"Tuuli\"];push(l)}"));
+	}
+	
+	@Test
+	public void testListSetSliceNegativeStep() {
+		assertEquals("[Annamari, Tuuli, Janna, Susanna]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];l[2:0:-1]=[\"Janna\", \"Tuuli\"];push(l)}"));
 	}
 
 	@Test
 	public void testListDelSlice() {
 		assertEquals("[Annamari, Susanna]",
 			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];del l[1:3];push(l)}"));
+	}
+
+	@Test
+	public void testListDelSliceStep() {
+		assertEquals("[Reetta, Vilma]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];del l[::3];push(l)}"));
+	}
+
+	@Test
+	public void testListDelSliceNegativeStep() {
+		assertEquals("[Reetta, Vilma]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];del l[-1::-3];push(l)}"));
 	}
 
 	@Test

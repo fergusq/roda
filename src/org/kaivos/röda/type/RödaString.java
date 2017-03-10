@@ -50,15 +50,30 @@ public class RödaString extends RödaValue {
 		return RödaInteger.of(text.length());
 	}
 
-	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal) {
-		long start = startVal == null ? 0 : startVal.integer();
-		long end = endVal == null ? text.length() : endVal.integer();
+	@Override public RödaValue slice(RödaValue startVal, RödaValue endVal, RödaValue stepVal) {
+		long step = stepVal == null ? 1 : stepVal.integer();
+		long start = startVal != null ? startVal.integer() : step > 0 ? 0 : -1;
 		if (start < 0) start = text.length()+start;
-		if (end < 0) end = text.length()+end;
-		if (end == 0 && start > 0) end = text.length();
+		long end;
+		if (endVal == null) {
+			if (step < 0) end = -1;
+			else end = text.length();
+		}
+		else {
+			end = endVal.integer();
+			if (end < 0) end = text.length()+end;
+			if (end == 0 && start > 0) end = text.length();
+		}
 		if (start > Integer.MAX_VALUE || end > Integer.MAX_VALUE)
 			outOfBounds("string index out of bounds: too large number: " + (start > end ? start : end));
-		return of(text.substring((int) start, (int) end));
+		if (step == 1)
+			return of(text.substring((int) start, (int) end));
+		StringBuilder newString = new StringBuilder();
+		if (step > 0)
+			for (int i = (int) start; i < end; i += step) newString.append(text.charAt(i));
+		else if (step < 0)
+			for (int i = (int) start; i > end; i += step) newString.append(text.charAt(i));
+		return of(newString.toString());
 	}
 	
 	@Override public RödaValue containsValue(RödaValue seq) {

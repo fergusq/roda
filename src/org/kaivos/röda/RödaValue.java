@@ -100,7 +100,7 @@ public abstract class RödaValue {
 		typeMismatch(typeString() + " doesn't have elements");
 	}
 
-	public void setSlice(RödaValue start, RödaValue end, RödaValue value) {
+	public void setSlice(RödaValue start, RödaValue end, RödaValue step, RödaValue value) {
 		typeMismatch(typeString() + " doesn't have elements");
 	}
 
@@ -108,7 +108,7 @@ public abstract class RödaValue {
 		typeMismatch(typeString() + " doesn't have elements");
 	}
 
-	public void delSlice(RödaValue start, RödaValue end) {
+	public void delSlice(RödaValue start, RödaValue end, RödaValue step) {
 		typeMismatch(typeString() + " doesn't have elements");
 	}
 
@@ -127,7 +127,7 @@ public abstract class RödaValue {
 		return null;
 	}
 
-	public RödaValue slice(RödaValue start, RödaValue end) {
+	public RödaValue slice(RödaValue start, RödaValue end, RödaValue step) {
 		typeMismatch(typeString() + " doesn't have elements");
 		return null;
 	}

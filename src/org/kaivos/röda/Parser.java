@@ -1117,7 +1117,7 @@ public class Parser {
 		StatementTree statement;
 		FunctionTree block;
 		List<ExpressionTree> list;
-		ExpressionTree sub, index, index1, index2, exprA, exprB;
+		ExpressionTree sub, index, index1, index2, step, exprA, exprB;
 		String field;
 		DatatypeTree datatype;
 
@@ -1137,7 +1137,8 @@ public class Parser {
 			case SLICE: {
 				String i1 = index1 == null ? "" : index1.asString();
 				String i2 = index2 == null ? "" : index2.asString();
-				return sub.asString() + "[" + i1 + ":" + i2 + "]";
+				String s = step == null ? "" : ":" + step.asString();
+				return sub.asString() + "[" + i1 + ":" + i2 + s + "]";
 			}
 			case BLOCK:
 				return "{...}";
@@ -1300,7 +1301,7 @@ public class Parser {
 	}
 
 	private static ExpressionTree expressionSlice(String file, int line,
-						  ExpressionTree list, ExpressionTree index1, ExpressionTree index2) {
+						  ExpressionTree list, ExpressionTree index1, ExpressionTree index2, ExpressionTree step) {
 		ExpressionTree e = new ExpressionTree();
 		e.type = ExpressionTree.Type.SLICE;
 		e.file = file;
@@ -1308,6 +1309,7 @@ public class Parser {
 		e.sub = list;
 		e.index1 = index1;
 		e.index2 = index2;
+		e.step = step;
 		return e;
 	}
 
@@ -1422,9 +1424,13 @@ public class Parser {
 				ExpressionTree e1 = isNext(tl, ":") ? null : parseExpression(tl);
 				if (isNext(tl, ":")) {
 					accept(tl, ":");
-					ExpressionTree e2 = isNext(tl, "]") ? null : parseExpression(tl);
+					ExpressionTree e2 = isNext(tl, ":", "]") ? null : parseExpression(tl);
+					ExpressionTree e3 = null;
+					if (acceptIfNext(tl, ":")) {
+						e3 = parseExpression(tl);
+					}
 					accept(tl, "]");
-					ans = expressionSlice(file, line, ans, e1, e2);
+					ans = expressionSlice(file, line, ans, e1, e2, e3);
 				}
 				else {
 					accept(tl, "]");
