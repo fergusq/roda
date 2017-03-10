@@ -63,6 +63,7 @@ public class RödaList extends RödaValue {
 			outOfBounds("list index out of bounds: index " + index
 			      + ", size " + list.size());
 		if (index > Integer.MAX_VALUE) outOfBounds("list index out of bounds: too large index: "+index);
+		if (index < 0) outOfBounds("list index out of bounds: too small index: "+index);
 	}
 
 	@Override public RödaValue get(RödaValue indexVal) {
