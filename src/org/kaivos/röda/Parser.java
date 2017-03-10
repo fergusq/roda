@@ -981,7 +981,7 @@ public class Parser {
 		}
 		ArgumentsTree arguments;
 		
-		if (acceptIfNext(tl, "(")) {
+		if (tl.acceptIfNext("(")) { // ei saa olla uuttariviä ennen (-merkkiä
 			arguments = parseArguments(tl, true);
 			accept(tl, ")");
 		}
@@ -1415,7 +1415,7 @@ public class Parser {
 	}
 
 	private static ExpressionTree parseArrayAccessIfPossible(TokenList tl, ExpressionTree ans, boolean allowCalls) {
-		while (isNext(tl, ".", "is") || tl.isNext("[") || allowCalls && (isNext(tl, "<<") || tl.isNext("("))) {
+		while (isNext(tl, ".", "is", "&") || tl.isNext("[") || allowCalls && (isNext(tl, "<<") || tl.isNext("("))) {
 			String file = seek(tl).getFile();
 			int line = seek(tl).getLine();
 			if (acceptIfNext(tl, "[")) {
@@ -1463,6 +1463,10 @@ public class Parser {
 				DatatypeTree dt = parseType(tl);
 				ans = expressionIs(file, line, ans, dt);
 			}
+			else if (acceptIfNext(tl, "&")) {
+				ExpressionTree et = parseExpressionPrimary(tl, true);
+				ans = expressionJoin(file, line, ans, et);
+			}
 			else assert false;
 		}
 		return ans;
@@ -1490,8 +1494,6 @@ public class Parser {
 		library.increaseLevel();
 		library.add("..", (a, b) -> expressionConcat(a.file, a.line, a, b));
 		library.add("...", (a, b) -> expressionConcatChildren(a.file, a.line, a, b));
-		library.increaseLevel();
-		library.add("&", (a, b) -> expressionJoin(a.file, a.line, a, b));
 		library.increaseLevel();
 		library.add("<", op(ExpressionTree.CType.LT));
 		library.add(">", op(ExpressionTree.CType.GT));
