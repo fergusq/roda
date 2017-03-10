@@ -1697,7 +1697,8 @@ public class Parser {
 		else if (NUMBER_PATTERN_ALL.matcher(seekString(tl)).find()) {
 			ans = expressionFloat(file, line, Double.parseDouble(nextString(tl)));
 		}
-		else if (tl.isNext("r") && tl.seekString(1).equals(":")) { /* r:n ja kaksoispisteen välissä ei saa olla uuttariviä */
+		else if (tl.isNext("r") && tl.seekString(1).equals(":") && tl.seekString(2).equals("\"")) {
+			/* r:n ja kaksoispisteen välissä ei saa olla uuttariviä */
 			tl.accept("r");
 			tl.accept(":");
 			tl.accept("\"");
