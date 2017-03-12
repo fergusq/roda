@@ -184,6 +184,14 @@ public class Röda {
 						Interpreter.checkString("prompt", a.get(0));
 						in.setPrompt(a.get(0).str());
 					}, Arrays.asList(new Parameter("prompt_string", false)), false));
+
+			INTERPRETER.G.setLocal("getLine", RödaNativeFunction.of("getLine", (ta, a, k, s, i, o) -> {
+						try {
+							o.push(RödaString.of(in.readLine("? ")));
+						} catch (IOException e) {
+							Interpreter.error(e);
+						}
+					}, Arrays.asList(), false));
 			
 			in.addCompleter((b, k, l) -> {
 					if (b == null) l.addAll(INTERPRETER.G.map.keySet());
