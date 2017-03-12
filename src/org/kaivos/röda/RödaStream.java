@@ -228,24 +228,46 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 			id = streamCounter++;
 		}
 	}
+	
+	public static enum ISStreamMode {
+		LINE,
+		CHARACTER
+	}
 
-	public static class ISLineStream extends RödaStream {
+	public static class ISStream extends RödaStream {
 		private BufferedReader in;
 		private boolean finished = false;
+		private ISStreamMode mode = ISStreamMode.LINE;
 
-		public ISLineStream(BufferedReader in) {
+		public ISStream(BufferedReader in) {
 			this.in = in;
+		}
+		
+		public void setMode(ISStreamMode mode) {
+			this.mode = mode;
 		}
 
 		public RödaValue get() {
 			if (finished)
 				return null;
 			try {
-				String line = in.readLine();
-				if (line == null)
+				switch (mode) {
+				case LINE:
+					String line = in.readLine();
+					if (line == null)
+						return null;
+					else
+						return RödaString.of(line + "\n");
+				case CHARACTER:
+					int chr = in.read();
+					if (chr == -1)
+						return null;
+					else
+						return RödaString.of(Character.toString((char) chr));
+				default:
+					error("invalid input mode");
 					return null;
-				else
-					return RödaString.of(line + "\n");
+				}
 			} catch (IOException e) {
 				error(e);
 				return null;

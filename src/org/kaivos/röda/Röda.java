@@ -17,8 +17,9 @@ import java.util.stream.Collectors;
 
 import org.kaivos.nept.parser.ParsingException;
 import org.kaivos.röda.Interpreter.RödaException;
-import org.kaivos.röda.RödaStream.ISLineStream;
+import org.kaivos.röda.RödaStream.ISStream;
 import org.kaivos.röda.RödaStream.OSStream;
+import org.kaivos.röda.commands.StreamPopulator;
 import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaString;
@@ -46,13 +47,16 @@ public class Röda {
 		}
 	}
 	
-	private static RödaStream STDIN, STDOUT;
+	private static ISStream STDIN;
+	private static OSStream STDOUT, STDERR;
 	static {
 		InputStreamReader ir = new InputStreamReader(System.in);
 		BufferedReader in = new BufferedReader(ir);
 		PrintWriter out = new PrintWriter(System.out);
-		STDIN = new ISLineStream(in);
+		PrintWriter err = new PrintWriter(System.err);
+		STDIN = new ISStream(in);
 		STDOUT = new OSStream(out);
+		STDERR = new OSStream(err);
 	}
 	
 	private static void interpretEOption(List<String> eval) {
@@ -142,6 +146,38 @@ public class Röda {
 			return;
 		}
 		
+		INTERPRETER.G.setLocal("STDIN", StreamPopulator.createStreamObj(STDIN));
+		INTERPRETER.G.setLocal("STDOUT", StreamPopulator.createStreamObj(STDOUT));
+		INTERPRETER.G.setLocal("STDERR", StreamPopulator.createStreamObj(STDERR));
+
+		INTERPRETER.G.setLocal("inputMode", RödaNativeFunction.of("inputMode", (ta, a, k, s, i, o) -> {
+			RödaValue arg = a.get(0);
+			if (arg.is(RödaValue.INTEGER)) {
+				if (arg.integer() == 0) {
+					STDIN.setMode(RödaStream.ISStreamMode.LINE);
+				}
+				else if (arg.integer() == 1) {
+					STDIN.setMode(RödaStream.ISStreamMode.CHARACTER);
+				}
+				else Interpreter.illegalArguments("illegal argument for 'inputMode': " + arg.str());
+			}
+			else if (arg.is(RödaValue.STRING)) {
+				switch (arg.str()) {
+				case "line":
+				case "l":
+					STDIN.setMode(RödaStream.ISStreamMode.LINE);
+					break;
+				case "character":
+				case "c":
+					STDIN.setMode(RödaStream.ISStreamMode.CHARACTER);
+					break;
+				default:
+					Interpreter.illegalArguments("illegal argument for 'inputMode': " + arg.str());
+					break;
+				}
+			}
+		}, Arrays.asList(new Parameter("mode", false)), false));
+		
 		INTERPRETER.enableDebug = enableDebug;
 		INTERPRETER.enableProfiling = enableProfiling;
 		interpretEOption(eval);
@@ -181,18 +217,20 @@ public class Röda {
 					outStream = new OSStream(out);
 
 			INTERPRETER.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, k, s, i, o) -> {
-						Interpreter.checkString("prompt", a.get(0));
-						in.setPrompt(a.get(0).str());
-					}, Arrays.asList(new Parameter("prompt_string", false)), false));
+				Interpreter.checkString("prompt", a.get(0));
+				in.setPrompt(a.get(0).str());
+			}, Arrays.asList(new Parameter("prompt_string", false)), false));
 
 			INTERPRETER.G.setLocal("getLine", RödaNativeFunction.of("getLine", (ta, a, k, s, i, o) -> {
-						try {
-							o.push(RödaString.of(in.readLine("? ")));
-						} catch (IOException e) {
-							Interpreter.error(e);
-						}
-					}, Arrays.asList(), false));
-			
+				String promptString = in.getPrompt();
+				try {
+					o.push(RödaString.of(in.readLine("? ")));
+				} catch (IOException e) {
+					Interpreter.error(e);
+				}
+				in.setPrompt(promptString);
+			}, Arrays.asList(), false));
+
 			in.addCompleter((b, k, l) -> {
 					if (b == null) l.addAll(INTERPRETER.G.map.keySet());
 					else {
@@ -274,5 +312,8 @@ public class Röda {
 		}
 
 		Interpreter.shutdown();
+		STDIN.finish();
+		STDOUT.finish();
+		STDERR.finish();
 	}
 }
