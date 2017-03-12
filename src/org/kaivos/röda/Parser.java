@@ -1129,9 +1129,9 @@ public class Parser {
 			case VARIABLE:
 				return variable;
 			case STRING:
-				return "\"" + string.replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
+				return "\"" + string.replaceAll("\\\\", "\\\\\\\\").replaceAll("\"", "\\\\\"") + "\"";
 			case PATTERN:
-				return "r:\"" + pattern.pattern().replaceAll("\\\\", "\\\\").replaceAll("\"", "\\\"") + "\"";
+				return "r:\"" + pattern.pattern().replaceAll("\\\\", "\\\\\\\\").replaceAll("\"", "\\\\\"") + "\"";
 			case INTEGER:
 				return String.valueOf(integer);
 			case SLICE: {
