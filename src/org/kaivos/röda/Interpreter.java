@@ -1742,17 +1742,7 @@ public class Interpreter {
 		if (exp.type == ExpressionTree.Type.CALCULATOR) {
 			if (exp.isUnary) {
 				RödaValue sub = evalExpression(exp.sub, scope, in, out).impliciteResolve();
-				switch (exp.ctype) {
-				case NOT:
-					if (!sub.is(BOOLEAN)) typeMismatch("tried to NOT " + sub.typeString());
-					return RödaBoolean.of(!sub.bool());
-				case NEG:
-					if (!sub.is(INTEGER)) typeMismatch("tried to NEG " + sub.typeString());
-					return RödaInteger.of(-sub.integer());
-				case BNOT:
-					if (!sub.is(INTEGER)) typeMismatch("tried to BNOT " + sub.typeString());
-					return RödaInteger.of(~sub.integer());
-				}
+				return sub.callOperator(exp.ctype, null);
 			}
 			else {
 				RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
@@ -1781,8 +1771,6 @@ public class Interpreter {
 				val2 = getVal2.get();
 				return val1.callOperator(exp.ctype, val2);
 			}
-			unknownName("unknown expression type " + exp.ctype);
-			return null;
 		}
 
 		unknownName("unknown expression type " + exp.type);

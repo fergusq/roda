@@ -188,7 +188,10 @@ public abstract class RödaValue {
 		case NEQ:
 			return RödaBoolean.of(!this.halfEq(value));
 		default:
-			typeMismatch("can't " + operator.name() + " " + basicIdentity() + " and " + value.basicIdentity());
+			if (value == null)
+				typeMismatch("can't " + operator.name() + " " + basicIdentity());
+			else
+				typeMismatch("can't " + operator.name() + " " + basicIdentity() + " and " + value.basicIdentity());
 			return null;
 		}
 	}

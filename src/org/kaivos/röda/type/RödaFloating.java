@@ -27,6 +27,11 @@ public class RödaFloating extends RödaValue {
 	
 	@Override
 	public RödaValue callOperator(Parser.ExpressionTree.CType operator, RödaValue value) {
+		switch (operator) {
+		case NEG:
+			return RödaFloating.of(-this.floating());
+		default:
+		}
 		if (!value.is(NUMBER)) typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
 		switch (operator) {
 		case MUL:

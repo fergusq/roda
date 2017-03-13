@@ -31,6 +31,13 @@ public class RödaInteger extends RödaValue {
 	
 	@Override
 	public RödaValue callOperator(Parser.ExpressionTree.CType operator, RödaValue value) {
+		switch (operator) {
+		case NEG:
+			return RödaInteger.of(-this.integer());
+		case BNOT:
+			return RödaInteger.of(~this.integer());
+		default:
+		}
 		if (!value.is(INTEGER)) typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
 		switch (operator) {
 		case MUL:
