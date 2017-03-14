@@ -91,7 +91,7 @@ public class SortPopulator {
 				list.sort((a, b) -> {
 					a = evalKey(I, key, a);
 					b = evalKey(I, key, b);
-					return a.callOperator(CType.LT, b).bool() ? -1 : 1;
+					return a.callOperator(CType.LT, b).bool() ? -1 : a.strongEq(b) ? 0 : 1;
 				});
 			}
 			else if (kwargs.containsKey("cmp")) {
