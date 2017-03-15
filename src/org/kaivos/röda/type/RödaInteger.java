@@ -40,6 +40,8 @@ public class RödaInteger extends RödaValue {
 		}
 		if (!value.is(INTEGER)) typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
 		switch (operator) {
+		case POW:
+			return RödaInteger.of((long) Math.pow(this.integer(), value.integer()));
 		case MUL:
 			return RödaInteger.of(this.integer()*value.integer());
 		case DIV:

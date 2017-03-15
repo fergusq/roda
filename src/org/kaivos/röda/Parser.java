@@ -47,7 +47,7 @@ public class Parser {
 		.addOperatorRule("<<")
 		.addOperatorRule(">>")
 		.addPatternRule(NUMBER_PATTERN, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
-		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$")
+		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/^~@%$")
 		.separateIdentifiersAndPunctuation(false)
 		.addCommentRule("/*", "*/")
 		.addCommentRule("#!", "\n")
@@ -62,7 +62,7 @@ public class Parser {
 		.addCharacterEscapeCode('x', 2, 16)
 		.appendOnEOF("<EOF>");
 
-	private static String operatorCharacters = "<>()[]{}|&.,:;=#%!?\n\\+-*/~@%$\"";
+	private static String operatorCharacters = "<>()[]{}|&.,:;=#%!?\n\\+-*/^~@%$\"";
 	private static String notIdentifierStart = operatorCharacters + "_";
 	
 	private static Token seek(TokenList tl) {
@@ -1070,6 +1070,7 @@ public class Parser {
 			IN
 		}
 		public enum CType {
+			POW("^"),
 			MUL("*"),
 			DIV("/"),
 			IDIV("//"),
@@ -1521,6 +1522,8 @@ public class Parser {
 		library.add("/", op(ExpressionTree.CType.DIV));
 		library.add("//", op(ExpressionTree.CType.IDIV));
 		library.add("%", op(ExpressionTree.CType.MOD));
+		library.increaseLevel();
+		library.add("^", op(ExpressionTree.CType.POW));
 		
 		/* Declares the OPP */
 		opparser = OperatorPrecedenceParser.fromLibrary(library);

@@ -34,6 +34,8 @@ public class RödaFloating extends RödaValue {
 		}
 		if (!value.is(NUMBER)) typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
 		switch (operator) {
+		case POW:
+			return RödaFloating.of(Math.pow(this.floating(), value.floating()));
 		case MUL:
 			return RödaFloating.of(this.floating()*value.floating());
 		case DIV:
