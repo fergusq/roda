@@ -1024,7 +1024,7 @@ public class Parser {
 		arguments.kwarguments = new ArrayList<>();
 		boolean kwargMode = false;
 		while ((allowNewlines || !tl.isNext(";", "\n"))
-				&& (allowPrefixes || !tl.isNext("for", "while", "until", "if", "until"))
+				&& (allowPrefixes || !tl.isNext("for", "while", "until", "if", "unless"))
 				&& !isNext(tl, "|", ")", "]", "}", "in", "do", "else", "done", "<EOF>")) {
 			if (validIdentifier(tl.seekString()) && tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
 				kwargMode = true;
