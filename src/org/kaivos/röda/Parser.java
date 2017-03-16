@@ -25,6 +25,7 @@ public class Parser {
 	private static final Pattern NUMBER_PATTERN = Pattern.compile("^"+NUMBER_REGEX);
 	private static final Pattern NUMBER_PATTERN_ALL = Pattern.compile("^"+NUMBER_REGEX+"$");
 	private static final Pattern INT_PATTERN_ALL = Pattern.compile("^[0-9]+$");
+	private static final Pattern SUGAR_PATTERN_ALL = Pattern.compile("^_([1-9][0-9]*)?$");
 	
 	public static final TokenScanner t = new TokenScanner()
 		.addOperatorRule("...")
@@ -1014,6 +1015,21 @@ public class Parser {
 	
 	private static Deque<List<String>> sugarVars = new ArrayDeque<>();
 	
+	private static String sugarVar(String sugar) {
+		if (sugar.equals("_")) {
+			String sfvname = "<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">";
+			sugarVars.peek().add(sfvname);
+			return sfvname;
+		} else {
+			int position = Integer.parseInt(sugar.substring(1)) - 1;
+			List<String> sfvList = sugarVars.peek();
+			while (sfvList.size() <= position) {
+				sfvList.add("<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">");
+			}
+			return sfvList.get(position);
+		}
+	}
+	
 	private static ArgumentsTree parseArguments(TokenList tl, boolean allowNewlines) {
 		return parseArguments(tl, allowNewlines, allowNewlines);
 	}
@@ -1641,9 +1657,8 @@ public class Parser {
 		    		tl2.accept("<EOF>"); // varmistetaan, että lauseke on loppunut
 		    	}
 		    	else {
-			    	if (!sugarVars.isEmpty() && var.equals("_")) {
-			    		var = "<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">";
-			    		sugarVars.peek().add(var);
+			    	if (!sugarVars.isEmpty() && SUGAR_PATTERN_ALL.matcher(seekString(tl)).matches()) {
+			    		var = sugarVar(var);
 			    	}
 					if (!validIdentifier(var))
 						throw new ParsingException(TokenList.expected("identifier"), t);
@@ -1694,10 +1709,10 @@ public class Parser {
 			String name = "@" + identifier(tl);
 			ans = expressionVariable(file, line, name);
 		}
-		else if (INT_PATTERN_ALL.matcher(seekString(tl)).find()) {
+		else if (INT_PATTERN_ALL.matcher(seekString(tl)).matches()) {
 			ans = expressionInt(file, line, Integer.parseInt(nextString(tl)));
 		}
-		else if (NUMBER_PATTERN_ALL.matcher(seekString(tl)).find()) {
+		else if (NUMBER_PATTERN_ALL.matcher(seekString(tl)).matches()) {
 			ans = expressionFloat(file, line, Double.parseDouble(nextString(tl)));
 		}
 		else if (tl.isNext("r") && tl.seekString(1).equals(":") && tl.seekString(2).equals("\"")) {
@@ -1709,14 +1724,13 @@ public class Parser {
 			tl.accept("\"");
 		    ans = expressionPattern(file, line, s);
 		}
-		else if (!sugarVars.isEmpty() && seekString(tl).equals("_")) {
-			accept(tl, "_");
-			String sfvname = "<sfv" + (SUGAR_FOR_VARNUM_COUNTER++) + ">";
+		else if (!sugarVars.isEmpty() && SUGAR_PATTERN_ALL.matcher(seekString(tl)).matches()) {
+			String name = nextString(tl);
+			String sfvname = sugarVar(name);
 			ans = expressionVariable(
 							tl.seek().getFile(),
 							tl.seek().getLine(),
 							sfvname);
-			sugarVars.peek().add(sfvname);
 		}
 		else {
 			String name = identifier(tl);
