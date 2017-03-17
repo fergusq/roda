@@ -32,7 +32,7 @@ public final class InterleavePopulator {
 				}
 			}
 		}, Arrays.asList(new Parameter("first_list", false, LIST), new Parameter("other_lists", false, LIST)), true));
-		S.setLocal("subseq", RödaNativeFunction.of("subseq", (typeargs, args, kwargs, scope, in, out) -> {
+		S.setLocal("slide", RödaNativeFunction.of("slide", (typeargs, args, kwargs, scope, in, out) -> {
 			long n = args.get(0).integer();
 			if (n > Integer.MAX_VALUE || n < 1) outOfBounds("invalid subsequence length: " + n
 					+ " (valid range: 1 <= n <= "  + Integer.MAX_VALUE);
