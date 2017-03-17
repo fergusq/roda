@@ -38,6 +38,8 @@ public class RödaInteger extends RödaValue {
 			return RödaInteger.of(~this.integer());
 		default:
 		}
+		if (value.is(FLOATING)) return RödaFloating.of(this.integer()).callOperator(operator, value);
+		// TODO: ^ virheviestit eivät näyttävät tyypin olevan floating
 		if (!value.is(INTEGER)) typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
 		switch (operator) {
 		case POW:
