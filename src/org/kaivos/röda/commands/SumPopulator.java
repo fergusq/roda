@@ -61,7 +61,7 @@ public class SumPopulator {
 					}
 					out.push(RödaList.of(sum));
 				}
-				else typeMismatch("sum expected list, integer of floating, got " + val.typeString());
+				else typeMismatch("sum: expected list, integer of floating, got " + val.typeString());
 			}
 			else {
 				for (RödaValue list : args) {
@@ -89,7 +89,59 @@ public class SumPopulator {
 							sum.add(list.list().get(i));
 						out.push(RödaList.of(sum));
 					}
-					else typeMismatch("sum expected list, integer or floating, got " + val.typeString());
+					else typeMismatch("sum: expected list, integer or floating, got " + val.typeString());
+				}
+			}
+		}, Arrays.asList(new Parameter("values", false, LIST)), true, Collections.emptyList(), true));
+		S.setLocal("product", RödaNativeFunction.of("product", (typeargs, args, kwargs, scope, in, out) -> {
+			RödaValue first = kwargs.get("fst");
+			if (args.size() == 0) {
+				RödaValue val = first != null ? first : in.pull();
+				if (val == null) {
+					out.push(RödaInteger.of(1));
+					return;
+				}
+				if (val.is(INTEGER)) {
+					long sum = val.integer();
+					while (true) {
+						RödaValue val2 = in.pull();
+						if (val2 == null) break;
+						sum *= val2.integer();
+					}
+					out.push(RödaInteger.of(sum));
+				}
+				else if (val.is(FLOATING)) {
+					double sum = val.floating();
+					while (true) {
+						RödaValue val2 = in.pull();
+						if (val2 == null) break;
+						sum *= val2.floating();
+					}
+					out.push(RödaFloating.of(sum));
+				}
+				else typeMismatch("product: expected integer of floating, got " + val.typeString());
+			}
+			else {
+				for (RödaValue list : args) {
+					checkList("sum", list);
+					if (list.list().isEmpty()) {
+						out.push(RödaInteger.of(1));
+						continue;
+					}
+					RödaValue val = first != null ? first : list.list().get(0);
+					if (val.is(INTEGER)) {
+						long sum = val.integer();
+						for (int i = first != null ? 0 : 1; i < list.list().size(); i++)
+							sum *= list.list().get(i).integer();
+						out.push(RödaInteger.of(sum));
+					}
+					else if (val.is(FLOATING)) {
+						double sum = val.floating();
+						for (int i = first != null ? 0 : 1; i < list.list().size(); i++)
+							sum *= list.list().get(i).floating();
+						out.push(RödaFloating.of(sum));
+					}
+					else typeMismatch("product: expected integer or floating, got " + val.typeString());
 				}
 			}
 		}, Arrays.asList(new Parameter("values", false, LIST)), true, Collections.emptyList(), true));
@@ -119,7 +171,7 @@ public class SumPopulator {
 					}
 					out.push(RödaString.of(sum.toString()));
 				}
-				else typeMismatch("concat expected list or string, got " + val.typeString());
+				else typeMismatch("concat: expected list or string, got " + val.typeString());
 			}
 			else {
 				for (RödaValue list : args) {
@@ -141,7 +193,7 @@ public class SumPopulator {
 							sum.append(list.list().get(i).str());
 						out.push(RödaString.of(sum.toString()));
 					}
-					else typeMismatch("concat expected list or string, got " + val.typeString());
+					else typeMismatch("concat: expected list or string, got " + val.typeString());
 				}
 			}
 		}, Arrays.asList(new Parameter("values", false, LIST)), true, Collections.emptyList(), true));
