@@ -32,9 +32,9 @@ public final class InterleavePopulator {
 				}
 			}
 		}, Arrays.asList(new Parameter("first_list", false, LIST), new Parameter("other_lists", false, LIST)), true));
-		S.setLocal("subsequence", RödaNativeFunction.of("subsequence", (typeargs, args, kwargs, scope, in, out) -> {
+		S.setLocal("subseq", RödaNativeFunction.of("subseq", (typeargs, args, kwargs, scope, in, out) -> {
 			long n = args.get(0).integer();
-			if (n > Integer.MAX_VALUE || n < 1) outOfBounds("invalid sequence length: " + n
+			if (n > Integer.MAX_VALUE || n < 1) outOfBounds("invalid subsequence length: " + n
 					+ " (valid range: 1 <= n <= "  + Integer.MAX_VALUE);
 			RödaValue[] array = new RödaValue[(int) n];
 			for (int i = 0; i < n; i++) {
@@ -46,7 +46,7 @@ public final class InterleavePopulator {
 			int i = 0;
 			RödaValue val;
 			while ((val = in.pull()) != null) {
-				array[i++] = val;
+				array[(int)(i++%n)] = val;
 				for (int j = 0; j < n; j++) {
 					out.push(array[(int)((i+j)%n)]);
 				}
