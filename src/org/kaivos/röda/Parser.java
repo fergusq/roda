@@ -1657,12 +1657,12 @@ public class Parser {
 		    		tl2.accept("<EOF>"); // varmistetaan, että lauseke on loppunut
 		    	}
 		    	else {
-			    	if (!sugarVars.isEmpty() && SUGAR_PATTERN_ALL.matcher(seekString(tl)).matches()) {
+			    	if (!sugarVars.isEmpty() && SUGAR_PATTERN_ALL.matcher(var).matches()) {
 			    		var = sugarVar(var);
 			    	}
-					if (!validIdentifier(var))
-						throw new ParsingException(TokenList.expected("identifier"), t);
-					varExp = expressionVariable(file, line, var);
+				if (!validIdentifier(var))
+					throw new ParsingException(TokenList.expected("identifier"), t);
+				varExp = expressionVariable(file, line, var);
 		    	}
 				ans = expressionConcat(file, line, ans, varExp);
 		    	if (stringStart < fragments[i].length()) {
