@@ -1353,7 +1353,6 @@ public class Interpreter {
 						assign.accept(RödaList.of(newList));
 					}
 					else {
-						checkString(".=", args.get(0));
 						assign.accept(RödaString.of(v.str()+args.get(0).str()));
 					}
 				};
