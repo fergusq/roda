@@ -43,6 +43,7 @@ public class Parser {
 		.addOperatorRule("//")
 		.addOperatorRule("!=")
 		.addOperatorRule("=~")
+		.addOperatorRule("!~")
 		.addOperatorRule("<=")
 		.addOperatorRule(">=")
 		.addOperatorRule("<<")
@@ -172,6 +173,7 @@ public class Parser {
 		case "--":
 		case "//":
 		case "=~":
+		case "!~":
 		case "<=":
 		case ">=":
 		case "<<":
@@ -1102,6 +1104,7 @@ public class Parser {
 			EQ("="),
 			NEQ("!="),
 			MATCHES("~="),
+			NO_MATCH("!="),
 			LT("<"),
 			GT(">"),
 			LE("<="),
@@ -1512,8 +1515,9 @@ public class Parser {
 		library.add("xor", op(ExpressionTree.CType.XOR));
 		library.increaseLevel();
 		library.add("=", op(ExpressionTree.CType.EQ));
-		library.add("=~", op(ExpressionTree.CType.MATCHES));
 		library.add("!=", op(ExpressionTree.CType.NEQ));
+		library.add("=~", op(ExpressionTree.CType.MATCHES));
+		library.add("!~", op(ExpressionTree.CType.NO_MATCH));
 		library.increaseLevel();
 		library.add("..", (a, b) -> expressionConcat(a.file, a.line, a, b));
 		library.add("...", (a, b) -> expressionConcatChildren(a.file, a.line, a, b));

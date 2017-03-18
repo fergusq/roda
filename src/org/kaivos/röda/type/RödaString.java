@@ -105,6 +105,12 @@ public class RödaString extends RödaValue {
 				return RödaBoolean.of(((RödaString) value).pattern.matcher(text).matches());
 			else
 				return RödaBoolean.of(text.matches(value.str()));
+		case NO_MATCH:
+			if (!value.is(STRING)) typeMismatch("tried to NO_MATCH " + value.typeString());
+			if (((RödaString) value).pattern != null)
+				return RödaBoolean.of(!((RödaString) value).pattern.matcher(text).matches());
+			else
+				return RödaBoolean.of(!text.matches(value.str()));
 		default:
 			return super.callOperator(operator, value);
 		}
