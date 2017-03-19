@@ -2,8 +2,10 @@ package org.kaivos.röda.commands;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.RödaValue;
@@ -59,11 +61,24 @@ public class UniqPopulator {
 		}, Collections.emptyList(), false));
 	}
 	
+	private static void addOrderedUniqFunction(RödaScope S, String name) {
+		S.setLocal(name, RödaNativeFunction.of(name, (typeargs, args, kwargs, scope, in, out) -> {
+			Set<RödaValue> counts = new HashSet<>();
+			in.forAll(value -> {
+				if (!counts.contains(value)) {
+					counts.add(value);
+					out.push(value);
+				}
+			});
+		}, Collections.emptyList(), false));
+	}
+	
 	public static void populateUniq(RödaScope S) {
 		addUniqFunction(S, "uniq", false);
 		addUniqFunction(S, "count", true);
 		addUnorderedUniqFunction(S, "unorderedUniq", false);
 		addUnorderedUniqFunction(S, "unorderedCount", true);
+		addOrderedUniqFunction(S, "orderedUniq");
 	}
 	
 }
