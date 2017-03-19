@@ -31,11 +31,14 @@ import org.kaivos.röda.type.RödaString;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.ParsedLine;
+import org.jline.reader.Reference;
 import org.jline.reader.UserInterruptException;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.AttributedStringBuilder;
+import org.jline.utils.InfoCmp.Capability;
+import org.jline.keymap.KeyMap;
 import org.jline.reader.Candidate;
 import org.jline.reader.EndOfFileException;
 
@@ -431,6 +434,9 @@ public class Röda {
 
 			in.unsetOpt(LineReader.Option.INSERT_TAB);
 			in.setOpt(LineReader.Option.DISABLE_EVENT_EXPANSION);
+			
+			in.getKeyMaps().get(LineReader.EMACS)
+				.bind(new Reference(LineReader.VI_OPEN_LINE_BELOW), KeyMap.alt(KeyMap.key(terminal, Capability.newline)));
 			
 			RödaStream inStream = RödaStream.makeEmptyStream(), 
 					outStream = STDOUT;

@@ -19,7 +19,7 @@ public final class IOUtils {
 			return new File(name);
 		} else if (name.startsWith("~")) {
 			return new File(System.getenv("HOME"), name.replaceAll("~/?", ""));
-		}else {
+		} else {
 			return new File(pwd, name);
 		}
 	}
