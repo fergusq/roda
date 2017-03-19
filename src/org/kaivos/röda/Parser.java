@@ -112,7 +112,7 @@ public class Parser {
 		tl.accept(keywords);
 	}
 	
-	private static boolean validIdentifier(String applicant) {
+	public static boolean validIdentifier(String applicant) {
 		if (!validTypename(applicant)) return false;
 		switch (applicant) {
 		case "function":

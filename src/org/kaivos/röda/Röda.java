@@ -14,7 +14,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.kaivos.nept.parser.ParsingException;
@@ -32,6 +34,7 @@ import org.jline.reader.ParsedLine;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import org.jline.utils.AttributedStringBuilder;
 import org.jline.reader.Candidate;
 import org.jline.reader.EndOfFileException;
 
@@ -262,6 +265,8 @@ public class Röda {
 			
 			parser.setEscapeChars(new char[0]);
 			
+			Set<String> builtins = INTERPRETER.G.map.keySet();
+			
 			Terminal terminal = TerminalBuilder.terminal();
 			LineReader in = LineReaderBuilder.builder()
 					.terminal(terminal)
@@ -269,6 +274,91 @@ public class Röda {
 					.variable(LineReader.HISTORY_FILE, historyFile)
 					.variable(LineReader.COMMENT_BEGIN, "#!")
 					.parser(parser)
+					.highlighter((r, b) -> {
+						AttributedStringBuilder sb = new AttributedStringBuilder();
+						StringBuilder current = new StringBuilder();
+						Consumer<String> style = s -> {
+							boolean isWord = s.matches("\\w+");
+							if (!Parser.validIdentifier(s) && isWord
+									//|| s.equals("{") || s.equals("}") || s.equals(";") || s.equals("|")
+									) {
+								sb.style(sb.style().foreground(2));
+								sb.append(s);
+								sb.style(sb.style().foregroundOff());
+							}
+							else if (isWord && builtins.contains(s)) {
+								sb.style(sb.style().foreground(6));
+								sb.style(sb.style().bold());
+								sb.append(s);
+								sb.style(sb.style().boldOff());
+								sb.style(sb.style().foregroundOff());
+							}
+							else if (s.matches("[0-9]+")) {
+								sb.style(sb.style().faint());
+								sb.append(s);
+								sb.style(sb.style().faintOff());
+							}
+							else sb.append(s);
+						};
+						boolean simpleQuoteOn = false, backtickQuoteOn = false;
+						int interpolationDepth = 0;
+						for (int i = 0; i < b.length(); i++) {
+							char c = b.charAt(i);
+							if (c == '"' && !backtickQuoteOn) {
+								simpleQuoteOn = !simpleQuoteOn;
+								if (simpleQuoteOn) sb.style(sb.style().faint());
+								else sb.style(sb.style().faintOff());
+							}
+							else if (c == '`' && !simpleQuoteOn && interpolationDepth == 0) {
+								backtickQuoteOn = !backtickQuoteOn;
+								if (backtickQuoteOn) sb.style(sb.style().faint());
+								else sb.style(sb.style().faintOff());
+							}
+							if (simpleQuoteOn || c == '"') {
+								sb.append(c);
+								if (c == '\\' && i != b.length()-1) sb.append(b.charAt(++i));
+							}
+							else if (backtickQuoteOn || c == '`') {
+								sb.append(c);
+								if (c == '$' && i != b.length()-1) {
+									if (b.charAt(i+1) == '{') {
+										sb.append('{'); i++;
+										backtickQuoteOn = false;
+										interpolationDepth = 1;
+										sb.style(sb.style().faintOff());
+										continue;
+									}
+								}
+							}
+							else if (c == '}' && interpolationDepth == 1) {
+								style.accept(current.toString());
+								current.setLength(0);
+								interpolationDepth = 0;
+								backtickQuoteOn = true;
+								sb.style(sb.style().faint());
+								sb.append(c);
+							}
+							else if (Parser.operatorCharacters.indexOf(c) >= 0 || Character.isWhitespace(c)) {
+								style.accept(current.toString());
+								current.setLength(0);
+								style.accept(Character.toString(c));
+							}
+							else if (c == ' ') { // NBSP
+								sb.style(sb.style().inverse());
+								sb.append(c);
+								sb.style(sb.style().inverseOff());
+							}
+							else {
+								current.append(c);
+							}
+							if (interpolationDepth > 0) {
+								if (c == '{') interpolationDepth++;
+								else if (c == '}') interpolationDepth--;
+							}
+						}
+						style.accept(current.toString());
+						return sb.toAttributedString();
+					})
 					.completer((r, l, c) -> {
 						int quoteChars = 0, quoteIndex = -1;
 						for (int i = 0; i < l.wordIndex(); i++) {
@@ -279,7 +369,7 @@ public class Röda {
 							else if (l.words().get(i).equals("\\")) i++;
 						}
 						if (quoteChars % 2 == 0) {
-							TreeSet<String> vars = new TreeSet<>(INTERPRETER.G.map.keySet());
+							TreeSet<String> vars = new TreeSet<>(builtins);
 							for (String match : vars.tailSet(l.word())) {
 								if (!match.startsWith(l.word())) break;
 								c.add(new Candidate(match, match, null,
