@@ -31,6 +31,7 @@ import org.kaivos.röda.type.RödaString;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.ParsedLine;
+import org.jline.reader.UserInterruptException;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -279,7 +280,7 @@ public class Röda {
 						AttributedStringBuilder sb = new AttributedStringBuilder();
 						StringBuilder current = new StringBuilder();
 						Consumer<String> style = s -> {
-							boolean isWord = s.matches("\\w+");
+							boolean isWord = s.matches("[\\w']+");
 							if (!Parser.validIdentifier(s) && isWord
 									//|| s.equals("{") || s.equals("}") || s.equals(";") || s.equals("|")
 									) {
@@ -450,6 +451,8 @@ public class Röda {
 					line = in.readLine(prompt);
 				} catch (EndOfFileException e) {
 					break;
+				} catch (UserInterruptException e) {
+					continue;
 				}
 				if (!line.trim().isEmpty()) {
 					try {
