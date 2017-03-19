@@ -9,7 +9,7 @@ repositories {
 }
 dependencies {
     compile project(':nept')
-    compile 'jline:jline:2.12'
+    compile 'org.jline:jline:3.2.0'
     testCompile 'junit:junit:4.12'
 }
 

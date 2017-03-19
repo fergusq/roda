@@ -64,7 +64,7 @@ public class Parser {
 		.addCharacterEscapeCode('x', 2, 16)
 		.appendOnEOF("<EOF>");
 
-	private static String operatorCharacters = "<>()[]{}|&.,:;=#%!?\n\\+-*/^~@%$\"";
+	public static String operatorCharacters = "<>()[]{}|&.,:;=#%!?\n\\+-*/^~@%$\"";
 	private static String notIdentifierStart = operatorCharacters + "_";
 	
 	private static Token seek(TokenList tl) {

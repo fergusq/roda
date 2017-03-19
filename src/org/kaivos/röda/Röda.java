@@ -9,8 +9,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -24,8 +26,14 @@ import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaString;
 
-import jline.console.ConsoleReader;
-import jline.console.history.FileHistory;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.ParsedLine;
+import org.jline.reader.impl.DefaultParser;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+import org.jline.reader.Candidate;
+import org.jline.reader.EndOfFileException;
 
 /**
  * A simple stream language
@@ -59,6 +67,8 @@ public class Röda {
 		STDERR = new OSStream(err);
 	}
 	
+	private static String prompt;
+	
 	private static void interpretEOption(List<String> eval) {
 		try {
 			for (String stmt : eval) INTERPRETER.interpretStatement(stmt, "<option -e>", STDIN, STDOUT);
@@ -75,7 +85,6 @@ public class Röda {
 		List<String> argsForRöda = new ArrayList<>();
 		boolean interactive = System.console() != null, forcedI = false, disableInteraction = false,
 				enableDebug = true, enableProfiling = false, divideByInvocations = false;
-		String prompt = null;
 		
 		for (int i = 0; i < args.length; i++) {
 			if (file != null) {
@@ -203,63 +212,157 @@ public class Röda {
 		} else if (!disableInteraction && interactive && System.console() != null) {
 
 			File historyFile = new File(System.getProperty("user.home") + "/.rödahist");
+			
+			DefaultParser parser = new DefaultParser() {
+				
+				@Override
+				public ParsedLine parse(final String line, final int cursor, ParseContext context) {
+					List<String> words = new LinkedList<>();
+					StringBuilder current = new StringBuilder();
+					int wordCursor = -1;
+					int wordIndex = -1;
 
-			FileHistory history = new FileHistory(historyFile);
+					for (int i = 0; (line != null) && (i < line.length()); i++) {
+						if (i == cursor) {
+							wordIndex = words.size();
+							wordCursor = current.length();
+						}
+						if (isDelimiterChar(line, i)) {
+							if (current.length() > 0) {
+								words.add(current.toString());
+								current.setLength(0);
+							}
+							if (!Character.isWhitespace(line.charAt(i))) {
+								words.add(Character.toString(line.charAt(i)));
+							}
+						} else {
+		                    current.append(line.charAt(i));
+		                }
+					}
 
-			ConsoleReader in = new ConsoleReader();
-			in.setExpandEvents(false);
-			in.setHistory(history);
-			in.setPrompt(prompt);
+					if (current.length() > 0 || cursor == line.length()) {
+						words.add(current.toString());
+					}
 
-			PrintWriter out = new PrintWriter(in.getOutput());
+					if (cursor == line.length()) {
+						wordIndex = words.size() - 1;
+						wordCursor = words.get(words.size() - 1).length();
+					}
 
+					return new ArgumentList(line, words, wordIndex, wordCursor, cursor);
+				}
+
+				@Override
+				public boolean isDelimiterChar(CharSequence buffer, int pos) {
+					char c = buffer.charAt(pos);
+					return c != '.' && Parser.operatorCharacters.indexOf(c) >= 0
+							|| Character.isWhitespace(c);
+				}
+			};
+			
+			parser.setEscapeChars(new char[0]);
+			
+			Terminal terminal = TerminalBuilder.terminal();
+			LineReader in = LineReaderBuilder.builder()
+					.terminal(terminal)
+					.appName("Röda")
+					.variable(LineReader.HISTORY_FILE, historyFile)
+					.variable(LineReader.COMMENT_BEGIN, "#!")
+					.parser(parser)
+					.completer((r, l, c) -> {
+						int quoteChars = 0, quoteIndex = -1;
+						for (int i = 0; i < l.wordIndex(); i++) {
+							if (l.words().get(i).equals("\"")) {
+								quoteChars++;
+								quoteIndex = i;
+							}
+							else if (l.words().get(i).equals("\\")) i++;
+						}
+						if (quoteChars % 2 == 0) {
+							TreeSet<String> vars = new TreeSet<>(INTERPRETER.G.map.keySet());
+							for (String match : vars.tailSet(l.word())) {
+								if (!match.startsWith(l.word())) break;
+								c.add(new Candidate(match, match, null,
+										INTERPRETER.G.map.get(match).str(), null, null, true));
+							}
+						}
+						else {
+							try {
+								String currentPath = "";
+								for (int i = quoteIndex + 1; i <= l.wordIndex(); i++) {
+									currentPath += l.words().get(i);
+								}
+								File currentFile = IOUtils.getMaybeRelativeFile(INTERPRETER.currentDir, currentPath);
+								TreeSet<String> files;
+								String fileToComplete;
+								if (!currentPath.endsWith("/")) {
+									if (currentFile.isDirectory()) {
+										c.add(new Candidate("/"));
+									}
+								}
+								if (currentPath.indexOf('/') >= 0) {
+									File currentDir = IOUtils.getMaybeRelativeFile(INTERPRETER.currentDir,
+											currentPath.substring(0, currentPath.lastIndexOf('/')));
+									
+									files = new TreeSet<>(Files.list(currentDir.toPath())
+											.map(p -> currentDir.toPath().relativize(p).toString()
+													+ (p.toFile().isDirectory() ? "/" : ""))
+											.collect(Collectors.toSet()));
+									fileToComplete = currentPath.substring(currentPath.lastIndexOf('/')+1);
+								}
+								else {
+									files = new TreeSet<>(Files.list(INTERPRETER.currentDir.toPath())
+											.map(p -> INTERPRETER.currentDir.toPath().relativize(p).toString()
+													+ (p.toFile().isDirectory() ? "/" : ""))
+											.collect(Collectors.toSet()));
+									fileToComplete = currentPath;
+								}
+								for (String match : files.tailSet(fileToComplete)) {
+									if (!match.startsWith(fileToComplete)) break;
+									c.add(new Candidate(match, match, null, null, null, null, false));
+								}
+							} catch (IOException e) {
+								Interpreter.error(e);
+							}
+						}
+					})
+					.build();
+
+			in.unsetOpt(LineReader.Option.INSERT_TAB);
+			in.setOpt(LineReader.Option.DISABLE_EVENT_EXPANSION);
+			
 			RödaStream inStream = RödaStream.makeEmptyStream(), 
-					outStream = new OSStream(out);
+					outStream = STDOUT;
 
 			INTERPRETER.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, k, s, i, o) -> {
 				Interpreter.checkString("prompt", a.get(0));
-				in.setPrompt(a.get(0).str());
+				prompt = a.get(0).str();
 			}, Arrays.asList(new Parameter("prompt_string", false)), false));
 
 			INTERPRETER.G.setLocal("getLine", RödaNativeFunction.of("getLine", (ta, a, k, s, i, o) -> {
-				String promptString = in.getPrompt();
-				try {
-					o.push(RödaString.of(in.readLine("? ")));
-				} catch (IOException e) {
-					Interpreter.error(e);
-				}
-				in.setPrompt(promptString);
+				o.push(RödaString.of(in.readLine("? ")));
 			}, Arrays.asList(), false));
-
-			in.addCompleter((b, k, l) -> {
-					if (b == null) l.addAll(INTERPRETER.G.map.keySet());
-					else {
-						int i = Math.max(b.lastIndexOf(" "), Math.max(b.lastIndexOf("|"), Math.max(b.lastIndexOf("{"), b.lastIndexOf(";"))))+1;
-						String a = b.substring(0, i);
-						b = b.substring(i);
-						TreeSet<String> vars = new TreeSet<>(INTERPRETER.G.map.keySet());
-						for (String match : vars.tailSet(b)) {
-							if (!match.startsWith(b)) break;
-							l.add(a + match + " ");
-						}
-					}
-					return l.isEmpty() ? -1 : 0;
-				});
+			
 			String line = "";
 			int i = 1;
-			while ((line = in.readLine()) != null) {
+			while (true) {
+				try {
+					line = in.readLine(prompt);
+				} catch (EndOfFileException e) {
+					break;
+				}
 				if (!line.trim().isEmpty()) {
 					try {
 						INTERPRETER.interpretStatement(line, "<line "+ i++ +">", inStream, outStream);
 					} catch (ParsingException e) {
-						out.println("[E] " + e.getMessage());
+						System.err.println("[E] " + e.getMessage());
 					} catch (Interpreter.RödaException e) {
 						printRödaException(e);
 					}
 				}
 			}
-
-			history.flush();
+			
+			in.getHistory().save();
 
 			System.out.println();
 
