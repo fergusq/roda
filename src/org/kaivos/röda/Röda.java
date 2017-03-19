@@ -71,6 +71,7 @@ public class Röda {
 	}
 	
 	private static String prompt;
+	private static int keywordColor = 2, variableColor = 6;
 	
 	private static void interpretEOption(List<String> eval) {
 		try {
@@ -282,12 +283,12 @@ public class Röda {
 							if (!Parser.validIdentifier(s) && isWord
 									//|| s.equals("{") || s.equals("}") || s.equals(";") || s.equals("|")
 									) {
-								sb.style(sb.style().foreground(2));
+								sb.style(sb.style().foreground(keywordColor));
 								sb.append(s);
 								sb.style(sb.style().foregroundOff());
 							}
 							else if (isWord && builtins.contains(s)) {
-								sb.style(sb.style().foreground(6));
+								sb.style(sb.style().foreground(variableColor));
 								sb.style(sb.style().bold());
 								sb.append(s);
 								sb.style(sb.style().boldOff());
@@ -306,19 +307,25 @@ public class Röda {
 							char c = b.charAt(i);
 							if (c == '"' && !backtickQuoteOn) {
 								simpleQuoteOn = !simpleQuoteOn;
-								if (simpleQuoteOn) sb.style(sb.style().faint());
-								else sb.style(sb.style().faintOff());
+								if (simpleQuoteOn) {
+									style.accept(current.toString());
+									current.setLength(0);
+									sb.style(sb.style().faint());
+								}
 							}
 							else if (c == '`' && !simpleQuoteOn && interpolationDepth == 0) {
 								backtickQuoteOn = !backtickQuoteOn;
-								if (backtickQuoteOn) sb.style(sb.style().faint());
-								else sb.style(sb.style().faintOff());
+								if (backtickQuoteOn) {
+									style.accept(current.toString());
+									current.setLength(0);
+									sb.style(sb.style().faint());
+								}
 							}
-							if (simpleQuoteOn || c == '"') {
+							if (simpleQuoteOn) {
 								sb.append(c);
 								if (c == '\\' && i != b.length()-1) sb.append(b.charAt(++i));
 							}
-							else if (backtickQuoteOn || c == '`') {
+							else if (backtickQuoteOn) {
 								sb.append(c);
 								if (c == '$' && i != b.length()-1) {
 									if (b.charAt(i+1) == '{') {
@@ -354,6 +361,9 @@ public class Röda {
 							if (interpolationDepth > 0) {
 								if (c == '{') interpolationDepth++;
 								else if (c == '}') interpolationDepth--;
+							}
+							if ((c == '"' || c == '`') && !simpleQuoteOn && !backtickQuoteOn) {
+								sb.style(sb.style().faintOff());
 							}
 						}
 						style.accept(current.toString());
