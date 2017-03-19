@@ -197,9 +197,9 @@ public class Röda {
 		
 		INTERPRETER.enableDebug = enableDebug;
 		INTERPRETER.enableProfiling = enableProfiling;
-		interpretEOption(eval);
 
 		if (file != null) {
+			interpretEOption(eval);
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 			String code = "";
 			String line = "";
@@ -440,6 +440,23 @@ public class Röda {
 			
 			RödaStream inStream = RödaStream.makeEmptyStream(), 
 					outStream = STDOUT;
+			
+			INTERPRETER.G.setLocal("jlineVar", RödaNativeFunction.of("jlineVar", (ta, a, k, s, i, o) -> {
+				if (a.size() > 2) Interpreter.argumentOverflow("jlineVar", 2, a.size());
+				else if (a.size() == 2) in.setVariable(a.get(0).str(), a.get(1).str());
+				else if (a.size() == 1) {
+					Object var = in.getVariable(a.get(0).str());
+					if (var != null)
+						o.push(RödaString.of(var.toString()));
+				}
+			}, Arrays.asList(new Parameter("var", false, RödaValue.STRING), new Parameter("values", false)), true));
+			
+			INTERPRETER.G.setLocal("kwColor", RödaNativeFunction.of("kwColor", (ta, a, k, s, i, o) -> {
+				keywordColor = (int) a.get(0).integer();
+			}, Arrays.asList(new Parameter("color", false, RödaValue.INTEGER)), false));
+			INTERPRETER.G.setLocal("varColor", RödaNativeFunction.of("kwColor", (ta, a, k, s, i, o) -> {
+				variableColor = (int) a.get(0).integer();
+			}, Arrays.asList(new Parameter("color", false, RödaValue.INTEGER)), false));
 
 			INTERPRETER.G.setLocal("prompt", RödaNativeFunction.of("prompt", (ta, a, k, s, i, o) -> {
 				Interpreter.checkString("prompt", a.get(0));
@@ -449,6 +466,8 @@ public class Röda {
 			INTERPRETER.G.setLocal("getLine", RödaNativeFunction.of("getLine", (ta, a, k, s, i, o) -> {
 				o.push(RödaString.of(in.readLine("? ")));
 			}, Arrays.asList(), false));
+			
+			interpretEOption(eval);
 			
 			String line = "";
 			int i = 1;
@@ -476,6 +495,7 @@ public class Röda {
 			System.out.println();
 
 		} else if (!disableInteraction) {
+			interpretEOption(eval);
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 			String line = "";
