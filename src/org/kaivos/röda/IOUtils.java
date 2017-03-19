@@ -17,8 +17,9 @@ public final class IOUtils {
 	public static File getMaybeRelativeFile(File pwd, String name) {
 		if (name.startsWith("/")) { // tee tästä yhteensopiva outojen käyttöjärjestelmien kanssa
 			return new File(name);
-		}
-		else {
+		} else if (name.startsWith("~")) {
+			return new File(System.getenv("HOME"), name.replaceAll("~/?", ""));
+		}else {
 			return new File(pwd, name);
 		}
 	}
