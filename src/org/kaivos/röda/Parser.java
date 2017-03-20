@@ -131,7 +131,8 @@ public class Parser {
 	}
 
 	private static boolean validTypename(String applicant) {
-		if (applicant.length() == 1 && notIdentifierStart.indexOf(applicant.charAt(0)) >= 0) return false;
+		if (applicant.length() == 0) return false;
+		if (applicant.length() >= 1 && notIdentifierStart.indexOf(applicant.charAt(0)) >= 0) return false;
 		switch (applicant) {
 		/* avainsanat */
 		case "if":
