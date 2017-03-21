@@ -383,11 +383,29 @@ public class Röda {
 							else if (l.words().get(i).equals("\\")) i++;
 						}
 						if (quoteChars % 2 == 0) {
+							boolean isPiped = l.wordIndex() == 0 || l.words().get(l.wordIndex()-1).equals("|");
 							TreeSet<String> vars = new TreeSet<>(builtins);
 							for (String match : vars.tailSet(l.word())) {
 								if (!match.startsWith(l.word())) break;
-								c.add(new Candidate(match, match, null,
-										INTERPRETER.G.map.get(match).str(), null, null, true));
+								
+								RödaValue val = INTERPRETER.G.map.get(match);
+								
+								String cand;
+								if (isPiped) cand = match;
+								else if (val.is(RödaValue.FUNCTION)) {
+									if (val.is(RödaValue.NFUNCTION)
+											&& !val.nfunction().isVarargs
+											&& val.nfunction().parameters.isEmpty()
+											&& !val.nfunction().isKwVarargs
+											&& val.nfunction().kwparameters.isEmpty())
+										cand = match + "()";
+									else
+										cand = match + "(";
+								}
+								else if (val.is(RödaValue.LIST) || val.is(RödaValue.MAP)) cand = match + "[";
+								else cand = match;
+								
+								c.add(new Candidate(cand, match, null, val.str(), null, null, isPiped));
 							}
 						}
 						else {
