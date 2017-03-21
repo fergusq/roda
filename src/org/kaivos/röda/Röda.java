@@ -1,5 +1,7 @@
 package org.kaivos.röda;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
 import static org.kaivos.röda.Interpreter.INTERPRETER;
 
@@ -19,15 +21,9 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.kaivos.nept.parser.ParsingException;
-import org.kaivos.röda.Interpreter.RödaException;
-import org.kaivos.röda.RödaStream.ISStream;
-import org.kaivos.röda.RödaStream.OSStream;
-import org.kaivos.röda.commands.StreamPopulator;
-import org.kaivos.röda.runtime.Function.Parameter;
-import org.kaivos.röda.type.RödaNativeFunction;
-import org.kaivos.röda.type.RödaString;
-
+import org.jline.keymap.KeyMap;
+import org.jline.reader.Candidate;
+import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.ParsedLine;
@@ -38,9 +34,14 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.InfoCmp.Capability;
-import org.jline.keymap.KeyMap;
-import org.jline.reader.Candidate;
-import org.jline.reader.EndOfFileException;
+import org.kaivos.nept.parser.ParsingException;
+import org.kaivos.röda.Interpreter.RödaException;
+import org.kaivos.röda.RödaStream.ISStream;
+import org.kaivos.röda.RödaStream.OSStream;
+import org.kaivos.röda.commands.StreamPopulator;
+import org.kaivos.röda.runtime.Function.Parameter;
+import org.kaivos.röda.type.RödaNativeFunction;
+import org.kaivos.röda.type.RödaString;
 
 /**
  * A simple stream language
@@ -194,6 +195,18 @@ public class Röda {
 				}
 			}
 		}, Arrays.asList(new Parameter("mode", false)), false));
+
+		INTERPRETER.G.setLocal("ifStdIn", RödaNativeFunction.of("ifStdIn", (ta, a, k, s, i, o) -> {
+			if (i == STDIN) {
+				INTERPRETER.exec("<io setup>", -1, a.get(0), emptyList(), emptyList(), emptyMap(), s, i, o);
+			}
+		}, Arrays.asList(new Parameter("callback", false, RödaValue.FUNCTION)), false));
+
+		INTERPRETER.G.setLocal("ifStdOut", RödaNativeFunction.of("ifStdOut", (ta, a, k, s, i, o) -> {
+			if (o == STDOUT) {
+				INTERPRETER.exec("<io setup>", -1, a.get(0), emptyList(), emptyList(), emptyMap(), s, i, o);
+			}
+		}, Arrays.asList(new Parameter("callback", false, RödaValue.FUNCTION)), false));
 		
 		INTERPRETER.enableDebug = enableDebug;
 		INTERPRETER.enableProfiling = enableProfiling;
@@ -456,9 +469,6 @@ public class Röda {
 			in.getKeyMaps().get(LineReader.EMACS)
 				.bind(new Reference(LineReader.VI_OPEN_LINE_BELOW), KeyMap.alt(KeyMap.key(terminal, Capability.newline)));
 			
-			RödaStream inStream = RödaStream.makeEmptyStream(), 
-					outStream = STDOUT;
-			
 			INTERPRETER.G.setLocal("jlineVar", RödaNativeFunction.of("jlineVar", (ta, a, k, s, i, o) -> {
 				if (a.size() > 2) Interpreter.argumentOverflow("jlineVar", 2, a.size());
 				else if (a.size() == 2) in.setVariable(a.get(0).str(), a.get(1).str());
@@ -499,7 +509,7 @@ public class Röda {
 				}
 				if (!line.trim().isEmpty()) {
 					try {
-						INTERPRETER.interpretStatement(line, "<line "+ i++ +">", inStream, outStream);
+						INTERPRETER.interpretStatement(line, "<line "+ i++ +">", STDIN, STDOUT);
 					} catch (ParsingException e) {
 						System.err.println("[E] " + e.getMessage());
 					} catch (Interpreter.RödaException e) {
