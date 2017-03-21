@@ -291,6 +291,7 @@ public class Röda {
 					.appName("Röda")
 					.variable(LineReader.HISTORY_FILE, historyFile)
 					.variable(LineReader.COMMENT_BEGIN, "#!")
+					.variable(LineReader.SECONDARY_PROMPT_PATTERN, "%P > ")
 					.parser(parser)
 					.highlighter((r, b) -> {
 						AttributedStringBuilder sb = new AttributedStringBuilder();
