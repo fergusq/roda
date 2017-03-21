@@ -31,6 +31,6 @@ public final class IndexOfPopulator {
 				}
 				out.push(RödaInteger.of(-1));
 			}
-		}, Arrays.asList(new Parameter("sequence", true), new Parameter("str", false)), true));
+		}, Arrays.asList(new Parameter("sequence", false), new Parameter("str", false)), true));
 	}
 }
