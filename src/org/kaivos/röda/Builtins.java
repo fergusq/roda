@@ -31,6 +31,7 @@ import org.kaivos.röda.commands.ErrorPopulator;
 import org.kaivos.röda.commands.ErrprintPopulator;
 import org.kaivos.röda.commands.ExecPopulator;
 import org.kaivos.röda.commands.FilePopulator;
+import org.kaivos.röda.commands.FilterPopulator;
 import org.kaivos.röda.commands.GetenvPopulator;
 import org.kaivos.röda.commands.HeadAndTailPopulator;
 import org.kaivos.röda.commands.IdentityPopulator;
@@ -109,6 +110,7 @@ public class Builtins {
 		SortPopulator.populateSort(I, S);
 		UniqPopulator.populateUniq(S);
 		SumPopulator.populateSum(S);
+		FilterPopulator.populateFilterAndGrep(I, S);
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
