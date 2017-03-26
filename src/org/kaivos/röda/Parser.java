@@ -1665,9 +1665,9 @@ public class Parser {
 			    	if (!sugarVars.isEmpty() && SUGAR_PATTERN_ALL.matcher(var).matches()) {
 			    		var = sugarVar(var);
 			    	}
-				if (!validIdentifier(var))
-					throw new ParsingException(TokenList.expected("identifier"), t);
-				varExp = expressionVariable(file, line, var);
+			    	else if (!validIdentifier(var))
+						throw new ParsingException(TokenList.expected("identifier"), t);
+					varExp = expressionVariable(file, line, var);
 		    	}
 				ans = expressionConcat(file, line, ans, varExp);
 		    	if (stringStart < fragments[i].length()) {

@@ -60,6 +60,11 @@ public class RödaTest {
 	public void testBacktickStringLiteralWithASubstitutionInBraces() {
 		assertEquals("abba2cabba", eval("main{x:=2;push`abba${x}cabba`}"));
 	}
+
+	@Test
+	public void testBacktickStringLiteralWithASugarVar() {
+		assertEquals("abba 1 1 cabba,abba 2 2 cabba", eval("main{push 1,2|push`abba $_ $_1 cabba`}"));
+	}
 	
 	// Peek-komento
 	
