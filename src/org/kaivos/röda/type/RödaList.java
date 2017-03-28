@@ -206,6 +206,12 @@ public class RödaList extends RödaValue {
 		list.addAll(values);
 	}
 
+	@Override public void remove(RödaValue value) {
+		if (type != null && !value.is(type))
+			typeMismatch(typeString() + " can not contain " + value.typeString());
+		list.remove(value);
+	}
+
 	@Override public boolean strongEq(RödaValue value) {
 		if (!value.is(LIST)) return false;
 		if (list.size() != value.list().size()) return false;

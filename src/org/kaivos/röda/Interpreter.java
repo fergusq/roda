@@ -961,6 +961,8 @@ public class Interpreter {
 
 		//System.err.println("exec " + value + "("+args+") " + in + " -> " + out);
 		if (value.is(LIST)) {
+			checkArgs("[]", 0, args.size());
+			if (!kwargs.isEmpty()) argumentOverflow("[]", 0, kwargs.size()); // TODO parempi virheviesti
 			for (RödaValue item : value.list())
 				out.push(item);
 			return;
@@ -1262,13 +1264,13 @@ public class Interpreter {
 			switch (cmd.operator) {
 			case ":=": {
 				r = () -> {
-					if (args.size() > 1) argumentOverflow(":=", 1, args.size());
+					checkArgs(":=", 1, args.size());
 					assignLocal.accept(args.get(0));
 				};
 			} break;
 			case "=": {
 				r = () -> {
-					if (args.size() > 1) argumentOverflow("=", 1, args.size());
+					checkArgs("=", 1, args.size());
 					assign.accept(args.get(0));
 				};
 			} break;
@@ -1276,6 +1278,7 @@ public class Interpreter {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkNumber("++", v);
+					checkArgs("++", 0, args.size());
 					if (v.is(INTEGER))
 						assign.accept(RödaInteger.of(v.integer()+1));
 					else if (v.is(FLOATING))
@@ -1286,6 +1289,7 @@ public class Interpreter {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkNumber("--", v);
+					checkArgs("--", 0, args.size());
 					if (v.is(INTEGER))
 						assign.accept(RödaInteger.of(v.integer()-1));
 					else if (v.is(FLOATING))
@@ -1297,9 +1301,10 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkListOrNumber("+=", v);
 					if (v.is(LIST)) {
-						v.add(args.get(0));
+						args.forEach(v::add);
 					}
 					else {
+						checkArgs("+=", 1, args.size());
 						checkInteger("+=", args.get(0));
 						if (v.is(INTEGER))
 							assign.accept(RödaInteger.of(v.integer()+args.get(0).integer()));
@@ -1311,17 +1316,24 @@ public class Interpreter {
 			case "-=": {
 				r = () -> {
 					RödaValue v = resolve.get();
-					checkNumber("-=", v);
-					checkNumber("-=", args.get(0));
-					if (v.is(INTEGER))
-						assign.accept(RödaInteger.of(v.integer()-args.get(0).integer()));
-					else if (v.is(FLOATING))
-						assign.accept(RödaFloating.of(v.floating()-args.get(0).floating()));
+					checkListOrNumber("-=", v);
+					if (v.is(LIST)) {
+						args.forEach(v::remove);
+					}
+					else {
+						checkArgs("-=", 1, args.size());
+						checkNumber("-=", args.get(0));
+						if (v.is(INTEGER))
+							assign.accept(RödaInteger.of(v.integer()-args.get(0).integer()));
+						else if (v.is(FLOATING))
+							assign.accept(RödaFloating.of(v.floating()-args.get(0).floating()));
+					}
 				};
 			} break;
 			case "*=": {
 				r = () -> {
 					RödaValue v = resolve.get();
+					checkArgs("*=", 1, args.size());
 					checkNumber("*=", v);
 					checkNumber("*=", args.get(0));
 					if (v.is(INTEGER))
@@ -1333,6 +1345,7 @@ public class Interpreter {
 			case "/=": {
 				r = () -> {
 					RödaValue v = resolve.get();
+					checkArgs("/=", 1, args.size());
 					checkNumber("/=", v);
 					checkNumber("/=", args.get(0));
 					if (v.is(INTEGER))
@@ -1346,13 +1359,13 @@ public class Interpreter {
 					RödaValue v = resolve.get();
 					checkListOrString(".=", v);
 					if (v.is(LIST)) {
-						checkList(".=", args.get(0));
-						ArrayList<RödaValue> newList = new ArrayList<>();
-						newList.addAll(v.list());
-						newList.addAll(args.get(0).list());
-						assign.accept(RödaList.of(newList));
+						for (RödaValue arg : args) {
+							checkList(".=", arg);
+							v.addAll(arg.list());
+						}
 					}
 					else {
+						checkArgs(".=", 1, args.size());
 						assign.accept(RödaString.of(v.str()+args.get(0).str()));
 					}
 				};
@@ -1384,6 +1397,7 @@ public class Interpreter {
 			} break;
 			case "?": {
 				r = () -> {
+					checkArgs("?", 0, args.size());
 					if (e.type != ExpressionTree.Type.VARIABLE)
 						error("bad lvalue for '?': " + e.asString());
 					_out.push(RödaBoolean.of(scope.resolve(e.variable) != null));

@@ -145,6 +145,10 @@ public abstract class RödaValue {
 		typeMismatch("can't add values to " + typeString());
 	}
 
+	public void remove(RödaValue value) {
+		typeMismatch("can't remove values from " + typeString());
+	}
+
 	public void setField(String field, RödaValue value) {
 		typeMismatch(typeString() + " doesn't have fields");
 	}
