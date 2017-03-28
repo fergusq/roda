@@ -543,6 +543,9 @@ public class Röda {
 				System.out.print(prompt);
 			}
 		}
+		else if (disableInteraction) {
+			interpretEOption(eval);
+		}
 		
 		if (enableProfiling) {
 			final boolean divInvs = divideByInvocations;
