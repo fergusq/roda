@@ -52,6 +52,7 @@ import org.kaivos.röda.Parser.ArgumentTree;
 import org.kaivos.röda.Parser.Command;
 import org.kaivos.röda.Parser.DatatypeTree;
 import org.kaivos.röda.Parser.ExpressionTree;
+import org.kaivos.röda.Parser.ExpressionTree.CType;
 import org.kaivos.röda.Parser.FunctionTree;
 import org.kaivos.röda.Parser.KwArgumentTree;
 import org.kaivos.röda.Parser.ParameterTree;
@@ -1303,11 +1304,7 @@ public class Interpreter {
 					}
 					else {
 						checkArgs("+=", 1, args.size());
-						checkInteger("+=", args.get(0));
-						if (v.is(INTEGER))
-							assign.accept(RödaInteger.of(v.integer()+args.get(0).integer()));
-						else if (v.is(FLOATING))
-							assign.accept(RödaFloating.of(v.floating()+args.get(0).floating()));
+						assign.accept(v.callOperator(CType.ADD, args.get(0)));
 					}
 				};
 			} break;
@@ -1320,11 +1317,7 @@ public class Interpreter {
 					}
 					else {
 						checkArgs("-=", 1, args.size());
-						checkNumber("-=", args.get(0));
-						if (v.is(INTEGER))
-							assign.accept(RödaInteger.of(v.integer()-args.get(0).integer()));
-						else if (v.is(FLOATING))
-							assign.accept(RödaFloating.of(v.floating()-args.get(0).floating()));
+						assign.accept(v.callOperator(CType.SUB, args.get(0)));
 					}
 				};
 			} break;
@@ -1332,24 +1325,35 @@ public class Interpreter {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkArgs("*=", 1, args.size());
-					checkNumber("*=", v);
-					checkNumber("*=", args.get(0));
-					if (v.is(INTEGER))
-						assign.accept(RödaInteger.of(v.integer()*args.get(0).integer()));
-					else if (v.is(FLOATING))
-						assign.accept(RödaFloating.of(v.floating()*args.get(0).floating()));
+					assign.accept(v.callOperator(CType.MUL, args.get(0)));
 				};
 			} break;
 			case "/=": {
 				r = () -> {
 					RödaValue v = resolve.get();
 					checkArgs("/=", 1, args.size());
-					checkNumber("/=", v);
-					checkNumber("/=", args.get(0));
-					if (v.is(INTEGER))
-						assign.accept(RödaInteger.of(v.integer()/args.get(0).integer()));
-					else if (v.is(FLOATING))
-						assign.accept(RödaFloating.of(v.floating()/args.get(0).floating()));
+					assign.accept(v.callOperator(CType.DIV, args.get(0)));
+				};
+			} break;
+			case "//=": {
+				r = () -> {
+					RödaValue v = resolve.get();
+					checkArgs("//=", 1, args.size());
+					assign.accept(v.callOperator(CType.IDIV, args.get(0)));
+				};
+			} break;
+			case "%=": {
+				r = () -> {
+					RödaValue v = resolve.get();
+					checkArgs("%=", 1, args.size());
+					assign.accept(v.callOperator(CType.MOD, args.get(0)));
+				};
+			} break;
+			case "^=": {
+				r = () -> {
+					RödaValue v = resolve.get();
+					checkArgs("^=", 1, args.size());
+					assign.accept(v.callOperator(CType.POW, args.get(0)));
 				};
 			} break;
 			case ".=": {

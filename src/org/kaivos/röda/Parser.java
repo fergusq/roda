@@ -38,6 +38,9 @@ public class Parser {
 		.addOperatorRule("-=")
 		.addOperatorRule("*=")
 		.addOperatorRule("/=")
+		.addOperatorRule("//=")
+		.addOperatorRule("%=")
+		.addOperatorRule("^=")
 		.addOperatorRule("++")
 		.addOperatorRule("--")
 		.addOperatorRule("//")
@@ -974,7 +977,7 @@ public class Parser {
 		ExpressionTree name = parseExpressionPrimary(tl, false);
 		String operator = null;
 		List<DatatypeTree> typeargs = new ArrayList<>();
-		if (isNext(tl, ":=", "=", "++", "--", "+=", "-=", "*=", "/=", ".=", "~=", "?")) {
+		if (isNext(tl, ":=", "=", "++", "--", "+=", "-=", "*=", "/=", "//=", "%=", "^=", ".=", "~=", "?")) {
 			operator = nextString(tl);
 		}
 		else if (acceptIfNext(tl, "<<")) {

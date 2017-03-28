@@ -441,7 +441,7 @@ public class RödaTest {
 	public void testSuffixIf() {
 		assertEquals("5",
 			     eval("main{hinta:=10;alennus=true();korotus=false();"
-				  + "hinta /= 2 if push alennus;"
+				  + "hinta //= 2 if push alennus;"
 				  + "hinta += 10 if push korotus;"
 				  + "push hinta}"));
 	}
