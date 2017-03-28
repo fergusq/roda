@@ -21,6 +21,7 @@ public class RödaTest {
 	@Before
 	public void init() {
 		results = new ArrayList<>();
+		Interpreter.INTERPRETER.getClass();
 	}
 
 	@After
