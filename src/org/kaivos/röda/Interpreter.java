@@ -317,7 +317,8 @@ public class Interpreter {
 			outOfBoundsErrorRecord
 	};
 
-	private void populateBuiltins() {
+	public void populateBuiltins() {
+		if (enableProfiling) pushTimer();
 		for (Record r : builtinRecords) {
 			G.preRegisterRecord(r);
 		}
@@ -330,6 +331,7 @@ public class Interpreter {
 		G.setLocal("ENV", RödaMap.of(System.getenv().entrySet().stream()
 				.collect(toMap(e -> e.getKey(),
 						e -> RödaString.of(e.getValue())))));
+		if (enableProfiling) popTimer("<populate builtins>");
 	}
 
 	private RödaValue createRecordClassReflection(Record record, RödaScope scope) {
@@ -469,7 +471,7 @@ public class Interpreter {
 	
 	private static ThreadLocal<ArrayDeque<Timer>> timerStack = ThreadLocal.withInitial(ArrayDeque::new);
 	
-	private void pushTimer() {
+	void pushTimer() {
 		ArrayDeque<Timer> ts = timerStack.get();
 		if (!ts.isEmpty()) {
 			ts.peek().stop();
@@ -479,7 +481,7 @@ public class Interpreter {
 		t.start();
 	}
 	
-	private void popTimer(String name) {
+	void popTimer(String name) {
 		ArrayDeque<Timer> ts = timerStack.get();
 		Timer t = ts.pop();
 		t.stop();
@@ -487,10 +489,6 @@ public class Interpreter {
 		if (!ts.isEmpty()) {
 			ts.peek().start();
 		}
-	}
-	
-	static {
-		INTERPRETER.populateBuiltins();
 	}
 	
 	public boolean enableDebug = true, enableProfiling = false;

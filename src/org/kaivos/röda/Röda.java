@@ -164,6 +164,11 @@ public class Röda {
 			return;
 		}
 		
+		INTERPRETER.enableDebug = enableDebug;
+		INTERPRETER.enableProfiling = enableProfiling;
+		
+		INTERPRETER.populateBuiltins();
+		
 		INTERPRETER.G.setLocal("STDIN", StreamPopulator.createStreamObj(STDIN));
 		INTERPRETER.G.setLocal("STDOUT", StreamPopulator.createStreamObj(STDOUT));
 		INTERPRETER.G.setLocal("STDERR", StreamPopulator.createStreamObj(STDERR));
@@ -207,9 +212,6 @@ public class Röda {
 				INTERPRETER.exec("<io setup>", -1, a.get(0), emptyList(), emptyList(), emptyMap(), s, i, o);
 			}
 		}, Arrays.asList(new Parameter("callback", false, RödaValue.FUNCTION)), false));
-		
-		INTERPRETER.enableDebug = enableDebug;
-		INTERPRETER.enableProfiling = enableProfiling;
 
 		if (file != null) {
 			interpretEOption(eval);

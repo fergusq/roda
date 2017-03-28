@@ -76,6 +76,8 @@ public class Builtins {
 		RödaScope S = I.G;
 
 		/* Perusvirtaoperaatiot */
+		
+		if (I.enableProfiling) I.pushTimer();
 
 		S.setLocal("print", RödaNativeFunction.of("print", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.isEmpty()) {
@@ -89,31 +91,40 @@ public class Builtins {
 		}, Arrays.asList(new Parameter("values", false)), true));
 		
 		PushAndPullPopulator.populatePushAndPull(S);
+		
+		if (I.enableProfiling) I.popTimer("<populate basic stream operations>");
 
 		/* Muuttujaoperaatiot */
-
+		
+		if (I.enableProfiling) I.pushTimer();
 		UndefinePopulator.populateUndefine(S);
 		NamePopulator.populateName(S);
 		ImportPopulator.populateImport(I, S);
 		AssignGlobalPopulator.populateAssignGlobal(S);
+		if (I.enableProfiling) I.popTimer("<populate variable operations>");
 
 		/* Muut oleelliset kielen rakenteet */
-
-		IdentityPopulator.populateIdentity(S);
+		
+		if (I.enableProfiling) I.pushTimer();
 		ErrorPopulator.populateError(S);
 		ErrprintPopulator.populateErrprint(S);
+		if (I.enableProfiling) I.popTimer("<populate error functions>");
 
 		/* Täydentävät virtaoperaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
+		IdentityPopulator.populateIdentity(S);
 		HeadAndTailPopulator.populateHeadAndTail(S);
 		InterleavePopulator.populateInterleave(S);
 		SortPopulator.populateSort(I, S);
 		UniqPopulator.populateUniq(S);
 		SumPopulator.populateSum(S);
 		FilterPopulator.populateFilterAndGrep(I, S);
+		if (I.enableProfiling) I.popTimer("<populate other stream operations>");
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
 		SearchPopulator.populateSearch(S);
 		MatchPopulator.populateMatch(S);
 		ReplacePopulator.populateReplace(S);
@@ -126,41 +137,54 @@ public class Builtins {
 		BtosAndStobPopulator.populateBtosAndStob(S);
 		StrsizePopulator.populateStrsize(S);
 		ChrAndOrdPopulator.populateChrAndOrd(S);
-		CasePopulator.populateUpperAndLowerCase(S);;
+		CasePopulator.populateUpperAndLowerCase(S);
+		if (I.enableProfiling) I.popTimer("<populate string-related functions>");
 
 		/* Konstruktorit */
 
+		if (I.enableProfiling) I.pushTimer();
 		SeqPopulator.populateSeq(S);
 		TrueAndFalsePopulator.populateTrueAndFalse(S);
 		StreamPopulator.populateStream(I, S);
+		if (I.enableProfiling) I.popTimer("<populate value constructors>");
 
 		/* Merkkijono-, lista- ja karttaoperaatiot */
-		
+
+		if (I.enableProfiling) I.pushTimer();
 		ShiftPopulator.populateShift(S);
 		KeysPopulator.populateKeys(S);
 		IndexOfPopulator.populateIndexOf(S);
+		if (I.enableProfiling) I.popTimer("<populate list operations>");
 		
 		/* Apuoperaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
 		CurrentTimePopulator.populateTime(S);
 		RandomPopulator.populateRandom(S);
 		ExecPopulator.populateExec(I, S);
 		GetenvPopulator.populateGetenv(S);
+		if (I.enableProfiling) I.popTimer("<populate utilities>");
 
 		/* Tiedosto-operaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
 		CdAndPwdPopulator.populateCdAndPwd(I, S);
 		ReadAndWritePopulator.populateReadAndWrite(I, S);
 		FilePopulator.populateFile(I, S);
+		if (I.enableProfiling) I.popTimer("<populate file operations>");
 
 		/* Verkko-operaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
 		WcatPopulator.populateWcat(S);
 		ServerPopulator.populateServer(I, S);
+		if (I.enableProfiling) I.popTimer("<populate network operations>");
 
 		// Säikeet
 
+		if (I.enableProfiling) I.pushTimer();
 		ThreadPopulator.populateThread(I, S);
+		if (I.enableProfiling) I.popTimer("<populate thread operations>");
 	}
 
 	public static RödaValue genericPush(String name, RödaStream _out) {
