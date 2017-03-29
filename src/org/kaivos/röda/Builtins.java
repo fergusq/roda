@@ -55,7 +55,7 @@ import org.kaivos.röda.commands.SortPopulator;
 import org.kaivos.röda.commands.SplitPopulator;
 import org.kaivos.röda.commands.StreamPopulator;
 import org.kaivos.röda.commands.StrsizePopulator;
-import org.kaivos.röda.commands.SumPopulator;
+import org.kaivos.röda.commands.ReducePopulator;
 import org.kaivos.röda.commands.ThreadPopulator;
 import org.kaivos.röda.commands.TrueAndFalsePopulator;
 import org.kaivos.röda.commands.UndefinePopulator;
@@ -118,7 +118,7 @@ public class Builtins {
 		InterleavePopulator.populateInterleave(S);
 		SortPopulator.populateSort(I, S);
 		UniqPopulator.populateUniq(S);
-		SumPopulator.populateSum(S);
+		ReducePopulator.populateReduce(S);
 		FilterPopulator.populateFilterAndGrep(I, S);
 		if (I.enableProfiling) I.popTimer("<populate other stream operations>");
 

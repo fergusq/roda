@@ -21,11 +21,19 @@ import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaString;
 
-public class SumPopulator {
+public class ReducePopulator {
 
-	private SumPopulator() {}
+	private ReducePopulator() {}
 	
-	public static void populateSum(RödaScope S) {
+	public static void populateReduce(RödaScope S) {
+		S.setLocal("reduce", RödaNativeFunction.of("reduce", (typeargs, args, kwargs, scope, in, out) -> {
+			if (in.open()) {
+				in.pushBack(args.get(0));
+			}
+			else {
+				out.push(args.get(0));
+			}
+		}, Arrays.asList(new Parameter("value", false)), false));
 		S.setLocal("sum", RödaNativeFunction.of("sum", (typeargs, args, kwargs, scope, in, out) -> {
 			RödaValue first = kwargs.get("fst");
 			if (args.size() == 0) {

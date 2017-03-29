@@ -41,10 +41,20 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	public abstract void finish();
 
 	/**
-	 * Returns false if it is possible to pull values from the stream.
+	 * Returns false if it is not possible to pull values from the stream.
+	 * This is a non-blocking operation, and a truthy return value does not mean
+	 * that it is possible to pull values from the stream.
 	 */
 	public boolean closed() {
 		return finished() && stack.isEmpty();
+	}
+	
+	/**
+	 * Returns true if it is possible to pull values from the stream.
+	 * This is a blocking operation.
+	 */
+	public boolean open() {
+		return peek() != null;
 	}
 
 	/**
