@@ -336,6 +336,7 @@ public class Interpreter {
 	}
 
 	private RödaValue createRecordClassReflection(Record record, RödaScope scope) {
+		if (enableProfiling) pushTimer();
 		if (enableDebug) callStack.get().push("creating reflection object of record "
 				+ record.name + "\n\tat <runtime>");
 		RödaValue typeObj = RödaRecordInstance.of(typeRecord, emptyList());
@@ -347,6 +348,7 @@ public class Interpreter {
 							o.push(newRecord(new Datatype(record.name, emptyList(), scope), ta, a, scope));
 						}, emptyList(), false));
 		if (enableDebug) callStack.get().pop();
+		if (enableProfiling) popTimer("<create record class reflection>");
 		return typeObj;
 	}
 
@@ -360,6 +362,7 @@ public class Interpreter {
 	}
 
 	private RödaValue createFieldReflection(Record record, Record.Field field, RödaScope scope) {
+		if (enableProfiling) pushTimer();
 		if (enableDebug) callStack.get().push("creating reflection object of field "
 				+ record.name + "." + field.name + "\n\tat <runtime>");
 		RödaValue fieldObj = RödaRecordInstance.of(fieldRecord, emptyList());
@@ -390,6 +393,7 @@ public class Interpreter {
 		if (scope.getRecordDeclarations().containsKey(field.type.name))
 			fieldObj.setField("type", scope.getRecordDeclarations().get(field.type.name).reflection);
 		if (enableDebug) callStack.get().pop();
+		if (enableProfiling) popTimer("<create field reflection>");
 		return fieldObj;
 	}
 
@@ -1793,6 +1797,7 @@ public class Interpreter {
 	}
 	
 	private RödaValue newRecord(Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
+		if (enableProfiling) pushTimer();
 		switch (type.name) {
 		case "list":
 			if (subtypes.size() > 1)
@@ -1825,6 +1830,7 @@ public class Interpreter {
 			illegalArguments("wrong number of typearguments to 'namespace': 0 required, got " + subtypes.size());
 			return null;
 		}
+		if (enableProfiling) popTimer("<new>");
 		return newRecord(null, type, subtypes, args, scope);
 	}
 
