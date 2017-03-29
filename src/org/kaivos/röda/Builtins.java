@@ -187,17 +187,19 @@ public class Builtins {
 		if (I.enableProfiling) I.popTimer("<populate thread operations>");
 	}
 
-	public static RödaValue genericPush(String name, RödaStream _out) {
+	public static RödaValue genericPush(String name, RödaStream _out, boolean back) {
 		return RödaNativeFunction.of(name, (ra, a, k, s, i, o) -> {
 			if (a.size() == 0) {
 				while (true) {
 					RödaValue v = i.pull();
 					if (v == null) break;
-					_out.push(v);
+					if (back) _out.pushBack(v);
+					else _out.push(v);
 				}
 			} else {
 				for (RödaValue v : a) {
-					_out.push(v);
+					if (back) _out.pushBack(v);
+					else _out.push(v);
 				}
 			}
 		}, Arrays.asList(new Parameter("values", false)), true);
