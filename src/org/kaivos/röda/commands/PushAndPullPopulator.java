@@ -5,6 +5,7 @@ import static org.kaivos.röda.Interpreter.checkReference;
 import static org.kaivos.röda.Interpreter.emptyStream;
 
 import java.util.Arrays;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import org.kaivos.röda.Interpreter.RödaScope;
@@ -17,6 +18,16 @@ import org.kaivos.röda.type.RödaNativeFunction;
 public final class PushAndPullPopulator {
 	
 	private PushAndPullPopulator() {}
+	
+	private static void addPushingFunction(RödaScope S, String name, boolean isIn, BiConsumer<RödaStream, RödaValue> body) {
+		S.setLocal(name, RödaNativeFunction.of(name, (typeargs, args, kwargs, scope, in, out) -> {
+			if (args.isEmpty())
+				argumentUnderflow(name, 1, 0);
+			for (RödaValue value : args) {
+				body.accept(isIn ? in : out, value);
+			}
+		}, Arrays.asList(new Parameter("values", false)), true));
+	}
 
 	private static void addPullingFunction(RödaScope S, String name,
 			boolean returnSuccess, Function<RödaStream, RödaValue> body) {
@@ -43,14 +54,9 @@ public final class PushAndPullPopulator {
 	}
 	
 	public static void populatePushAndPull(RödaScope S) {
-		S.setLocal("push", RödaNativeFunction.of("push", (typeargs, args, kwargs, scope, in, out) -> {
-			if (args.isEmpty())
-				argumentUnderflow("push", 1, 0);
-			for (RödaValue value : args) {
-				out.push(value);
-			}
-		}, Arrays.asList(new Parameter("values", false)), true));
-	
+		addPushingFunction(S, "push", false, RödaStream::push);
+		addPushingFunction(S, "pushBack", true, RödaStream::pushBack);
+		
 		addPullingFunction(S, "pull", false, RödaStream::pull);
 		addPullingFunction(S, "tryPull", true, RödaStream::pull);
 	

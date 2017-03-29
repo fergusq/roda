@@ -2,11 +2,11 @@ package org.kaivos.röda;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Iterator;
 
 import java.util.function.Consumer;
@@ -30,7 +30,7 @@ import static org.kaivos.röda.Interpreter.error;
  * values in a pipe. It can be used to iterate over all these values.
  */
 public abstract class RödaStream implements Iterable<RödaValue> {
-	private Queue<RödaValue> peekQueue = new ArrayDeque<>();
+	private Deque<RödaValue> stack = new ArrayDeque<>();
 
 	protected abstract RödaValue get();
 	protected abstract void put(RödaValue value);
@@ -44,7 +44,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	 * Returns false if it is possible to pull values from the stream.
 	 */
 	public boolean closed() {
-		return finished();
+		return finished() && stack.isEmpty();
 	}
 
 	/**
@@ -58,27 +58,34 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	public final void push(RödaValue value) {
 		put(value);
 	}
+	
+	/**
+	 * Adds a new value to the stack.
+	 */
+	public final void pushBack(RödaValue value) {
+		stack.addFirst(value);
+	}
 
 	/**
-	 * Pulls a value from the stream, or, if the peek queue is not empty, from the peek queue.
+	 * Pulls a value from the stream, or, if the stack is not empty, from the stack.
 	 *
 	 * @return the value, or null if the stream is closed.
 	 */
 	public final RödaValue pull() {
-		if (!peekQueue.isEmpty()) return peekQueue.poll();
+		if (!stack.isEmpty()) return stack.removeFirst();
 		return get();
 	}
 	
 	/**
-	 * Pulls a value from the stream and places it to the <i>peek queue</i>.
-	 * Next time a value is pulled, it will be taken from the peek queue.
+	 * Pulls a value from the stream and places it to the stack.
+	 * Next time a value is pulled, it will be taken from the stack.
 	 *
 	 * @return the value, or null if the stream is closed.
 	 */
 	public final RödaValue peek() {
 		RödaValue value = pull();
 		if (value == null) return null;
-		peekQueue.offer(value);
+		stack.addFirst(value);
 		return value;
 	}
 
