@@ -221,10 +221,37 @@ public class RödaList extends RödaValue {
 		return ans;
 	}
 	
+	private int compare(RödaList other) {
+		List<RödaValue> list2 = other.list();
+		for (int i = 0; i < Math.min(list.size(), list2.size()); i++) {
+			RödaValue val1 = list.get(i);
+			RödaValue val2 = list2.get(i);
+			if (val1.callOperator(CType.LT, val2).bool()) return -1;
+			if (val2.callOperator(CType.LT, val1).bool()) return 1;
+		}
+		if (list.size() < list2.size()) return -1;
+		if (list.size() > list2.size()) return 1;
+		return 0;
+	}
+	
 	@Override
 	public RödaValue callOperator(CType operator, RödaValue value) {
-		if (operator == CType.MUL && !value.is(INTEGER))
-			typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
+		switch (operator) {
+		case MUL:
+			if (!value.is(INTEGER))
+				typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
+			break;
+		case LT:
+		case GT:
+		case LE:
+		case GE:
+			if (!value.is(LIST))
+				typeMismatch("can't " + operator.name() + " " + typeString() + " and " + value.typeString());
+			break;
+		default:
+		}
+		
+			
 		switch (operator) {
 		case MUL: {
 			List<RödaValue> newList = new ArrayList<>();
@@ -243,6 +270,14 @@ public class RödaList extends RödaValue {
 			newList.remove(value);
 			return of(newList);
 		}
+		case LT:
+			return RödaBoolean.of(compare((RödaList) value) < 0);
+		case GT:
+			return RödaBoolean.of(compare((RödaList) value) > 0);
+		case LE:
+			return RödaBoolean.of(compare((RödaList) value) <= 0);
+		case GE:
+			return RödaBoolean.of(compare((RödaList) value) >= 0);
 		default:
 			return super.callOperator(operator, value);
 		}
