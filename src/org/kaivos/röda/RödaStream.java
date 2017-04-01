@@ -274,7 +274,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 					if (line == null)
 						return null;
 					else
-						return RödaString.of(line + "\n");
+						return RödaString.of(line);
 				case CHARACTER:
 					int chr = in.read();
 					if (chr == -1)
