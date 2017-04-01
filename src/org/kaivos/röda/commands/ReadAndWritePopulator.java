@@ -7,10 +7,11 @@ import static org.kaivos.röda.RödaValue.STRING;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.stream.Stream;
 
 import org.kaivos.röda.IOUtils;
-import org.kaivos.röda.IOUtils.ClosableIterable;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Parser;
 import org.kaivos.röda.Interpreter.RödaScope;
@@ -29,13 +30,10 @@ public final class ReadAndWritePopulator {
 			for (RödaValue value : args) {
 				String filename = value.str();
 				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
-				int i = 0;
-				try (ClosableIterable<String> iterator = IOUtils.fileIterator(file)) {
-					for (String line : iterator) {
-						if (i == limit) break;
-						if (i++ < skip) continue;
-						out.push(RödaString.of(line));
-					}
+				try {
+					Stream<String> stream = Files.lines(file.toPath()).skip(skip);
+					if (limit >= 0) stream = stream.limit(limit);
+					stream.map(RödaString::of).forEach(out::push);
 				} catch (IOException e) {
 					error(e);
 				}
