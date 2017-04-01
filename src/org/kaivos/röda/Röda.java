@@ -93,7 +93,7 @@ public class Röda {
 		List<String> eval = new ArrayList<>();
 		List<String> argsForRöda = new ArrayList<>();
 		boolean interactive = System.console() != null, forcedI = false, disableInteraction = false,
-				enableDebug = true, enableProfiling = false, divideByInvocations = false;
+				enableDebug = true, enableProfiling = false, divideByInvocations = false, singleThreadMode = false;
 		
 		for (int i = 0; i < args.length; i++) {
 			if (file != null) {
@@ -129,6 +129,9 @@ public class Röda {
 			case "--per-invocation":
 				divideByInvocations = true;
 				break;
+			case "-s":
+				singleThreadMode = true;
+				continue;
 			case "-v":
 			case "--version":
 				System.out.println("Röda " + RÖDA_VERSION_STRING);
@@ -145,6 +148,7 @@ public class Röda {
 				System.out.println("-p prompt        Change the prompt in interactive mode");
 				System.out.println("-P               Disable prompt in interactive mode");
 				System.out.println("--per-invocation Divide CPU time by invocation number in profiler output");
+				System.out.println("-s               Enable single thread mode");
 				System.out.println("-t               Enable time profiler");
 				System.out.println("-v, --version    Show the version number of the interpreter");
 				System.out.println("-h, --help       Show this help text");
@@ -166,6 +170,7 @@ public class Röda {
 		
 		INTERPRETER.enableDebug = enableDebug;
 		INTERPRETER.enableProfiling = enableProfiling;
+		INTERPRETER.singleThreadMode = singleThreadMode;
 		
 		INTERPRETER.populateBuiltins();
 		

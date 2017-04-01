@@ -1027,8 +1027,37 @@ public class Interpreter {
 		}
 		typeMismatch("can't execute a value of type " + value.typeString());
 	}
-
+	
+	public boolean singleThreadMode = false;
+	
 	private void evalStatement(StatementTree statement, RödaScope scope,
+			RödaStream in, RödaStream out, boolean redirected) {
+		if (singleThreadMode) {
+			evalStatementST(statement, scope, in, out, redirected);
+		}
+		else {
+			evalStatementCC(statement, scope, in, out, redirected);
+		}
+	}
+	
+	private void evalStatementST(StatementTree statement, RödaScope scope,
+			RödaStream in, RödaStream out, boolean redirected) {
+		RödaStream _in = in;
+		int i = 0;
+		for (Command command : statement.commands) {
+			boolean last = i == statement.commands.size()-1;
+			RödaStream _out = last ? out : RödaStream.makeStream();
+			evalCommand(command, scope,
+					in, out,
+					_in, _out).run();
+			if (!last || redirected)
+				_out.finish();
+			_in = _out;
+			i++;
+		}
+	}
+
+	private void evalStatementCC(StatementTree statement, RödaScope scope,
 			RödaStream in, RödaStream out, boolean redirected) {
 		RödaStream _in = in;
 		int i = 0;
@@ -1797,7 +1826,7 @@ public class Interpreter {
 	}
 	
 	private RödaValue newRecord(Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
-		if (enableProfiling) pushTimer();
+		//if (enableProfiling) pushTimer();
 		switch (type.name) {
 		case "list":
 			if (subtypes.size() > 1)
@@ -1830,7 +1859,7 @@ public class Interpreter {
 			illegalArguments("wrong number of typearguments to 'namespace': 0 required, got " + subtypes.size());
 			return null;
 		}
-		if (enableProfiling) popTimer("<new>");
+		//if (enableProfiling) popTimer("<new>");
 		return newRecord(null, type, subtypes, args, scope);
 	}
 
