@@ -51,6 +51,7 @@ public class Parser {
 		.addOperatorRule(">=")
 		.addOperatorRule("<<")
 		.addOperatorRule(">>")
+		.addOperatorRule("<>")
 		.addPatternRule(NUMBER_PATTERN, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
 		.addOperators("<>()[]{}|&.,:;=#%!?\n\\+-*/^~@%$")
 		.separateIdentifiersAndPunctuation(false)
@@ -182,6 +183,7 @@ public class Parser {
 		case ">=":
 		case "<<":
 		case ">>":
+		case "<>":
 			return false;
 		default:
 			return true;
@@ -628,6 +630,7 @@ public class Parser {
 	static class Command {
 		enum Type {
 			NORMAL,
+			INTERLEAVE,
 			WHILE,
 			IF,
 			FOR,
@@ -651,6 +654,7 @@ public class Parser {
 		List<String> variables;
 		ExpressionTree list;
 		List<StatementTree> body, elseBody;
+		List<Command> cmds;
 		Command cmd;
 		Command() {} // käytä apufunktioita alla
 		String file;
@@ -668,6 +672,8 @@ public class Parser {
 			switch (type) {
 			case NORMAL:
 				return name.asString() + "(" + argumentsAsString() + ")";
+			case INTERLEAVE:
+				return cmds.stream().map(Command::asString).collect(joining(" <> "));
 			case BREAK:
 				return "break";
 			case CONTINUE:
@@ -736,6 +742,15 @@ public class Parser {
 		cmd.name = name;
 		cmd.typearguments = typearguments;
 		cmd.arguments = arguments;
+		return cmd;
+	}
+	
+	static Command _makeInterleaveCommand(String file, int line, List<Command> cmds) {
+		Command cmd = new Command();
+		cmd.type = Command.Type.INTERLEAVE;
+		cmd.file = file;
+		cmd.line = line;
+		cmd.cmds = cmds;
 		return cmd;
 	}
 	
@@ -842,8 +857,22 @@ public class Parser {
 	}
 
 	static Command parseCommand(TokenList tl) {
+		sugarVars.push(new ArrayList<>());
+		
 		Command cmd = parsePrefixCommand(tl);
-		return parseSuffix(tl, cmd);
+		cmd = parseSuffix(tl, cmd);
+		
+		List<String> sfvs = sugarVars.pop();
+		
+		if (!sfvs.isEmpty()) {
+			cmd = _makeForCommand(
+					cmd.file,
+					cmd.line,
+					sfvs,
+					null, null,
+					Arrays.asList(new StatementTree(Arrays.asList(cmd))));
+		}
+		return cmd;
 	}
 	
 	static Command parseSuffix(TokenList tl, Command cmd) {
@@ -876,6 +905,16 @@ public class Parser {
 			}
 			return _makeForCommand(cmd.file, cmd.line, variables, list, cond,
 					       Arrays.asList(new StatementTree(Arrays.asList(cmd))));
+		}
+		else if (tl.acceptIfNext("<>")) {
+			List<Command> cmds = new ArrayList<>();
+			cmds.add(cmd);
+			cmds.add(parsePrefixCommand(tl));
+			while (tl.acceptIfNext("<>")) {
+				cmds.add(parsePrefixCommand(tl));
+			}
+			Command ans = _makeInterleaveCommand(cmd.file, cmd.line, cmds);
+			return parseSuffix(tl, ans);
 		}
 		else return cmd;
 	}
@@ -971,8 +1010,6 @@ public class Parser {
 		if (acceptIfNext(tl, "del")) {
 			return _makeDelCommand(file, line, parseExpressionPrimary(tl, false));
 		}
-		
-		sugarVars.push(new ArrayList<>());
 
 		ExpressionTree name = parseExpressionPrimary(tl, false);
 		String operator = null;
@@ -1002,17 +1039,6 @@ public class Parser {
 			cmd = _makeNormalCommand(file, line, name, typeargs, arguments);
 		else
 			cmd = _makeVariableCommand(file, line, name, operator, arguments);
-		
-		List<String> sfvs = sugarVars.pop();
-		
-		if (!sfvs.isEmpty()) {
-			cmd = _makeForCommand(
-					cmd.file,
-					cmd.line,
-					sfvs,
-					null, null,
-					Arrays.asList(new StatementTree(Arrays.asList(cmd))));
-		}
 		
 		return cmd;
 	}
@@ -1047,7 +1073,7 @@ public class Parser {
 		boolean kwargMode = false;
 		while ((allowNewlines || !tl.isNext(";", "\n"))
 				&& (allowPrefixes || !tl.isNext("for", "while", "until", "if", "unless"))
-				&& !isNext(tl, "|", ")", "]", "}", "in", "do", "else", "done", "<EOF>")) {
+				&& !isNext(tl, "|", ")", "]", "}", "in", "do", "else", "done", "<>", "<EOF>")) {
 			if (validIdentifier(tl.seekString()) && tl.seekString(1).equals("=") || kwargMode) { // TODO: ei salli rivinvaihtoa nimen ja =-merkin väliin
 				kwargMode = true;
 				String name = identifier(tl);

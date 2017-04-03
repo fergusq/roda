@@ -257,6 +257,7 @@ public class Interpreter {
 	private final Record
 		javaErrorRecord,
 		leakyPipeErrorRecord,
+		streamErrorRecord,
 		emptyStreamErrorRecord,
 		fullStreamErrorRecord,
 		illegalArgumentsErrorRecord,
@@ -299,8 +300,9 @@ public class Interpreter {
 		
 		javaErrorRecord = errorSubtype("JavaError");
 		leakyPipeErrorRecord = errorSubtype("LeakyPipeError");
-		emptyStreamErrorRecord = errorSubtype("EmptyStreamError");
-		fullStreamErrorRecord = errorSubtype("FullStreamError");
+		streamErrorRecord = errorSubtype("StreamError");
+		emptyStreamErrorRecord = errorSubtype("EmptyStreamError", "StreamError");
+		fullStreamErrorRecord = errorSubtype("FullStreamError", "StreamError");
 		illegalArgumentsErrorRecord = errorSubtype("IllegalArgumentsError");
 		unknownNameErrorRecord = errorSubtype("UnknownNameError");
 		typeMismatchErrorRecord = errorSubtype("TypeMismatchError", "IllegalArgumentsError");
@@ -310,6 +312,7 @@ public class Interpreter {
 			typeRecord, errorRecord, fieldRecord,
 			leakyPipeErrorRecord,
 			javaErrorRecord,
+			streamErrorRecord,
 			emptyStreamErrorRecord,
 			fullStreamErrorRecord,
 			illegalArgumentsErrorRecord,
@@ -561,6 +564,10 @@ public class Interpreter {
 	
 	public static void error(String message) {
 		throw createRödaException(INTERPRETER.errorRecord, message);
+	}
+	
+	public static void streamError(String message) {
+		throw createRödaException(INTERPRETER.streamErrorRecord, message);
 	}
 	
 	public static void emptyStream(String message) {
@@ -1200,6 +1207,7 @@ public class Interpreter {
 			RödaScope scope,
 			RödaStream in, RödaStream out,
 			RödaStream _in, RödaStream _out) {
+		
 		if (cmd.type == Command.Type.NORMAL) {
 			RödaValue function = evalExpression(cmd.name, scope, in, out);
 			List<Datatype> typeargs = cmd.typearguments.stream()
@@ -1210,6 +1218,33 @@ public class Interpreter {
 				exec(cmd.file, cmd.line, function, typeargs, args, kwargs, scope, _in, _out);
 			};
 			return r;
+		}
+		
+		if (cmd.type == Command.Type.INTERLEAVE) {
+			// TODO tee monisäikeinen versio?
+			return () -> {
+				int size = cmd.cmds.size();
+				int i = 0;
+				
+				RödaStream[] __outs = new RödaStream[size];
+				for (Command icmd : cmd.cmds) {
+					RödaStream __in = RödaStream.makeEmptyStream();
+					__outs[i] = RödaStream.makeStream();
+					evalCommand(icmd, scope, in, out, __in, __outs[i]).run();
+					i++;
+				}
+				
+				for (RödaStream __out : __outs) __out.finish();
+				
+				i = 0;
+				while (true) {
+					RödaValue val = __outs[i].pull();
+					if (val == null) break;
+					_out.push(val);
+					i++; i %= size;
+				}
+				for (RödaStream __out : __outs) if (__out.open()) streamError("streams of mixed length");
+			};
 		}
 		
 		if (cmd.type == Command.Type.DEL) {
