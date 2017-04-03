@@ -646,7 +646,9 @@ public class Interpreter {
 
 	public void load(String code, String filename, RödaScope scope, boolean overwrite) {
 		try {
+			if (enableProfiling) pushTimer();
 			ProgramTree program = parse(t.tokenize(code, filename));
+			if (enableProfiling) popTimer("<parser>");
 			for (List<StatementTree> f : program.preBlocks) {
 				execBlock("pre_load", f, scope);
 			}

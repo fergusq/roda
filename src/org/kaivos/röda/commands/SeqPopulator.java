@@ -40,7 +40,7 @@ public final class SeqPopulator {
 			if (args.get(0).bool()) {
 				out.push(args.get(args.size()-1));
 				for (int i = args.size()-1; i >= 1; i--) {
-					in.pushBack(args.get(i));
+					in.unpull(args.get(i));
 				}
 			}
 		}, Arrays.asList(new Parameter("cond", false, BOOLEAN), new Parameter("first_value", false), new Parameter("other_values", false)), true));

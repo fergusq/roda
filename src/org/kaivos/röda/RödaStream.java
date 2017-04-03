@@ -72,7 +72,7 @@ public abstract class RödaStream implements Iterable<RödaValue> {
 	/**
 	 * Adds a new value to the stack.
 	 */
-	public final void pushBack(RödaValue value) {
+	public final void unpull(RödaValue value) {
 		stack.addFirst(value);
 	}
 

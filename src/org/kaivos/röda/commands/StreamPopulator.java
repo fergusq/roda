@@ -34,7 +34,7 @@ public final class StreamPopulator {
 		streamObject.setField("tryPeek", Builtins.genericTryPull("Stream.tryPeek", stream, true));
 		
 		streamObject.setField("push", Builtins.genericPush("Stream.push", stream, false));
-		streamObject.setField("pushBack", Builtins.genericPush("Stream.pushBack", stream, true));
+		streamObject.setField("unpull", Builtins.genericPush("Stream.unpull", stream, true));
 		streamObject.setField("finish", RödaNativeFunction.of("Stream.finish", (ta, a, k, s, i, o) -> {
 			stream.finish();
 		}, Collections.emptyList(), false));
@@ -50,7 +50,7 @@ public final class StreamPopulator {
 						new Record.Field("peek", new Datatype("function")),
 						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function")),
-						new Record.Field("pushBack", new Datatype("function")),
+						new Record.Field("unpull", new Datatype("function")),
 						new Record.Field("finish", new Datatype("function"))),
 				false, I.G);
 		I.G.preRegisterRecord(streamRecord);

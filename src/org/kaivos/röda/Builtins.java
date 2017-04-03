@@ -193,12 +193,12 @@ public class Builtins {
 				while (true) {
 					RödaValue v = i.pull();
 					if (v == null) break;
-					if (back) _out.pushBack(v);
+					if (back) _out.unpull(v);
 					else _out.push(v);
 				}
 			} else {
 				for (RödaValue v : a) {
-					if (back) _out.pushBack(v);
+					if (back) _out.unpull(v);
 					else _out.push(v);
 				}
 			}

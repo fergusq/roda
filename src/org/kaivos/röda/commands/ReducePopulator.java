@@ -28,7 +28,7 @@ public class ReducePopulator {
 	public static void populateReduce(RödaScope S) {
 		S.setLocal("reduce", RödaNativeFunction.of("reduce", (typeargs, args, kwargs, scope, in, out) -> {
 			if (in.open()) {
-				in.pushBack(args.get(0));
+				in.unpull(args.get(0));
 			}
 			else {
 				out.push(args.get(0));

@@ -55,12 +55,16 @@ public final class PushAndPullPopulator {
 	
 	public static void populatePushAndPull(RödaScope S) {
 		addPushingFunction(S, "push", false, RödaStream::push);
-		addPushingFunction(S, "pushBack", true, RödaStream::pushBack);
+		addPushingFunction(S, "unpull", true, RödaStream::unpull);
 		
 		addPullingFunction(S, "pull", false, RödaStream::pull);
 		addPullingFunction(S, "tryPull", true, RödaStream::pull);
 	
 		addPullingFunction(S, "peek", false, RödaStream::peek);
 		addPullingFunction(S, "tryPeek", true, RödaStream::peek);
+		
+		S.setLocal("open", RödaNativeFunction.of("open", (typeargs, args, kwargs, scope, in, out) -> {
+			out.push(RödaBoolean.of(in.open()));
+		}, Arrays.asList(new Parameter("values", false)), true));
 	}
 }
