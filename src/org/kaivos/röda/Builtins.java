@@ -41,6 +41,7 @@ import org.kaivos.röda.commands.InterleavePopulator;
 import org.kaivos.röda.commands.JsonPopulator;
 import org.kaivos.röda.commands.KeysPopulator;
 import org.kaivos.röda.commands.MatchPopulator;
+import org.kaivos.röda.commands.MathPopulator;
 import org.kaivos.röda.commands.NamePopulator;
 import org.kaivos.röda.commands.ParseNumPopulator;
 import org.kaivos.röda.commands.PushAndPullPopulator;
@@ -163,6 +164,7 @@ public class Builtins {
 		RandomPopulator.populateRandom(S);
 		ExecPopulator.populateExec(I, S);
 		GetenvPopulator.populateGetenv(S);
+		MathPopulator.populateMath(S);
 		if (I.enableProfiling) I.popTimer("<populate utilities>");
 
 		/* Tiedosto-operaatiot */
