@@ -14,7 +14,7 @@ import org.kaivos.röda.JSON.JSONInteger;
 import org.kaivos.röda.JSON.JSONList;
 import org.kaivos.röda.JSON.JSONMap;
 import org.kaivos.röda.JSON.JSONString;
-import org.kaivos.röda.Parser.Parameter;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.type.RödaFloating;

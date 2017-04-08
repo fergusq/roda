@@ -147,7 +147,7 @@ Oletusarvoparametreja voi määritellä myös `...`-merkkien jälkeen.
 Muuttujaparametrien lisäksi funktiolla voi olla tyyppiparametreja, joille pitää antaa funktiokutsussa
 arvot muiden parametrien tapaan:
 
-```sh
+```c
 init_list<<T>> &variable {
 	variable := new list<<T>>
 }
@@ -271,7 +271,7 @@ korosta("kissa", väri="#2388ff")
 Jos funktiolle on määritelty tyyppiparametreja, sille on annettava kutsun yhteydessä vastaava määrä
 tyyppiargumentteja:
 
-```sh
+```c
 init_list<<string>> sisarukset
 sisarukset += "Joonas"
 sisarukset += "Amelie"
@@ -299,6 +299,7 @@ Muuttujalle voi asettaa uuden arvon operaattorilla **`=`**:
 ```sh
 ikä = 74
 tytöt[1] = "Liisa"
+tytöt[2:4] = ["Kaisa", "Elina"]
 ```
 
 Listaan voi lisätä arvon operaattorilla **`+=`**:
@@ -355,6 +356,7 @@ Seuraavaksi vielä kaikki muuttujaoperaattorit taulukossa:
 | `~=`        | `nimi ~= "ae", "ä"` | Tekee annetut korvaukset merkkijonoon, toimii kuten funktio `replace`. |
 | `+=`, `-=`, `*=`, `/=` | `pisteet *= 2` | Suorittaa laskutoimituksen lukumuuttujalla. |
 | `++`, `--`  | `varallisuus --`   | Kasvattaa tai vähentää lukumuuttujan arvoa.        |
+| `del`       | `del tytöt[2:4]`   | Poistaa listasta alkion tai alkioita.              |
 
 #### Ohjausrakenteet
 
@@ -565,9 +567,9 @@ vai kartta):
 | `[]?`       | Kertoo, onko alkio olemassa | Listan tai kartan ja tunnisteen   | Totuusarvon            |
 | `in`        | Kertoo, onko listassa arvo  | Minkä tahansa arvon               | Totuusarvon            |
 | `is`        | Kertoo, onko arvo tiettyä tyyppiä | Minkä tahansa arvon ja tyypin | Totuusarvon          |
-| `&&`        | Looginen JA                 | 2 totuusarvoa     | Totuusarvon   |
-| `||`        | Looginen TAI                | 2 totuusarvoa     | Totuusarvon   |
-| `^^`        | Looginen JOKO-TAI           | 2 totuusarvoa     | Totuusarvon   |
+| `and`       | Looginen JA                 | 2 totuusarvoa     | Totuusarvon   |
+| `or`        | Looginen TAI                | 2 totuusarvoa     | Totuusarvon   |
+| `xor`       | Looginen JOKO-TAI           | 2 totuusarvoa     | Totuusarvon   |
 | `=`         | Yhtäsuuruus                 | Mitä tahansa      | Totuusarvon   |
 | `!=`        | Erisuuruus                  | Mitä tahansa      | Totuusarvon   |
 | `<`         | Pienempi kuin               | 2 lukua           | Totuusarvon   |
@@ -603,7 +605,7 @@ Laskujärjestys:
 | 7.   | `&`                                                         |
 | 8.   | `..`                                                       |
 | 9.   | `=`, `!=`                                                  |
-| 10.  | `&&`, `||`, `^^`                                           |
+| 10.  | `and`, `or`, `xor`                                        |
 
 #### Komento
 
@@ -625,7 +627,7 @@ Jos on varmaa, että funktio antaa vain yhden arvon, voi hakasulkeet jättää p
 tulee listan ainoa arvo. Tämä heittää virheen, jos funktio palauttaa useampia arvoja (tai ei yhtään).
 
 ```sh
-A := expr("PI*"r"**2")
+kaksi := parseInteger("2")
 ```
 
 #### Nimetön funktio
@@ -668,7 +670,7 @@ record R {
 
 ...
 
-reflect R.fields /* palauttaa listan, jossa on kaksi field-oliota, yksi a:lle ja toinen b:lle */
+(reflect R).fields /* palauttaa listan, jossa on kaksi field-oliota, yksi a:lle ja toinen b:lle */
 ```
 
 `typeof` toimii samoin, mutta ottaa tyyppinimen sijasta arvon ja palauttaa sen tyypin.
@@ -676,7 +678,7 @@ reflect R.fields /* palauttaa listan, jossa on kaksi field-oliota, yksi a:lle ja
 ## Esimerkkejä
 
 ```sh
-push ENV["PATH"] | split :s, ":" | exec :I, :l, "ls", dir for dir | createGlobal komento, { |a...|; exec komento, *a } for komento
+push ENV["PATH"] | split sep=":" | ls dir for dir | createGlobal komento, { |a...|; exec komento, *a } for komento
 ```
 
 Etsii kaikki komentorivikomennot ja tekee jokaisesta funktion. Tämän jälkeen komentoja voi käyttää suoraan ilman

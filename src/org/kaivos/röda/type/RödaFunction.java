@@ -1,8 +1,8 @@
 package org.kaivos.röda.type;
 
+import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.RödaValue;
-import static org.kaivos.röda.Interpreter.RödaScope;
-import static org.kaivos.röda.Parser.Function;
+import org.kaivos.röda.runtime.Function;
 
 public class RödaFunction extends RödaValue {
 	private Function function;
@@ -38,6 +38,11 @@ public class RödaFunction extends RödaValue {
 
 	@Override public boolean strongEq(RödaValue value) {
 		return value.is(FUNCTION) && !value.is(NFUNCTION) && value.function() == function;
+	}
+	
+	@Override
+	public int hashCode() {
+		return function.hashCode() + localScope.hashCode();
 	}
 
 	public static RödaFunction of(Function function) {

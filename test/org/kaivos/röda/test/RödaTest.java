@@ -16,25 +16,23 @@ import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.type.RödaString;
 
 public class RödaTest {
-	private Interpreter interpreter;
 	private ArrayList<RödaValue> results;
 	
 	@Before
 	public void init() {
 		results = new ArrayList<>();
-		RödaStream in = makeStream(v -> {}, () -> null, () -> {}, () -> true);
-		RödaStream out = makeStream(v -> results.add(v), () -> null, () -> {}, () -> true);
-		if (interpreter != null) cleanup();
-		interpreter = new Interpreter(in, out);
+		Interpreter.INTERPRETER.populateBuiltins();
 	}
 
 	@After
 	public void cleanup() {
-		interpreter = null;
+		/* TODO */
 	}
 
 	private String eval(String code) {
-		interpreter.interpret(code, "<test>");
+		RödaStream in = makeStream(v -> {}, () -> null, () -> {}, () -> true);
+		RödaStream out = makeStream(v -> results.add(v), () -> null, () -> {}, () -> true);
+		Interpreter.INTERPRETER.interpret(code, "<test>", in, out);
 		return getResults();
 	}
 
@@ -45,8 +43,28 @@ public class RödaTest {
 	// Merkkijonoliteraali
 
 	@Test
-	public void testNormalLiteral() {
+	public void testNormalStringLiteral() {
 		assertEquals("abba", eval("main{push\"abba\"}"));
+	}
+
+	@Test
+	public void testBacktickStringLiteral() {
+		assertEquals("abba", eval("main{push`abba`}"));
+	}
+
+	@Test
+	public void testBacktickStringLiteralWithASubstitution() {
+		assertEquals("abba 2 cabba", eval("main{x:=2;push`abba $x cabba`}"));
+	}
+
+	@Test
+	public void testBacktickStringLiteralWithASubstitutionInBraces() {
+		assertEquals("abba2cabba", eval("main{x:=2;push`abba${x}cabba`}"));
+	}
+
+	@Test
+	public void testBacktickStringLiteralWithASugarVar() {
+		assertEquals("abba 1 1 cabba,abba 2 2 cabba", eval("main{push 1,2|push`abba $_ $_1 cabba`}"));
 	}
 	
 	// Peek-komento
@@ -120,6 +138,23 @@ public class RödaTest {
 						   + "push r.l[0], r.t}"));
 	}
 
+	@Test
+	public void testTypeparametrizationInSuperTypes() {
+		assertEquals("Tiina,Amanda",
+				eval("record R<<T>>{l:list<<T>>=new list<<T>>}record S<<U>>:R<<U>>{}"
+						+ "main{s:=new S<<string>>;"
+						+ "s.l+=\"Tiina\";s.l+=\"Amanda\";"
+						+ "s.l}"));
+	}
+
+	@Test
+	public void testSuperTypeArguments() {
+		assertEquals("Iida,Irina",
+				eval("record R(a,b){l:list=[a,b]}record S(a):R(a,\"Irina\"){}"
+						+ "main{s:=new S(\"Iida\");"
+						+ "s.l}"));
+	}
+
 	@Test(expected=RödaException.class)
 	public void testFieldTypeparametrizationWithWrongTypes() {
 		eval("record R<<T>>{t:T}main{r:=new R<<string>>;r.t=5}");
@@ -171,29 +206,29 @@ public class RödaTest {
 
 	@Test
 	public void testReflectRecordName() {
-		assertEquals("Mimmi", eval("record Mimmi{}main{push reflect Mimmi.name}"));
+		assertEquals("Mimmi", eval("record Mimmi{}main{push((reflect Mimmi).name)}"));
 	}
 
 	@Test
 	public void testReflectFieldName() {
-		assertEquals("Miina", eval("record R{Miina:string}main{push reflect R.fields[0].name}"));
+		assertEquals("Miina", eval("record R{Miina:string}main{push((reflect R).fields[0].name)}"));
 	}
 
 	@Test
 	public void testReflectFieldType() {
-		assertEquals("S", eval("record R{Miina:S}record S{}main{push reflect R.fields[0].type.name}"));
+		assertEquals("S", eval("record R{Miina:S}record S{}main{push((reflect R).fields[0].type.name)}"));
 	}
 
 	@Test
 	public void testReflectRecordAnnotation() {
 		assertEquals("Salli", eval("function @A{push\"Salli\"}"
-					   + "@A;record R{}main{push reflect R.annotations[0]}"));
+					   + "@A;record R{}main{push((reflect R).annotations[0])}"));
 	}
 
 	@Test
 	public void testReflectFieldAnnotation() {
 		assertEquals("Maisa", eval("function @A{push\"Maisa\"}"
-					   + "record R{@A;f:number}main{push reflect R.fields[0].annotations[0]}"));
+					   + "record R{@A;f:number}main{push((reflect R).fields[0].annotations[0])}"));
 	}
 
 	/* README:n esimerkit (hieman muutettuina)*/
@@ -406,7 +441,7 @@ public class RödaTest {
 	public void testSuffixIf() {
 		assertEquals("5",
 			     eval("main{hinta:=10;alennus=true();korotus=false();"
-				  + "hinta /= 2 if push alennus;"
+				  + "hinta //= 2 if push alennus;"
 				  + "hinta += 10 if push korotus;"
 				  + "push hinta}"));
 	}
@@ -500,6 +535,54 @@ public class RödaTest {
 	}
 
 	@Test
+	public void testListSliceStep() {
+		assertEquals("[Annamari, Vilma]",
+			     eval("main{push([\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"][::2])}"));
+	}
+
+	@Test
+	public void testListSliceNegativeStep() {
+		assertEquals("[Susanna, Reetta]",
+			     eval("main{push([\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"][3:0:-2])}"));
+	}
+
+	@Test
+	public void testListSetSlice() {
+		assertEquals("[Annamari, Janna, Tuuli, Susanna]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];l[1:3]=[\"Janna\", \"Tuuli\"];push(l)}"));
+	}
+	
+	@Test
+	public void testListSetSliceStep() {
+		assertEquals("[Annamari, Janna, Vilma, Tuuli]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];l[1::2]=[\"Janna\", \"Tuuli\"];push(l)}"));
+	}
+	
+	@Test
+	public void testListSetSliceNegativeStep() {
+		assertEquals("[Annamari, Tuuli, Janna, Susanna]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];l[2:0:-1]=[\"Janna\", \"Tuuli\"];push(l)}"));
+	}
+
+	@Test
+	public void testListDelSlice() {
+		assertEquals("[Annamari, Susanna]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];del l[1:3];push(l)}"));
+	}
+
+	@Test
+	public void testListDelSliceStep() {
+		assertEquals("[Reetta, Vilma]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];del l[::3];push(l)}"));
+	}
+
+	@Test
+	public void testListDelSliceNegativeStep() {
+		assertEquals("[Reetta, Vilma]",
+			     eval("main{l:=[\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"];del l[-1::-3];push(l)}"));
+	}
+
+	@Test
 	public void testListJoin() {
 		assertEquals("Annamari_Reetta_Vilma_Susanna",
 			     eval("main{push([\"Annamari\", \"Reetta\", \"Vilma\", \"Susanna\"]&\"_\")}"));
@@ -522,8 +605,14 @@ public class RödaTest {
 
 	@Test
 	public void testListConcat() {
-		assertEquals("[[1], [2], [3]]",
+		assertEquals("[[1, 2, 3]]",
 			     eval("main{push \"[\"..[1, 2, 3]..\"]\"}"));
+	}
+
+	@Test
+	public void testListConcatChildren() {
+		assertEquals("[[1], [2], [3]]",
+			     eval("main{push \"[\"...[1, 2, 3]...\"]\"}"));
 	}
 
 	@Test
@@ -633,10 +722,12 @@ public class RödaTest {
 
 	@Test
 	public void testArguments() {
-		interpreter.interpret("main a, b{push b, a}",
+		RödaStream in = makeStream(v -> {}, () -> null, () -> {}, () -> true);
+		RödaStream out = makeStream(v -> results.add(v), () -> null, () -> {}, () -> true);
+		Interpreter.INTERPRETER.interpret("main a, b{push b, a}",
 				      Arrays.asList(RödaString.of("Anne"),
 						    RödaString.of("Sanna")),
-				      "<test>");
+				      "<test>", in, out);
 		assertEquals("Sanna,Anne", getResults());
 	}
 
@@ -647,10 +738,12 @@ public class RödaTest {
 
 	@Test
 	public void testArgumentList() {
-		interpreter.interpret("main a...{push a[1], a[0], #a}",
+		RödaStream in = makeStream(v -> {}, () -> null, () -> {}, () -> true);
+		RödaStream out = makeStream(v -> results.add(v), () -> null, () -> {}, () -> true);
+		Interpreter.INTERPRETER.interpret("main a...{push a[1], a[0], #a}",
 				      Arrays.asList(RödaString.of("Venla"),
 						    RödaString.of("Eveliina")),
-				      "<test>");
+				      "<test>", in, out);
 		assertEquals("Eveliina,Venla,2", getResults());
 	}
 }

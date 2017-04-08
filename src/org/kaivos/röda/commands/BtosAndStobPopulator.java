@@ -1,9 +1,9 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.checkList;
-import static org.kaivos.röda.Interpreter.checkNumber;
+import static org.kaivos.röda.Interpreter.checkInteger;
 import static org.kaivos.röda.Interpreter.checkString;
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.outOfBounds;
 import static org.kaivos.röda.RödaValue.LIST;
 import static org.kaivos.röda.RödaValue.STRING;
 
@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaInteger;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaNativeFunction;
@@ -34,10 +34,10 @@ public final class BtosAndStobPopulator {
 				byte[] arr = new byte[(int) v.list().size()];
 				int c = 0;
 				for (RödaValue i : v.list()) {
-					checkNumber("bytesToString", i);
+					checkInteger("bytesToString", i);
 					long l = i.integer();
 					if (l > Byte.MAX_VALUE * 2)
-						error("byteToString: too large byte: " + l);
+						outOfBounds("byteToString: too large byte: " + l);
 					arr[c++] = (byte) l;
 				}
 				out.push(RödaString.of(new String(arr, chrset)));

@@ -1,15 +1,19 @@
 package org.kaivos.röda.type;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-
-import org.kaivos.röda.Datatype;
-import org.kaivos.röda.RödaValue;
-
 import static org.kaivos.röda.Interpreter.error;
-import static org.kaivos.röda.Parser.Record;
+import static org.kaivos.röda.Interpreter.illegalArguments;
+import static org.kaivos.röda.Interpreter.typeMismatch;
+import static org.kaivos.röda.Interpreter.unknownName;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Datatype;
+import org.kaivos.röda.runtime.Record;
 
 public class RödaRecordInstance extends RödaValue {
 	private boolean isValueType;
@@ -46,16 +50,16 @@ public class RödaRecordInstance extends RödaValue {
 
 	@Override public void setField(String field, RödaValue value) {
 		if (fieldTypes.get(field) == null)
-			error("a " + typeString() + " doesn't have field '" + field + "'");
+			unknownName(typeString() + " doesn't have field '" + field + "'");
 		if (!value.is(fieldTypes.get(field)))
-			error("can't put a " + value.typeString()
-			      + " to a " + fieldTypes.get(field) + " field");
+			typeMismatch("can't put " + value.typeString()
+			      + " to " + fieldTypes.get(field) + " field");
 		this.fields.put(field, value);
 	}
 
 	@Override public RödaValue getField(String field) {
 		if (fieldTypes.get(field) == null)
-			error("a " + typeString() + " doesn't have field '" + field + "'");
+			unknownName(typeString() + " doesn't have field '" + field + "'");
 		RödaValue a = fields.get(field);
 		if (a == null)
 			error("field '" + field + "' hasn't been initialized");
@@ -70,35 +74,43 @@ public class RödaRecordInstance extends RödaValue {
 			ans &= entry.getValue().strongEq(value.fields().get(entry.getKey()));
 		return ans;
 	}
+	
+	@Override public Map<String, RödaValue> fields() {
+		return Collections.unmodifiableMap(fields);
+	}
+	
+	@Override
+	public int hashCode() {
+		return basicIdentity().hashCode() + fields.hashCode();
+	}
 
-	public static RödaRecordInstance of(Record record, List<Datatype> typearguments,
-					    Map<String, Record> records) {
+	public static RödaRecordInstance of(Record record, List<Datatype> typearguments) {
 		Map<String, Datatype> fieldTypes = new HashMap<>();
 		List<Datatype> identities = new ArrayList<>();
-		construct(record, typearguments, records, fieldTypes, identities);
+		construct(record, typearguments, fieldTypes, identities);
 		return new RödaRecordInstance(identities, record.isValueType, new HashMap<>(), fieldTypes);
 	}
 
-	private static void construct(Record record, List<Datatype> typearguments, Map<String, Record> records,
+	private static void construct(Record record, List<Datatype> typearguments,
 				      Map<String, Datatype> fieldTypes,
 				      List<Datatype> identities) {
-		identities.add(new Datatype(record.name, typearguments));
+		identities.add(new Datatype(record.name, typearguments, record.declarationScope));
 		for (Record.Field field : record.fields) {
 			// TODO check double inheritance
 			fieldTypes.put(field.name, substitute(field.type, record.typeparams, typearguments));
 		}
-		for (Datatype superType : record.superTypes) {
-			superType = substitute(superType, record.typeparams, typearguments);
-			Record r = records.get(superType.name);
+		for (Record.SuperExpression superExp : record.superTypes) {
+			Datatype superType = substitute(superExp.type, record.typeparams, typearguments);
+			Record r = superType.resolve();
 			if (r == null)
-				error("super type " + superType.name + " not found");
-			construct(r, superType.subtypes, records, fieldTypes, identities);
+				unknownName("super type " + superType.name + " not found");
+			construct(r, superType.subtypes, fieldTypes, identities);
 		}
 	}
 
 	private static Datatype substitute(Datatype type, List<String> typeparams, List<Datatype> typeargs) {
 		if (typeparams.size() != typeargs.size())
-			error("wrong number of typearguments");
+			illegalArguments("wrong number of typearguments");
 		if (typeparams.contains(type.name)) {
 			if (!type.subtypes.isEmpty())
 				error("a typeparameter can't have subtypes");
@@ -108,6 +120,6 @@ public class RödaRecordInstance extends RödaValue {
 		for (Datatype t : type.subtypes) {
 			subtypes.add(substitute(t, typeparams, typeargs));
 		}
-		return new Datatype(type.name, subtypes);
+		return new Datatype(type.name, subtypes, type.scope);
 	}
 }

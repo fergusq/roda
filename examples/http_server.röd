@@ -50,7 +50,7 @@ record HttpServer(port_value) {
 		done
 		request.form = new map<<string>>
 		if push(request.headers["Content-Type"]?); do
-			if [ request.headers["Content-Type"] = "application/x-www-form-urlencoded" ]; do
+			if [ request.headers["Content-Type"] =~ "application/x-www-form-urlencoded(;.*)?" ]; do
 				for param in [split(request.content, sep="&")] do
 					kv := [split(param, sep="=")]
 					if [ #kv = 2 ]; do
@@ -91,7 +91,14 @@ record HttpServer(port_value) {
 				try do
 					request.handle()
 				catch e
-					request.send500(e)
+					date := "["..[{}()|bufferedExec("date", "+%d.%m.%Y/%H:%M")][0].."] "
+					errprint(date, (typeof e).name, ": ", e.message, "\n")
+					try do
+						request.send500(e)
+					catch e2
+						date = "["..[{}()|bufferedExec("date", "+%d.%m.%Y/%H:%M")][0].."] "
+						errprint(date, (typeof e2).name, ": ", e2.message, "\n")
+					done
 				done
 			else
 				break
@@ -101,7 +108,7 @@ record HttpServer(port_value) {
 	
 	function update {
 		connection := self.socket.accept()
-		date := "["..[bufferedExec("date", "+%d.%m.%Y/%H:%M")][0].."]"
+		date := "["..[{}()|bufferedExec("date", "+%d.%m.%Y/%H:%M")][0].."]"
 		print(date.." Connection from "..connection.hostname.." ("..connection.ip..":"..connection.port..").")
 		handler := thread({ self.handle(connection) })
 		handler.start()
@@ -120,8 +127,8 @@ record Request {
 	server : HttpServer
 	connection : Socket
 	
-	function send status, data {
-		new Response(self).send status, data
+	function send status, data, mime="text/html" {
+		new Response(self).send status, data, mime=mime
 	}
 	
 	function sendFile mime, name {
@@ -206,7 +213,7 @@ record Response(request) {
 			headers .= "Date: "
 			env := new map
 			env["LC_TIME"] = "c.UTF-8"
-			headers .= [exec("date", "-u", "+%a, %b %d %Y %H:%M:%S GMT", env=env)][:-1]&"".."\r\n"
+			headers .= [{}()|exec("date", "-u", "+%a, %b %d %Y %H:%M:%S GMT", env=env)][:-1]&"".."\r\n"
 			headers .= content_headers
 			headers .= self.cookieHeaders()
 			headers .= "Connection: keep-alive\r\n"
@@ -221,8 +228,8 @@ record Response(request) {
 		return headers
 	}
 	
-	function send status, data {
-		response := self.createHeaders(self.contentHeaders("text/html; charset=utf-8", strsize(data)), status)
+	function send status, data, mime="text/html" {
+		response := self.createHeaders(self.contentHeaders(mime.."; charset=utf-8", strsize(data)), status)
 		if [ self.request.command != "HEAD" ]; do
 			response .= data
 		done

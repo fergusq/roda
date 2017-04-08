@@ -1,35 +1,48 @@
 package org.kaivos.röda;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.ArrayList;
+import static org.kaivos.röda.Interpreter.argumentOverflow;
+import static org.kaivos.röda.Interpreter.argumentUnderflow;
+import static org.kaivos.röda.Interpreter.checkArgs;
+import static org.kaivos.röda.Interpreter.checkInteger;
+import static org.kaivos.röda.Interpreter.checkReference;
+import static org.kaivos.röda.Interpreter.checkString;
+import static org.kaivos.röda.Interpreter.emptyStream;
+import static org.kaivos.röda.Interpreter.error;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Consumer;
 
-import org.kaivos.röda.IOUtils;
-import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.commands.AssignGlobalPopulator;
 import org.kaivos.röda.commands.BtosAndStobPopulator;
+import org.kaivos.röda.commands.CasePopulator;
 import org.kaivos.röda.commands.CdAndPwdPopulator;
 import org.kaivos.röda.commands.ChrAndOrdPopulator;
 import org.kaivos.röda.commands.CurrentTimePopulator;
+import org.kaivos.röda.commands.EnumPopulator;
 import org.kaivos.röda.commands.ErrorPopulator;
 import org.kaivos.röda.commands.ErrprintPopulator;
 import org.kaivos.röda.commands.ExecPopulator;
 import org.kaivos.röda.commands.FilePopulator;
+import org.kaivos.röda.commands.FilterPopulator;
 import org.kaivos.röda.commands.GetenvPopulator;
 import org.kaivos.röda.commands.HeadAndTailPopulator;
 import org.kaivos.röda.commands.IdentityPopulator;
 import org.kaivos.röda.commands.ImportPopulator;
+import org.kaivos.röda.commands.IndexOfPopulator;
 import org.kaivos.röda.commands.InterleavePopulator;
 import org.kaivos.röda.commands.JsonPopulator;
+import org.kaivos.röda.commands.KeysPopulator;
 import org.kaivos.röda.commands.MatchPopulator;
+import org.kaivos.röda.commands.MathPopulator;
 import org.kaivos.röda.commands.NamePopulator;
 import org.kaivos.röda.commands.ParseNumPopulator;
 import org.kaivos.röda.commands.PushAndPullPopulator;
@@ -40,17 +53,22 @@ import org.kaivos.röda.commands.SearchPopulator;
 import org.kaivos.röda.commands.SeqPopulator;
 import org.kaivos.röda.commands.ServerPopulator;
 import org.kaivos.röda.commands.ShiftPopulator;
+import org.kaivos.röda.commands.SortPopulator;
 import org.kaivos.röda.commands.SplitPopulator;
 import org.kaivos.röda.commands.StreamPopulator;
 import org.kaivos.röda.commands.StrsizePopulator;
+import org.kaivos.röda.commands.ReducePopulator;
 import org.kaivos.röda.commands.ThreadPopulator;
 import org.kaivos.röda.commands.TrueAndFalsePopulator;
 import org.kaivos.röda.commands.UndefinePopulator;
+import org.kaivos.röda.commands.UniqPopulator;
 import org.kaivos.röda.commands.WcatPopulator;
-
-import org.kaivos.röda.type.*;
-import static org.kaivos.röda.Interpreter.*;
-import static org.kaivos.röda.Parser.*;
+import org.kaivos.röda.runtime.Function.Parameter;
+import org.kaivos.röda.type.RödaBoolean;
+import org.kaivos.röda.type.RödaInteger;
+import org.kaivos.röda.type.RödaList;
+import org.kaivos.röda.type.RödaNativeFunction;
+import org.kaivos.röda.type.RödaString;
 
 public class Builtins {
 
@@ -60,6 +78,8 @@ public class Builtins {
 		RödaScope S = I.G;
 
 		/* Perusvirtaoperaatiot */
+		
+		if (I.enableProfiling) I.pushTimer();
 
 		S.setLocal("print", RödaNativeFunction.of("print", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.isEmpty()) {
@@ -73,27 +93,41 @@ public class Builtins {
 		}, Arrays.asList(new Parameter("values", false)), true));
 		
 		PushAndPullPopulator.populatePushAndPull(S);
+		
+		if (I.enableProfiling) I.popTimer("<populate basic stream operations>");
 
 		/* Muuttujaoperaatiot */
-
+		
+		if (I.enableProfiling) I.pushTimer();
 		UndefinePopulator.populateUndefine(S);
 		NamePopulator.populateName(S);
 		ImportPopulator.populateImport(I, S);
 		AssignGlobalPopulator.populateAssignGlobal(S);
+		if (I.enableProfiling) I.popTimer("<populate variable operations>");
 
 		/* Muut oleelliset kielen rakenteet */
-
-		IdentityPopulator.populateIdentity(S);
+		
+		if (I.enableProfiling) I.pushTimer();
 		ErrorPopulator.populateError(S);
 		ErrprintPopulator.populateErrprint(S);
+		if (I.enableProfiling) I.popTimer("<populate error functions>");
 
 		/* Täydentävät virtaoperaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
+		IdentityPopulator.populateIdentity(S);
 		HeadAndTailPopulator.populateHeadAndTail(S);
 		InterleavePopulator.populateInterleave(S);
+		SortPopulator.populateSort(I, S);
+		UniqPopulator.populateUniq(S);
+		ReducePopulator.populateReduce(S);
+		FilterPopulator.populateFilterAndGrep(I, S);
+		EnumPopulator.populateEnum(S);
+		if (I.enableProfiling) I.popTimer("<populate other stream operations>");
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
 		SearchPopulator.populateSearch(S);
 		MatchPopulator.populateMatch(S);
 		ReplacePopulator.populateReplace(S);
@@ -106,51 +140,70 @@ public class Builtins {
 		BtosAndStobPopulator.populateBtosAndStob(S);
 		StrsizePopulator.populateStrsize(S);
 		ChrAndOrdPopulator.populateChrAndOrd(S);
+		CasePopulator.populateUpperAndLowerCase(S);
+		if (I.enableProfiling) I.popTimer("<populate string-related functions>");
 
 		/* Konstruktorit */
 
+		if (I.enableProfiling) I.pushTimer();
 		SeqPopulator.populateSeq(S);
 		TrueAndFalsePopulator.populateTrueAndFalse(S);
 		StreamPopulator.populateStream(I, S);
+		if (I.enableProfiling) I.popTimer("<populate value constructors>");
 
-		/* Listaoperaatiot */
-		
+		/* Merkkijono-, lista- ja karttaoperaatiot */
+
+		if (I.enableProfiling) I.pushTimer();
 		ShiftPopulator.populateShift(S);
+		KeysPopulator.populateKeys(S);
+		IndexOfPopulator.populateIndexOf(S);
+		if (I.enableProfiling) I.popTimer("<populate list operations>");
 		
 		/* Apuoperaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
 		CurrentTimePopulator.populateTime(S);
 		RandomPopulator.populateRandom(S);
 		ExecPopulator.populateExec(I, S);
 		GetenvPopulator.populateGetenv(S);
+		MathPopulator.populateMath(S);
+		if (I.enableProfiling) I.popTimer("<populate utilities>");
 
 		/* Tiedosto-operaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
 		CdAndPwdPopulator.populateCdAndPwd(I, S);
 		ReadAndWritePopulator.populateReadAndWrite(I, S);
 		FilePopulator.populateFile(I, S);
+		if (I.enableProfiling) I.popTimer("<populate file operations>");
 
 		/* Verkko-operaatiot */
 
+		if (I.enableProfiling) I.pushTimer();
 		WcatPopulator.populateWcat(S);
 		ServerPopulator.populateServer(I, S);
+		if (I.enableProfiling) I.popTimer("<populate network operations>");
 
 		// Säikeet
 
+		if (I.enableProfiling) I.pushTimer();
 		ThreadPopulator.populateThread(I, S);
+		if (I.enableProfiling) I.popTimer("<populate thread operations>");
 	}
 
-	public static RödaValue genericPush(String name, RödaStream _out) {
+	public static RödaValue genericPush(String name, RödaStream _out, boolean back) {
 		return RödaNativeFunction.of(name, (ra, a, k, s, i, o) -> {
 			if (a.size() == 0) {
 				while (true) {
 					RödaValue v = i.pull();
 					if (v == null) break;
-					_out.push(v);
+					if (back) _out.unpull(v);
+					else _out.push(v);
 				}
 			} else {
 				for (RödaValue v : a) {
-					_out.push(v);
+					if (back) _out.unpull(v);
+					else _out.push(v);
 				}
 			}
 		}, Arrays.asList(new Parameter("values", false)), true);
@@ -162,7 +215,7 @@ public class Builtins {
 			if (a.size() == 0) {
 				if (oneOnly) {
 					RödaValue v = peek ? _in.peek() : _in.pull();
-					if (v == null) error("empty stream");
+					if (v == null) emptyStream("empty stream");
 					o.push(v);
 				} else
 					while (true) {
@@ -174,7 +227,7 @@ public class Builtins {
 				for (RödaValue v : a) {
 					checkReference(name, v);
 					RödaValue pulled = peek ? _in.peek() : _in.pull();
-					if (pulled == null) error("empty stream");
+					if (pulled == null) emptyStream("empty stream");
 					v.assignLocal(pulled);
 				}
 			}
@@ -240,7 +293,7 @@ public class Builtins {
 		return RödaNativeFunction.of(name, (ra, args, kwargs, scope, in, out) -> {
 			try {
 				RödaValue sizeVal = args.get(0);
-				checkNumber(name, sizeVal);
+				checkInteger(name, sizeVal);
 				long size = sizeVal.integer();
 				if (size > Integer.MAX_VALUE)
 					error(name + ": can't read more than " + Integer.MAX_VALUE + " bytes " + "at time");

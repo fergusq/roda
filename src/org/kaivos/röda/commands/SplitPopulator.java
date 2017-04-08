@@ -7,9 +7,9 @@ import java.util.Arrays;
 
 import org.kaivos.röda.Interpreter.RödaScope;
 import org.kaivos.röda.Parser;
-import org.kaivos.röda.Parser.Parameter;
-import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.RödaStream;
+import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaList;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaString;
@@ -64,5 +64,27 @@ public final class SplitPopulator {
 	public static void populateSplit(RödaScope S) {
 		addSplitter(S, "split", SplitPopulator::pushUncollectedSeparation);
 		addSplitter(S, "splitMany", SplitPopulator::pushCollectedSeparation);
+		S.setLocal("chars", RödaNativeFunction.of("chars", (typeargs, args, kwargs, scope, in, out) -> {
+			if (args.size() > 0) {
+				for (int i = 0; i < args.size(); i++) {
+					RödaValue value = args.get(i);
+					checkString("chars", value);
+					String str = value.str();
+					str.chars().mapToObj(c -> RödaString.of(new String(Character.toChars(c)))).forEach(out::push);;
+				}
+			}
+			else {
+				while (true) {
+					RödaValue value = in.pull();
+					if (value == null) break;
+					
+					checkString("chars", value);
+					String str = value.str();
+					str.chars().mapToObj(c -> RödaString.of(new String(Character.toChars(c)))).forEach(out::push);;
+				}
+			}
+		},
+		Arrays.asList(new Parameter("strings", false)),
+		true));
 	}
 }

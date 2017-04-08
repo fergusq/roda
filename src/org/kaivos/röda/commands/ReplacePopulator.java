@@ -1,14 +1,15 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.illegalArguments;
 import static org.kaivos.röda.RödaValue.STRING;
 
 import java.util.Arrays;
 import java.util.regex.PatternSyntaxException;
 
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaString;
 
@@ -19,7 +20,7 @@ public final class ReplacePopulator {
 	public static void populateReplace(RödaScope S) {
 		S.setLocal("replace", RödaNativeFunction.of("replace", (typeargs, args, kwargs, scope, in, out) -> {
 			if (args.size() % 2 != 0)
-				error("invalid arguments for replace: even number required (got " + args.size() + ")");
+				illegalArguments("invalid arguments for replace: even number required (got " + args.size() + ")");
 			try {
 				while (true) {
 					RödaValue input = in.pull();

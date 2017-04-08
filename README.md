@@ -4,6 +4,7 @@
 
 Röda is a homemade scripting language inspired by Bourne shell, Ruby and others. While not being a real shell language, Röda
 still makes an extensive use of concurrency and streams (pipes). For more documentation, see GUIDE.md.
+The standard library reference and other information is also found at the authors [web page](http://kaivos.org/~iikka/roda/doc). 
 
 ### Building
 
@@ -34,10 +35,13 @@ HTTP server:
 ```sh
 #!/usr/bin/röda
 
+{
+	http := require("http_server")
+}
+
 main {
-	import "http_server.röd"
-	server := http_server(8080)
-	server.controllers["/"] = controller({ |request|
+	server := new http.HttpServer(8080)
+	server.controllers["/"] = http.controller({ |request|
 		request.send "200 OK", "<html><head><title>Hello world!</title></head><body>Hello world!</body></html>"
 	})
 	while true; do

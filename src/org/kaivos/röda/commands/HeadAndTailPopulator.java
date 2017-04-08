@@ -1,16 +1,18 @@
 package org.kaivos.röda.commands;
 
 import static org.kaivos.röda.Interpreter.argumentOverflow;
-import static org.kaivos.röda.Interpreter.error;
+import static org.kaivos.röda.Interpreter.emptyStream;
+import static org.kaivos.röda.Interpreter.outOfBounds;
 import static org.kaivos.röda.RödaValue.INTEGER;
+import static org.kaivos.röda.RödaValue.LIST;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaNativeFunction;
 
 public final class HeadAndTailPopulator {
@@ -25,14 +27,14 @@ public final class HeadAndTailPopulator {
 			if (args.size() == 0) {
 				RödaValue input = in.pull();
 				if (input == null)
-					error("head: input stream is closed");
+					emptyStream("head: input stream is closed");
 				out.push(input);
 			} else {
 				long num = args.get(0).integer();
 				for (int i = 0; i < num; i++) {
 					RödaValue input = in.pull();
 					if (input == null)
-						error("head: input stream is closed");
+						emptyStream("head: input stream is closed");
 					out.push(input);
 				}
 			}
@@ -49,7 +51,7 @@ public final class HeadAndTailPopulator {
 			else {
 				numl = args.get(0).integer();
 				if (numl > Integer.MAX_VALUE)
-					error("tail: too large number: " + numl);
+					outOfBounds("tail: too large number: " + numl);
 			}
 
 			int num = (int) numl;
@@ -59,12 +61,31 @@ public final class HeadAndTailPopulator {
 				values.add(value);
 			}
 			if (values.size() < num)
-				error("tail: input stream is closed");
+				emptyStream("tail: input stream is closed");
 
 			for (int i = values.size() - num; i < values.size(); i++) {
 				out.push(values.get(i));
 			}
 
 		}, Arrays.asList(new Parameter("number", false, INTEGER)), true));
+
+		S.setLocal("reverse", RödaNativeFunction.of("reverse", (typeargs, args, kwargs, scope, in, out) -> {
+			if (args.size() > 1)
+				argumentOverflow("reverse", 1, args.size());
+
+			List<RödaValue> values;
+			
+			if (args.size() == 0) {
+				values = new ArrayList<>();
+				in.forAll(values::add);
+			} else {
+				values = args.get(0).list();
+			}
+
+			for (int i = values.size() - 1; i >= 0; i--) {
+				out.push(values.get(i));
+			}
+
+		}, Arrays.asList(new Parameter("list", false, LIST)), true));
 	}
 }

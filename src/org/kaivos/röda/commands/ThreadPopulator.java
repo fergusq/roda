@@ -8,14 +8,14 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import org.kaivos.röda.Builtins;
-import org.kaivos.röda.Datatype;
 import org.kaivos.röda.Interpreter;
 import org.kaivos.röda.Interpreter.RödaException;
 import org.kaivos.röda.Interpreter.RödaScope;
-import org.kaivos.röda.Parser.Parameter;
-import org.kaivos.röda.Parser.Record;
 import org.kaivos.röda.RödaStream;
 import org.kaivos.röda.RödaValue;
+import org.kaivos.röda.runtime.Function.Parameter;
+import org.kaivos.röda.runtime.Datatype;
+import org.kaivos.röda.runtime.Record;
 import org.kaivos.röda.type.RödaNativeFunction;
 import org.kaivos.röda.type.RödaRecordInstance;
 
@@ -32,9 +32,9 @@ public final class ThreadPopulator {
 						new Record.Field("peek", new Datatype("function")),
 						new Record.Field("tryPeek", new Datatype("function")),
 						new Record.Field("push", new Datatype("function"))),
-				false);
-		I.preRegisterRecord(threadRecord);
-		I.postRegisterRecord(threadRecord);
+				false, I.G);
+		I.G.preRegisterRecord(threadRecord);
+		I.G.postRegisterRecord(threadRecord);
 
 		S.setLocal("thread", RödaNativeFunction.of("thread", (typeargs, args, kwargs, scope, in, out) -> {
 			RödaValue function = args.get(0);
@@ -65,11 +65,11 @@ public final class ThreadPopulator {
 				_out.finish();
 			};
 
-			RödaValue threadObject = RödaRecordInstance.of(threadRecord, Collections.emptyList(), I.records);
+			RödaValue threadObject = RödaRecordInstance.of(threadRecord, Collections.emptyList());
 			threadObject.setField("start", RödaNativeFunction.of("Thread.start", (ra, a, k, s, i, o) -> {
 				checkArgs("Thread.start", 0, a.size());
 				if (p.started)
-					error("Thread has already " + "been executed");
+					error("Thread has already been started");
 				p.started = true;
 				Interpreter.executor.execute(task);
 			}, Collections.emptyList(), false));
@@ -80,7 +80,7 @@ public final class ThreadPopulator {
 			threadObject.setField("peek", Builtins.genericPull("Thread.peek", _out, true, true));
 			threadObject.setField("tryPeek", Builtins.genericTryPull("Thread.tryPeek", _out, true));
 			
-			threadObject.setField("push", Builtins.genericPush("Thread.push", _in));
+			threadObject.setField("push", Builtins.genericPush("Thread.push", _in, false));
 			out.push(threadObject);
 		}, Arrays.asList(new Parameter("runnable", false, FUNCTION)), false));
 	}
