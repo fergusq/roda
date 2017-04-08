@@ -1162,7 +1162,7 @@ public class Parser {
 		String variable;
 		String string;
 		Pattern pattern;
-		int integer;
+		long integer;
 		double floating;
 		StatementTree statement;
 		FunctionTree block;
@@ -1257,7 +1257,7 @@ public class Parser {
 		return e;
 	}
 
-	public static ExpressionTree expressionInt(String file, int line, int d) {
+	public static ExpressionTree expressionInt(String file, int line, long d) {
 		ExpressionTree e = new ExpressionTree();
 		e.type = ExpressionTree.Type.INTEGER;
 		e.file = file;
@@ -1744,7 +1744,7 @@ public class Parser {
 			ans = expressionVariable(file, line, name);
 		}
 		else if (INT_PATTERN_ALL.matcher(seekString(tl)).matches()) {
-			ans = expressionInt(file, line, Integer.parseInt(nextString(tl)));
+			ans = expressionInt(file, line, Long.parseLong(nextString(tl)));
 		}
 		else if (NUMBER_PATTERN_ALL.matcher(seekString(tl)).matches()) {
 			ans = expressionFloat(file, line, Double.parseDouble(nextString(tl)));
