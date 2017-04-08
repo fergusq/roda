@@ -27,6 +27,7 @@ import org.kaivos.röda.commands.CasePopulator;
 import org.kaivos.röda.commands.CdAndPwdPopulator;
 import org.kaivos.röda.commands.ChrAndOrdPopulator;
 import org.kaivos.röda.commands.CurrentTimePopulator;
+import org.kaivos.röda.commands.EnumPopulator;
 import org.kaivos.röda.commands.ErrorPopulator;
 import org.kaivos.röda.commands.ErrprintPopulator;
 import org.kaivos.röda.commands.ExecPopulator;
@@ -121,6 +122,7 @@ public class Builtins {
 		UniqPopulator.populateUniq(S);
 		ReducePopulator.populateReduce(S);
 		FilterPopulator.populateFilterAndGrep(I, S);
+		EnumPopulator.populateEnum(S);
 		if (I.enableProfiling) I.popTimer("<populate other stream operations>");
 
 		/* Yksinkertaiset merkkijonopohjaiset virtaoperaatiot */
