@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.kaivos.röda.Interpreter.RödaScope;
+import org.kaivos.röda.Parser.ExpressionTree.CType;
 import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaFloating;
@@ -24,6 +25,43 @@ import org.kaivos.röda.type.RödaString;
 public class ReducePopulator {
 
 	private ReducePopulator() {}
+	
+	public static void addMinMaxFunction(RödaScope S, String name, boolean min) {
+		S.setLocal(name, RödaNativeFunction.of(name, (typeargs, args, kwargs, scope, in, out) -> {
+			RödaValue first = kwargs.get("fst");
+			if (args.size() == 0) {
+				RödaValue val = first != null ? first : in.pull();
+				if (val == null) {
+					out.push(RödaInteger.of(min ? Long.MAX_VALUE : Long.MIN_VALUE));
+					return;
+				}
+				while (true) {
+					RödaValue val2 = in.pull();
+					if (val2 == null) break;
+					RödaValue a = min ? val2 : val;
+					RödaValue b = min ? val : val2;
+					if (a.callOperator(CType.LT, b).bool()) val = val2;
+				}
+				out.push(val);
+			}
+			else {
+				for (RödaValue list : args) {
+					checkList(name, list);
+					if (list.list().isEmpty()) {
+						out.push(first != null ? first : RödaInteger.of(min ? Long.MAX_VALUE : Long.MIN_VALUE));
+						continue;
+					}
+					RödaValue val = first != null ? first : list.list().get(0);
+					for (int i = first != null ? 0 : 1; i < list.list().size(); i++) {
+						RödaValue a = min ? list.list().get(i) : val;
+						RödaValue b = min ? val : list.list().get(i);
+						if (a.callOperator(CType.LT, b).bool()) val = list.list().get(i);
+					}
+					out.push(val);
+				}
+			}
+		}, Arrays.asList(new Parameter("values", false, LIST)), true, Collections.emptyList(), true));
+	}
 	
 	public static void populateReduce(RödaScope S) {
 		S.setLocal("reduce", RödaNativeFunction.of("reduce", (typeargs, args, kwargs, scope, in, out) -> {
@@ -75,7 +113,7 @@ public class ReducePopulator {
 				for (RödaValue list : args) {
 					checkList("sum", list);
 					if (list.list().isEmpty()) {
-						out.push(RödaInteger.of(0));
+						out.push(first != null ? first : RödaInteger.of(0));
 						continue;
 					}
 					RödaValue val = first != null ? first : list.list().get(0);
@@ -133,7 +171,7 @@ public class ReducePopulator {
 				for (RödaValue list : args) {
 					checkList("sum", list);
 					if (list.list().isEmpty()) {
-						out.push(RödaInteger.of(1));
+						out.push(first != null ? first : RödaInteger.of(1));
 						continue;
 					}
 					RödaValue val = first != null ? first : list.list().get(0);
@@ -185,7 +223,7 @@ public class ReducePopulator {
 				for (RödaValue list : args) {
 					checkList("concat", list);
 					if (list.list().isEmpty()) {
-						out.push(RödaList.empty());
+						out.push(first == null ? RödaList.empty() : RödaList.of(first));
 						continue;
 					}
 					RödaValue val = first != null ? first : list.list().get(0);
@@ -205,6 +243,8 @@ public class ReducePopulator {
 				}
 			}
 		}, Arrays.asList(new Parameter("values", false, LIST)), true, Collections.emptyList(), true));
+		addMinMaxFunction(S, "min", true);
+		addMinMaxFunction(S, "max", false);
 	}
 	
 }
