@@ -72,6 +72,12 @@ public class ReducePopulator {
 				out.push(args.get(0));
 			}
 		}, Arrays.asList(new Parameter("value", false)), false));
+		S.setLocal("reduceSteps", RödaNativeFunction.of("reduceSteps", (typeargs, args, kwargs, scope, in, out) -> {
+			if (in.open()) {
+				in.unpull(args.get(0));
+			}
+			out.push(args.get(0));
+		}, Arrays.asList(new Parameter("value", false)), false));
 		S.setLocal("sum", RödaNativeFunction.of("sum", (typeargs, args, kwargs, scope, in, out) -> {
 			RödaValue first = kwargs.get("fst");
 			if (args.size() == 0) {
