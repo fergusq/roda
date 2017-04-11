@@ -1,11 +1,12 @@
 package org.kaivos.röda.commands;
 
+import static org.kaivos.röda.Interpreter.checkList;
+import static org.kaivos.röda.Interpreter.emptyStream;
+import static org.kaivos.röda.Interpreter.typeMismatch;
 import static org.kaivos.röda.RödaValue.FLOATING;
 import static org.kaivos.röda.RödaValue.INTEGER;
 import static org.kaivos.röda.RödaValue.LIST;
 import static org.kaivos.röda.RödaValue.STRING;
-import static org.kaivos.röda.Interpreter.typeMismatch;
-import static org.kaivos.röda.Interpreter.checkList;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,7 +33,7 @@ public class ReducePopulator {
 			if (args.size() == 0) {
 				RödaValue val = first != null ? first : in.pull();
 				if (val == null) {
-					out.push(RödaInteger.of(min ? Long.MAX_VALUE : Long.MIN_VALUE));
+					emptyStream("empty stream");
 					return;
 				}
 				while (true) {
@@ -48,7 +49,10 @@ public class ReducePopulator {
 				for (RödaValue list : args) {
 					checkList(name, list);
 					if (list.list().isEmpty()) {
-						out.push(first != null ? first : RödaInteger.of(min ? Long.MAX_VALUE : Long.MIN_VALUE));
+						if (first != null)
+							out.push(first);
+						else
+							emptyStream("empty stream");
 						continue;
 					}
 					RödaValue val = first != null ? first : list.list().get(0);
