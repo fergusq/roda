@@ -87,5 +87,15 @@ public final class HeadAndTailPopulator {
 			}
 
 		}, Arrays.asList(new Parameter("list", false, LIST)), true));
+
+		S.setLocal("addHead", RödaNativeFunction.of("addHead", (typeargs, args, kwargs, scope, in, out) -> {
+			args.forEach(out::push);
+			in.forAll(out::push);
+		}, Arrays.asList(new Parameter("values", false)), true));
+
+		S.setLocal("addTail", RödaNativeFunction.of("addTail", (typeargs, args, kwargs, scope, in, out) -> {
+			in.forAll(out::push);
+			args.forEach(out::push);
+		}, Arrays.asList(new Parameter("values", false)), true));
 	}
 }
