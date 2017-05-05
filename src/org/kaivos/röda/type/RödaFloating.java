@@ -62,7 +62,7 @@ public class RödaFloating extends RödaValue {
 	}
 
 	@Override public boolean strongEq(RödaValue value) {
-		return value.is(FLOATING) && value.floating() == number;
+		return value.is(FLOATING) && value.floating() == number || value.is(INTEGER) && value.integer() == number;
 	}
 	
 	@Override
