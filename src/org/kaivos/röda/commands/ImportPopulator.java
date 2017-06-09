@@ -12,6 +12,7 @@ import org.kaivos.röda.RödaValue;
 import org.kaivos.röda.runtime.Function.Parameter;
 import org.kaivos.röda.type.RödaNamespace;
 import org.kaivos.röda.type.RödaNativeFunction;
+import org.kaivos.röda.type.RödaString;
 
 public final class ImportPopulator {
 	
@@ -45,6 +46,8 @@ public final class ImportPopulator {
 				String filename = value.str();
 				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
 				RödaScope newScope = new RödaScope(I.G);
+				newScope.setLocal("SOURCE_FILE", RödaString.of(file.getAbsolutePath()));
+				newScope.setLocal("SOURCE_DIR", RödaString.of(file.getParentFile().getAbsolutePath()));
 				I.loadFile(file, newScope);
 				out.push(RödaNamespace.of(newScope));
 			}
@@ -54,6 +57,8 @@ public final class ImportPopulator {
 				String filename = value.str();
 				File file = IOUtils.getMaybeRelativeFile(I.currentDir, filename);
 				RödaScope newScope = new RödaScope(scope);
+				newScope.setLocal("SOURCE_FILE", RödaString.of(file.getAbsolutePath()));
+				newScope.setLocal("SOURCE_DIR", RödaString.of(file.getParentFile().getAbsolutePath()));
 				I.loadFile(file, newScope);
 				out.push(RödaNamespace.of(newScope));
 			}

@@ -48,7 +48,7 @@ import org.kaivos.röda.type.RödaString;
  */
 public class Röda {
 	
-	public static final String RÖDA_VERSION_STRING = "0.12-alpha";
+	public static final String RÖDA_VERSION_STRING = "0.13-alpha";
 	
 	private static void printRödaException(Interpreter.RödaException e) {
 		System.err.println("[" + e.getErrorObject().basicIdentity() + "] " + e.getMessage());
@@ -219,8 +219,9 @@ public class Röda {
 		}, Arrays.asList(new Parameter("callback", false, RödaValue.FUNCTION)), false));
 
 		if (file != null) {
+			File fileObj = new File(file);
 			interpretEOption(eval);
-			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(fileObj)));
 			String code = "";
 			String line = "";
 			while ((line = in.readLine()) != null) {
@@ -231,6 +232,8 @@ public class Röda {
 				.map(RödaString::of)
 				.collect(Collectors.toList());
 			try {
+				INTERPRETER.G.setLocal("SOURCE_FILE", RödaString.of(fileObj.getAbsolutePath()));
+				INTERPRETER.G.setLocal("SOURCE_DIR", RödaString.of(fileObj.getParentFile().getAbsolutePath()));
 				INTERPRETER.interpret(code, valueArgs, file, STDIN, STDOUT);
 			} catch (ParsingException e) {
 				System.err.println("[E] " + e.getMessage());
