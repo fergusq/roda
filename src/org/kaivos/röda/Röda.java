@@ -233,7 +233,7 @@ public class Röda {
 				.collect(Collectors.toList());
 			try {
 				INTERPRETER.G.setLocal("SOURCE_FILE", RödaString.of(fileObj.getAbsolutePath()));
-				INTERPRETER.G.setLocal("SOURCE_DIR", RödaString.of(fileObj.getParentFile().getAbsolutePath()));
+				INTERPRETER.G.setLocal("SOURCE_DIR", RödaString.of(fileObj.getAbsoluteFile().getParentFile().getAbsolutePath()));
 				INTERPRETER.interpret(code, valueArgs, file, STDIN, STDOUT);
 			} catch (ParsingException e) {
 				System.err.println("[E] " + e.getMessage());
