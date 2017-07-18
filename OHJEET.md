@@ -47,7 +47,7 @@ Funktioita voi putkittaa `|`-operaattorilla, jolloin niiden sisään- ja ulostul
 Seuraava ohjelma tulostaa kahtena tiedoston "tieto.txt" ensimmäisen rivin:
 
 ```sh
-cat "tieto.txt" | duplicate
+readLines "tieto.txt" | duplicate
 ```
 
 Jos kaikki rivit haluttaisiin kahdentaa, olisi tehtävä uusi versio duplicate-funktiosta, joka lukee
@@ -55,7 +55,7 @@ kaiken mahdollisen syötteen:
 
 ```sh
 duplicate {
-	for value; do
+	for value do
 		push value
 		push value
 	done
@@ -99,8 +99,8 @@ Funktiolla voi ottaa vaihtelevan määrän argumentteja, jolloin viimeiselle par
 
 ```sh
 duplicate_files files... {
-	for file in files; do
-		cat file | duplicate
+	for file in files do
+		readLines file | duplicate
 	done
 }
 ```
@@ -230,7 +230,7 @@ myös tyhjä.
 
 ```sh
 tulosta_perheenjäsenet sukunimi, etunimet... {
-	for etunimi in etunimet; do
+	for etunimi in etunimet do
 		push etunimi, " ", sukunimi, "\n"
 	done
 }
@@ -281,7 +281,7 @@ sisarukset += "Amelie"
 
 Listan "kutsuminen" työntää kaikki listan alkiot ulostulovirtaan:
 ```sh
-["rivi1\n", "rivi2\n", "rivi3\n"] | writeLines tiedosto
+["rivi1\n", "rivi2\n", "rivi3\n"] | writeStrings tiedosto
 ```
 
 Listan kutsumiseen perustuu `[`- ja `]`-merkkien käyttö ehtolauseissa.
@@ -338,7 +338,7 @@ push nimi /* tulostaa Lissun */
 ```
 Muuttujan voi tuhota kokonaan käyttäen silmukkaa ja `?`-operaattoria, joka kertoo, onko muuttuja olemassa.
 ```sh
-while nimi?; do
+while nimi? do
 	undefine nimi
 done
 ```
@@ -370,13 +370,13 @@ Muut arvot tulkitaan aina samoin kuin `true`. Jos lause palauttaa useita arvoja,
 Sisäänrakennetuista funktioista vain `true`, `false`, `test`, `random` ja `file` (ks. alempana) palauttavat totuusarvon.
 
 ```sh
-if [ ikä < 18 ]; do
+if [ ikä < 18 ] do
 	push "Olet liian nuori!\n"
 done
 ```
 
 ```sh
-while [ not ( vastaus =~ "kyllä|ei" ) ]; do
+while [ not ( vastaus =~ "kyllä|ei" ) ] do
 	push "Vastaa kyllä tai ei: "
 	pull vastaus
 done
@@ -443,7 +443,7 @@ done
 `try` suorittaa annetun komennon tai lohkon ja ohittaa hiljaisesti kaikki vastaan tulleet virheet.
 
 ```sh
-while true; do
+while true do
 	try do
 		hae viestit
 		käsittele viestit
@@ -469,8 +469,8 @@ done
 
 ```sh
 haeSyntymävuodellaYksiTyttö vuosi {
-	for tyttö in tytöt; do
-		if [ tyttö[1] = vuosi ]; do
+	for tyttö in tytöt do
+		if [ tyttö[1] = vuosi ] do
 			return tyttö
 		done
 	done
@@ -546,7 +546,7 @@ iät["Ilmari"] = 19
 `?`-operaattorilla voi tarkastaa, onko kartassa tietty alkio:
 
 ```sh
-if push(!iät["Maija"]?); do
+unless [ iät["Maija"]? ] do
 	push "Maijan ikää ei löydy!\n"
 done
 ```
@@ -617,7 +617,7 @@ Seuraava ohjelma tulostaa tiedoston rivinumeroiden kera.
 ```sh
 rivit := [readLines(tiedosto)]
 i := 1
-for rivi in rivit; do
+for rivi in rivit do
 	push i, " ", rivi, "\n"
 	i ++
 done
@@ -638,8 +638,8 @@ Seuraavassa koodissa määritellään `filter`-funktio, joka lukee arvoja ja pal
 
 ```sh
 filter condFunction {
-	for value; do
-		if condFunction value; do
+	for value do
+		if condFunction value do
 			push value
 		done
 	done
@@ -651,7 +651,7 @@ Funktiota käytetään antamalla sille nimetön funktio (tai tavallinenkin funkt
 
 ```sh
 tytöt := [["Annamari", 1996], ["Reetta", 1992], ["Vilma", 1999]]
-tytöt | filter { |tyttö|; [ tyttö[1] > 1995 ] } | for tyttö; do
+tytöt | filter { |tyttö|; [ tyttö[1] > 1995 ] } | for tyttö do
 	push tyttö[0], " on vielä nuori.\n"
 done
 ```
