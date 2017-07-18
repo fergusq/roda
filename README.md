@@ -18,6 +18,13 @@ roda $ gradle fatJar
 
 ### Example
 
+Real life examples:
+
+* Small scripts at my [gist page](https://gist.github.com/fergusq) - I use Röda very often to create small scripts that could have been written in sh, AWK or Perl.
+* [Static site generator](https://github.com/fergusq/plan)
+* [Mafia game master service](https://github.com/fergusq/mafia)
+* [Lyrics video generator](https://github.com/fergusq/videolyrics)
+
 Prime generator:
 
 ```sh
