@@ -101,7 +101,7 @@ public class SortPopulator {
 				});
 			}
 			else {
-				list.sort((a, b) -> a.callOperator(CType.LT, b).bool() ? -1 : 1);
+				list.sort((a, b) -> a.callOperator(CType.LT, b).bool() ? -1 : a.strongEq(b) ? 0 : 1);
 			}
 			list.forEach(out::push);
 		}, Arrays.asList(new Parameter("number", false, LIST)), true,

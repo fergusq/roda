@@ -4,7 +4,7 @@
 
 Röda is a homemade scripting language inspired by Bourne shell, Ruby and others. While not being a real shell language, Röda
 still makes an extensive use of concurrency and streams (pipes). For more documentation, see GUIDE.md.
-The standard library reference and other information is also found at the authors [web page](http://kaivos.org/~iikka/roda/doc). 
+The standard library reference and other information is also found at the authors [web page](http://iikka.kapsi.fi/roda/). 
 
 ### Building
 

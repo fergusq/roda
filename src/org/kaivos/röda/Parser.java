@@ -617,10 +617,14 @@ public class Parser {
 			return commands.stream().map(Command::asString).collect(joining(" | "));
 		}
 	}
-
+	
 	static StatementTree parseStatement(TokenList tl) {
+		return parseStatement(tl, true);
+	}
+
+	static StatementTree parseStatement(TokenList tl, boolean allowSugarVars) {
 		List<Command> commands = new ArrayList<>();
-		commands.add(parseCommand(tl));
+		commands.add(parseCommand(tl, allowSugarVars));
 		while (acceptIfNext(tl, "|")) {
 			commands.add(parseCommand(tl));
 		}
@@ -682,17 +686,27 @@ public class Parser {
 				return "return " + argumentsAsString();
 			case IF:
 				return (negation ? "unless " : "if ") + cond.asString()
-					+ " do ... done";
+					+ " do " + (body.size() == 1 ? body.get(0).asString() : "...")
+					+ (elseBody != null ? " else " + (elseBody.size() == 1 ? elseBody.get(0).asString() : "...") : "")
+					+ " done";
 			case WHILE:
 				return (negation ? "until " : "while ") + cond.asString()
-					+ " do ... done";
+					+ " do " + (body.size() == 1 ? body.get(0).asString() : "...")
+					+ (elseBody != null ? " else " + (elseBody.size() == 1 ? elseBody.get(0).asString() : "...") : "")
+					+ " done";
 			case FOR:
 				return "for " + variables.stream().collect(joining(", "))
-						+ (list != null ? " in " + list.asString() : "") + " do ... done";
+						+ (list != null ? " in " + list.asString() : "")
+						+ " do "
+						+ (body.size() == 1 ? body.get(0).asString() : "...")
+						+ " done";
 			case TRY:
 				return "try " + cmd.asString();
 			case TRY_DO:
-				return "try do ... done";
+				if (body.size() == 1)
+					return "try " + body.get(0).asString();
+				else
+					return "try do ... done";
 			case VARIABLE:
 				return name.asString() + operator + argumentsAsString();
 			case DEL:
@@ -855,22 +869,28 @@ public class Parser {
 		cmd.name = expr;
 		return cmd;
 	}
-
+	
 	static Command parseCommand(TokenList tl) {
-		sugarVars.push(new ArrayList<>());
+		return parseCommand(tl, true);
+	}
+
+	static Command parseCommand(TokenList tl, boolean allowSugarVars) {
+		if (allowSugarVars) sugarVars.push(new ArrayList<>());
 		
 		Command cmd = parsePrefixCommand(tl);
 		cmd = parseSuffix(tl, cmd);
 		
-		List<String> sfvs = sugarVars.pop();
-		
-		if (!sfvs.isEmpty()) {
-			cmd = _makeForCommand(
-					cmd.file,
-					cmd.line,
-					sfvs,
-					null, null,
-					Arrays.asList(new StatementTree(Arrays.asList(cmd))));
+		if (allowSugarVars) {
+			List<String> sfvs = sugarVars.pop();
+			
+			if (!sfvs.isEmpty()) {
+				cmd = _makeForCommand(
+						cmd.file,
+						cmd.line,
+						sfvs,
+						null, null,
+						Arrays.asList(new StatementTree(Arrays.asList(cmd))));
+			}
 		}
 		return cmd;
 	}
@@ -881,10 +901,10 @@ public class Parser {
 			String commandName = nextString(tl);
 			boolean isWhile = commandName.equals("while") || commandName.equals("until");
 			boolean isUnless = commandName.equals("unless") || commandName.equals("until");
-			StatementTree cond = parseStatement(tl);
+			StatementTree cond = parseStatement(tl, false);
 			List<StatementTree> elseBody = null;
 			if (tl.acceptIfNext("else")) {
-				elseBody = Arrays.asList(new StatementTree(Arrays.asList(parseCommand(tl))));
+				elseBody = Arrays.asList(new StatementTree(Arrays.asList(parseCommand(tl, false))));
 			}
 			return _makeIfOrWhileCommand(cmd.file, cmd.line, isWhile, isUnless, cond,
 						     Arrays.asList(new StatementTree(Arrays.asList(cmd))), elseBody);
@@ -901,7 +921,7 @@ public class Parser {
 				list = parseExpression(tl);
 			}
 			if (acceptIfNext(tl, "if")) {
-				cond = parseStatement(tl);
+				cond = parseStatement(tl, false);
 			}
 			return _makeForCommand(cmd.file, cmd.line, variables, list, cond,
 					       Arrays.asList(new StatementTree(Arrays.asList(cmd))));
@@ -926,7 +946,7 @@ public class Parser {
 			String commandName = nextString(tl);
 			boolean isWhile = commandName.equals("while") || commandName.equals("until");
 			boolean isUnless = commandName.equals("unless") || commandName.equals("until");
-			StatementTree cond = parseStatement(tl);
+			StatementTree cond = parseStatement(tl, false);
 			accept(tl, "do");
 			List<StatementTree> body = new ArrayList<>(), elseBody = null;
 			while (!isNext(tl, "done") && !isNext(tl, "else")) {
@@ -957,7 +977,7 @@ public class Parser {
 				list = parseExpression(tl);
 			}
 			if (acceptIfNext(tl, "if")) {
-				cond = parseStatement(tl);
+				cond = parseStatement(tl, false);
 			}
 			accept(tl, "do");
 			List<StatementTree> body = new ArrayList<>();
@@ -1162,7 +1182,7 @@ public class Parser {
 		String variable;
 		String string;
 		Pattern pattern;
-		int integer;
+		long integer;
 		double floating;
 		StatementTree statement;
 		FunctionTree block;
@@ -1193,7 +1213,10 @@ public class Parser {
 			case BLOCK:
 				return "{...}";
 			case LIST:
-				return "[...]";
+				if (list.size() == 1)
+					return "[" + list.get(0).asString() + "]";
+				else
+					return "[...]";
 			case STATEMENT_LIST:
 				return "[" + statement.asString() + "]";
 			case STATEMENT_SINGLE:
@@ -1257,7 +1280,7 @@ public class Parser {
 		return e;
 	}
 
-	public static ExpressionTree expressionInt(String file, int line, int d) {
+	public static ExpressionTree expressionInt(String file, int line, long d) {
 		ExpressionTree e = new ExpressionTree();
 		e.type = ExpressionTree.Type.INTEGER;
 		e.file = file;
@@ -1744,7 +1767,7 @@ public class Parser {
 			ans = expressionVariable(file, line, name);
 		}
 		else if (INT_PATTERN_ALL.matcher(seekString(tl)).matches()) {
-			ans = expressionInt(file, line, Integer.parseInt(nextString(tl)));
+			ans = expressionInt(file, line, Long.parseLong(nextString(tl)));
 		}
 		else if (NUMBER_PATTERN_ALL.matcher(seekString(tl)).matches()) {
 			ans = expressionFloat(file, line, Double.parseDouble(nextString(tl)));

@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -111,6 +112,10 @@ public class Interpreter {
 
 		public synchronized void setLocal(String name, RödaValue value) {
 			map.put(name, value);
+		}
+		
+		public Set<String> getLocalVariableNames() {
+			return Collections.unmodifiableSet(map.keySet());
 		}
 
 		public void addTypearg(String name, Datatype value) {
