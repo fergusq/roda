@@ -48,7 +48,7 @@ import org.kaivos.röda.type.RödaString;
  */
 public class Röda {
 	
-	public static final String RÖDA_VERSION_STRING = "0.13-alpha";
+	public static final String RÖDA_VERSION_STRING = "0.14-alpha";
 	
 	private static void printRödaException(Interpreter.RödaException e) {
 		System.err.println("[" + e.getErrorObject().basicIdentity() + "] " + e.getMessage());
