@@ -1213,7 +1213,8 @@ public class Interpreter {
 			RödaStream in, RödaStream out,
 			RödaStream _in, RödaStream _out) {
 		
-		if (cmd.type == Command.Type.NORMAL) {
+		switch (cmd.type) {
+		case NORMAL: {
 			RödaValue function = evalExpression(cmd.name, scope, in, out);
 			List<Datatype> typeargs = cmd.typearguments.stream()
 					.map(scope::substitute).collect(toList());
@@ -1225,7 +1226,7 @@ public class Interpreter {
 			return r;
 		}
 		
-		if (cmd.type == Command.Type.INTERLEAVE) {
+		case INTERLEAVE: {
 			// TODO tee monisäikeinen versio?
 			return () -> {
 				int size = cmd.cmds.size();
@@ -1252,7 +1253,7 @@ public class Interpreter {
 			};
 		}
 		
-		if (cmd.type == Command.Type.DEL) {
+		case DEL: {
 			ExpressionTree e = cmd.name;
 			if (e.type != ExpressionTree.Type.ELEMENT
 					&& e.type != ExpressionTree.Type.SLICE)
@@ -1282,7 +1283,7 @@ public class Interpreter {
 			}
 		}
 
-		if (cmd.type == Command.Type.VARIABLE) {
+		case VARIABLE: {
 			List<RödaValue> args = flattenArguments(cmd.arguments.arguments, scope, in, out, true);
 			ExpressionTree e = cmd.name;
 			if (e.type != ExpressionTree.Type.VARIABLE
@@ -1504,7 +1505,8 @@ public class Interpreter {
 			return finalR;
 		}
 
-		if (cmd.type == Command.Type.WHILE || cmd.type == Command.Type.IF) {
+		case WHILE:
+		case IF: {
 			boolean isWhile = cmd.type == Command.Type.WHILE;
 			boolean neg = cmd.negation;
 			String commandName = isWhile?(neg?"until":"while"):(neg?"unless":"if");
@@ -1533,7 +1535,7 @@ public class Interpreter {
 			return r;
 		}
 
-		if (cmd.type == Command.Type.FOR) {
+		case FOR: {
 			Runnable r;
 			if (cmd.list != null) {
 				if (cmd.variables.size() != 1) error("invalid for statement: there must be only 1 variable when iterating a list");
@@ -1593,7 +1595,7 @@ public class Interpreter {
 			return r;
 		}
 
-		if (cmd.type == Command.Type.TRY_DO) {
+		case TRY_DO: {
 			Runnable r = () -> {
 				try {
 					RödaScope newScope = new RödaScope(scope);
@@ -1623,7 +1625,7 @@ public class Interpreter {
 			return r;
 		}
 
-		if (cmd.type == Command.Type.TRY) {
+		case TRY: {
 			Runnable tr = evalCommand(cmd.cmd, scope, in, out, _in, _out);
 			Runnable r = () -> {
 				try {
@@ -1637,7 +1639,7 @@ public class Interpreter {
 			return r;
 		}
 
-		if (cmd.type == Command.Type.RETURN) {
+		case RETURN: {
 			if (!cmd.arguments.kwarguments.isEmpty())
 				illegalArguments("all arguments of return must be non-kw");
 			List<RödaValue> args = flattenArguments(cmd.arguments.arguments, scope, in, out, true);
@@ -1648,22 +1650,24 @@ public class Interpreter {
 			return r;
 		}
 
-		if (cmd.type == Command.Type.BREAK
-				|| cmd.type == Command.Type.CONTINUE) {
+		case BREAK:
+		case CONTINUE: {
 			Runnable r = () -> {
 				throw cmd.type == Command.Type.BREAK ? BREAK_EXCEPTION : CONTINUE_EXCEPTION;
 			};
 			return r;
 		}
 
-		if (cmd.type == Command.Type.EXPRESSION) {
+		case EXPRESSION: {
 			return () -> {
 				_out.push(evalExpression(cmd.name, scope, _in, _out));
 			};
 		}
 
-		unknownName("unknown command");
-		return null;
+		default:
+			unknownName("unknown command");
+			return null;
+		}
 	}
 
 	private boolean evalCond(String cmd, StatementTree cond, RödaScope scope, RödaStream in) {
@@ -1704,17 +1708,18 @@ public class Interpreter {
 	private RödaValue evalExpressionWithoutErrorHandling(ExpressionTree exp, RödaScope scope,
 			RödaStream in, RödaStream out,
 			boolean variablesAreReferences) {
-		if (exp.type == ExpressionTree.Type.STRING) return RödaString.of(exp.string);
-		if (exp.type == ExpressionTree.Type.PATTERN) return RödaString.of(exp.pattern);
-		if (exp.type == ExpressionTree.Type.INTEGER) return RödaInteger.of(exp.integer);
-		if (exp.type == ExpressionTree.Type.FLOATING) return RödaFloating.of(exp.floating);
-		if (exp.type == ExpressionTree.Type.BLOCK) return RödaFunction.of(treeToFunction(exp.block, scope), scope);
-		if (exp.type == ExpressionTree.Type.LIST) return RödaList.of(exp.list
+		switch (exp.type) {
+		case STRING: return RödaString.of(exp.string);
+		case PATTERN: return RödaString.of(exp.pattern);
+		case INTEGER: return RödaInteger.of(exp.integer);
+		case FLOATING: return RödaFloating.of(exp.floating);
+		case BLOCK: return RödaFunction.of(treeToFunction(exp.block, scope), scope);
+		case LIST: return RödaList.of(exp.list
 				.stream()
 				.map(e -> evalExpression(e, scope, in, out).impliciteResolve())
 				.collect(toList()));
-		if (exp.type == ExpressionTree.Type.REFLECT
-				|| exp.type == ExpressionTree.Type.TYPEOF) {
+		case REFLECT:
+		case TYPEOF: {
 			Datatype type;
 			if (exp.type == ExpressionTree.Type.REFLECT) {
 				type = scope.substitute(exp.datatype);
@@ -1725,7 +1730,7 @@ public class Interpreter {
 			}
 			return type.resolveReflection();
 		}
-		if (exp.type == ExpressionTree.Type.NEW) {
+		case NEW: {
 			Datatype type = scope.substitute(exp.datatype);
 			List<Datatype> subtypes = exp.datatype.subtypes.stream()
 					.map(scope::substitute).collect(toList());
@@ -1735,10 +1740,10 @@ public class Interpreter {
 					.collect(toList());
 			return newRecord(type, subtypes, args, scope);
 		}
-		if (exp.type == ExpressionTree.Type.LENGTH
-				|| exp.type == ExpressionTree.Type.ELEMENT
-				|| exp.type == ExpressionTree.Type.SLICE
-				|| exp.type == ExpressionTree.Type.CONTAINS) {
+		case LENGTH:
+		case ELEMENT:
+		case SLICE:
+		case CONTAINS: {
 			RödaValue list = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 
 			if (exp.type == ExpressionTree.Type.LENGTH) {
@@ -1767,12 +1772,14 @@ public class Interpreter {
 				RödaValue index = evalExpression(exp.index, scope, in, out).impliciteResolve();
 				return list.contains(index);
 			}
+			
+			return null;
 		}
-		if (exp.type == ExpressionTree.Type.FIELD) {
+		case FIELD: {
 			return evalExpression(exp.sub, scope, in, out).impliciteResolve()
 					.getField(exp.field);
 		}
-		if (exp.type == ExpressionTree.Type.CONCAT) {
+		case CONCAT: {
 			RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue val2 = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			if (val1.is(LIST) && val2.is(LIST)) {
@@ -1783,27 +1790,27 @@ public class Interpreter {
 			}
 			else return RödaString.of(val1.str() + val2.str());
 		}
-		if (exp.type == ExpressionTree.Type.CONCAT_CHILDREN) {
+		case CONCAT_CHILDREN: {
 			RödaValue val1 = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue val2 = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			return concat(val1, val2);
 		}
-		if (exp.type == ExpressionTree.Type.JOIN) {
+		case JOIN: {
 			RödaValue list = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue separator = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			return list.join(separator);
 		}
-		if (exp.type == ExpressionTree.Type.IS) {
+		case IS: {
 			Datatype type = scope.substitute(exp.datatype);
 			RödaValue value = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 			return RödaBoolean.of(value.is(type));
 		}
-		if (exp.type == ExpressionTree.Type.IN) {
+		case IN: {
 			RödaValue value = evalExpression(exp.exprA, scope, in, out).impliciteResolve();
 			RödaValue list = evalExpression(exp.exprB, scope, in, out).impliciteResolve();
 			return list.containsValue(value);
 		}
-		if (exp.type == ExpressionTree.Type.STATEMENT_LIST) {
+		case STATEMENT_LIST: {
 			RödaStream _out = RödaStream.makeStream();
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
@@ -1811,7 +1818,7 @@ public class Interpreter {
 				emptyStream("empty stream (in statement expression: " + exp.asString() + ")");
 			return val;
 		}
-		if (exp.type == ExpressionTree.Type.STATEMENT_SINGLE) {
+		case STATEMENT_SINGLE: {
 			RödaStream _out = RödaStream.makeStream();
 			evalStatement(exp.statement, scope, in, _out, true);
 			RödaValue val = _out.readAll();
@@ -1821,7 +1828,7 @@ public class Interpreter {
 				fullStream("stream is full (in statement expression: " + exp.asString() + ")");
 			return val.list().get(0);
 		}
-		if (exp.type == ExpressionTree.Type.VARIABLE) {
+		case VARIABLE: {
 			if (variablesAreReferences) {
 				return RödaReference.of(exp.variable, scope, exp.file, exp.line);
 			}
@@ -1829,7 +1836,7 @@ public class Interpreter {
 			if (v == null) unknownName("variable not found: " + exp.variable);
 			return v;
 		}
-		if (exp.type == ExpressionTree.Type.CALCULATOR) {
+		case CALCULATOR: {
 			if (exp.isUnary) {
 				RödaValue sub = evalExpression(exp.sub, scope, in, out).impliciteResolve();
 				return sub.callOperator(exp.ctype, null);
@@ -1862,9 +1869,10 @@ public class Interpreter {
 				return val1.callOperator(exp.ctype, val2);
 			}
 		}
-
-		unknownName("unknown expression type " + exp.type);
-		return null;
+		default:
+			unknownName("unknown expression type " + exp.type);
+			return null;
+		}
 	}
 	
 	private RödaValue newRecord(Datatype type, List<Datatype> subtypes, List<RödaValue> args, RödaScope scope) {
