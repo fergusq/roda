@@ -97,5 +97,17 @@ public final class HeadAndTailPopulator {
 			in.forAll(out::push);
 			args.forEach(out::push);
 		}, Arrays.asList(new Parameter("values", false)), true));
+
+		S.setLocal("join", RödaNativeFunction.of("join", (typeargs, args, kwargs, scope, in, out) -> {
+			RödaValue sep = args.get(0);
+			int i = 0;
+			while (true) {
+				RödaValue value = in.pull();
+				if (value == null) break;
+				if (i != 0) out.push(sep);
+				out.push(value);
+				i++;
+			}
+		}, Arrays.asList(new Parameter("value", false)), false));
 	}
 }
