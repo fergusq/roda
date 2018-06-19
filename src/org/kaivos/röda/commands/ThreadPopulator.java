@@ -26,6 +26,7 @@ public final class ThreadPopulator {
 	public static void populateThread(Interpreter I, RödaScope S) {
 		Record threadRecord = new Record("Thread", Collections.emptyList(), Collections.emptyList(),
 				Arrays.asList(new Record.Field("start", new Datatype("function")),
+						new Record.Field("finish", new Datatype("function")),
 						new Record.Field("pull", new Datatype("function")),
 						new Record.Field("tryPull", new Datatype("function")),
 						new Record.Field("pullAll", new Datatype("function")),
@@ -72,6 +73,10 @@ public final class ThreadPopulator {
 					error("Thread has already been started");
 				p.started = true;
 				Interpreter.executor.execute(task);
+			}, Collections.emptyList(), false));
+			threadObject.setField("finish", RödaNativeFunction.of("Thread.finish", (ra, a, k, s, i, o) -> {
+				checkArgs("Thread.finish", 0, a.size());
+				_in.finish();
 			}, Collections.emptyList(), false));
 			threadObject.setField("pull", Builtins.genericPull("Thread.pull", _out, false, true));
 			threadObject.setField("tryPull", Builtins.genericTryPull("Thread.tryPull", _out, false));

@@ -2,14 +2,14 @@ apply plugin: 'java'
 
 targetCompatibility = 1.8
 sourceCompatibility = 1.8
-version = '0.13-alpha'
+version = '0.14-alpha'
 
 repositories {
     mavenCentral()
 }
 dependencies {
     compile project(':nept')
-    compile 'org.jline:jline:3.2.0'
+    compile 'org.jline:jline:3.7.1'
     testCompile 'junit:junit:4.12'
 }
 

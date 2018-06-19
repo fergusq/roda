@@ -1325,7 +1325,7 @@ public class Parser {
 		return e;
 	}
 
-	private static ExpressionTree expressionList(String file, int line, List<ExpressionTree> list) { 
+	public static ExpressionTree expressionList(String file, int line, List<ExpressionTree> list) {
 		ExpressionTree e = new ExpressionTree();
 		e.type = ExpressionTree.Type.LIST;
 		e.file = file;

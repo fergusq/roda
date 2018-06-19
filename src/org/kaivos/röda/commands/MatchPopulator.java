@@ -56,7 +56,7 @@ public final class MatchPopulator {
 					checkString("match", input);
 					Matcher matcher = pattern.matcher(input.str());
 					if (matcher.matches()) {
-						RödaValue[] results = new RödaValue[matcher.groupCount()];
+						RödaValue[] results = new RödaValue[matcher.groupCount() + 1];
 						for (int i = 0; i < results.length; i++) {
 							String group = matcher.group(i);
 							results[i] = RödaString.of(group != null ? group : "");
